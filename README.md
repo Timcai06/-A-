@@ -21,22 +21,24 @@ flowchart LR
     G --> H["阶段 7<br/>论文与图表交付"]
 
     B -. "已完成" .-> B1["清洗数据<br/>基础图表<br/>自动验收"]
+    C -. "已完成" .-> C1["静态供需高估对照<br/>278-337 USD/barrel<br/>论文图表"]
 ```
 
 ## 当前关键结论
 
 | 项目 | 当前状态 |
 |---|---|
-| 当前阶段 | 阶段 1 已完成，下一步进入阶段 2 |
+| 当前阶段 | 阶段 2 已完成，下一步进入阶段 3 |
 | 真实拟合口径 | 使用附件 CSV 的 `close_price` |
 | 冲突窗口实际交易日 | 2026-03-02 至 2026-05-05 |
 | 冲突窗口最高收盘价 | 114.06 USD/barrel |
 | 冲突窗口最高盘中价 | 119.50 USD/barrel |
 | 阶段 1 自动验收 | 33 项通过，0 项失败 |
+| 阶段 2 基准模型结论 | 静态供需模型给出 278-337 USD/barrel，明显高估现实价格 |
 
 ## 当前阶段
 
-当前 **阶段 1：数据清洗和探索** 已完成。
+当前 **阶段 2：传统供需基准模型** 已完成。
 
 阶段 1 已生成：
 
@@ -46,7 +48,13 @@ flowchart LR
 - `figures/event_window_price.png`
 - `figures/return_volatility.png`
 
-下一阶段是 **阶段 2：传统供需基准模型**。
+阶段 2 已生成：
+
+- `output/baseline/传统供需基准模型结果.csv`
+- `figures/baseline_vs_actual.png`
+- `output/reports/stage2_baseline_model_report.md`
+
+下一阶段是 **阶段 3：短期动态递推模型**。阶段 3 要把战略储备、商业库存、绕道运输、需求收缩和市场恐慌衰减放进日度模型，用来解释为什么现实价格没有涨到传统供需模型给出的高位。
 
 ## 目录说明
 
@@ -103,9 +111,17 @@ python3 -m src.pipeline.clean_data
 python3 -m src.pipeline.validate_stage1 --rerun
 ```
 
-阶段 2 开始前推荐先看：
+阶段 2 可复跑命令：
+
+```bash
+source scripts/project_env.sh
+python3 -m src.models.baseline_supply_demand
+```
+
+阶段 3 开始前推荐先看：
 
 - [output/reports/stage1_validation_report.md](output/reports/stage1_validation_report.md)
+- [output/reports/stage2_baseline_model_report.md](output/reports/stage2_baseline_model_report.md)
 - [data/metadata/stage1_data_dictionary.md](data/metadata/stage1_data_dictionary.md)
 - [paper/figures_mapping.md](paper/figures_mapping.md)
 

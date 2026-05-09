@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-阶段 1：数据清洗和探索已完成。
+阶段 2：传统供需基准模型已完成。
 
 ## 当前主线
 
@@ -25,16 +25,19 @@
 - 阶段 1 已生成清洗数据、冲突窗口数据、三张基础图和阶段报告。
 - 阶段 1 已新增并运行 `src/pipeline/validate_stage1.py --rerun`，自动验收 33 项，全部通过。
 - 阶段 1 已新增数据字典、自动验收报告、机器可读校验结果和 manifest。
+- 阶段 2 已实现并运行 `src/models/baseline_supply_demand.py`。
+- 阶段 2 已生成传统供需基准结果、对照图和阶段报告。
+- 阶段 2 结论：在线性化短期弹性口径下，传统供需模型预测约 278-337 USD/barrel，明显高于附件 CSV 的冲突窗口最高收盘价 114.06 USD/barrel。
 
 ## 下一步
 
-进入阶段 2：传统供需基准模型。
+进入阶段 3：短期动态递推模型。
 
-阶段 2 的目标是建立一个只考虑供应缺口和低需求价格弹性的对照模型，用来证明传统静态供需逻辑会高估油价，从而为阶段 3 引入库存、战略储备、绕道运输和需求收缩等缓冲机制提供论证基础。
+阶段 3 的目标是把库存、战略储备、绕道运输、需求收缩和恐慌衰减放进日度递推模型，解释现实油价为什么没有按静态供需模型一路冲到 200 美元以上，并为后续参数校准和 60-180 天情景预测提供主模型。
 
 ## 阻塞点
 
-PostgreSQL 当前只设计，不建库、不写入。阶段 1 已完成后，可以在进入阶段 2 前决定是否先导入清洗后的价格数据，但这不是阶段 2 的必要条件。
+PostgreSQL 当前只设计，不建库、不写入。阶段 2 已经证明当前 CSV 文件足够支撑前两阶段，数据库可以等进入多情景、多轮参数实验后再启用。
 
 备注：本机绘图依赖首次导入时出现 Matplotlib/fontconfig 缓存目录不可写提示，已添加 `.env.example`、`scripts/project_env.sh` 和项目本地 `.cache/` 目录约定。
 
@@ -49,3 +52,11 @@ PostgreSQL 当前只设计，不建库、不写入。阶段 1 已完成后，可
 - `output/reports/stage1_validation_report.md`：已完成
 - `output/reports/stage1_manifest.json`：已完成
 - `data/metadata/stage1_data_dictionary.md`：已完成
+
+## 阶段 2 验收目标
+
+- `src/models/baseline_supply_demand.py`：已完成
+- `output/baseline/传统供需基准模型结果.csv`：已完成
+- `figures/baseline_vs_actual.png`：已完成
+- `output/reports/stage2_baseline_model_report.md`：已完成
+- 传统模型高估现实价格的论文论证：已完成
