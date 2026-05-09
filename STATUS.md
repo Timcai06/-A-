@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-阶段 4：参数校准已完成。
+阶段 4：参数校准已完成。短期动态模型论文初稿已生成。
 
 ```mermaid
 flowchart LR
@@ -12,13 +12,15 @@ flowchart LR
     S1 --> S2["阶段2<br/>传统供需基准模型"]
     S2 --> S3["阶段3<br/>短期动态递推模型"]
     S3 --> S4["阶段4<br/>参数校准"]
-    S4 --> S5["阶段5-7<br/>预测/敏感性/论文"]
+    S4 --> P0["短期模型论文初稿<br/>LaTeX/PDF"]
+    P0 --> S5["阶段5-7<br/>预测/敏感性/总论文"]
 
     S0:::done
     S1:::done
     S2:::done
     S3:::done
     S4:::done
+    P0:::done
     S5:::next
 
     classDef done fill:#dcfce7,stroke:#16a34a,color:#14532d
@@ -54,6 +56,8 @@ flowchart LR
 - 阶段 4 已生成校准后路径、最优参数、候选参数前 10、分段误差和阶段报告。
 - 阶段 4 结论：综合最优参数 RMSE 为 3.50，并通过固定种子随机搜索加连续局部精修，将前期、中期、后期、高价平台和低价回落误差同步压低，短期模型达到优秀水平。
 - 阶段 4.6 已建立论文参考文献与证据库，记录油价冲击、库存预期、地缘风险、需求弹性、SPR 和霍尔木兹背景资料。
+- 短期动态模型论文初稿已生成，采用 `ctexart` + `xelatex` 编译，包含公式、参数表、误差评价、机制贡献图、候选模型对比图和参考文献。
+- 本机已安装 BasicTeX，并补齐 `ctex`、中文字体和常用排版包；论文 PDF 可用 `./scripts/build_short_term_paper.sh` 复现。
 
 ## 当前可直接引用的成果
 
@@ -71,6 +75,9 @@ flowchart LR
 | 校准报告 | `output/reports/stage4_calibration_report.md` | 可直接改写进论文参数校准小节 |
 | 质量检查 | `output/reports/stage0_to_stage3_quality_audit_report.md` | 阶段 0 至阶段 3 完整质量审计 |
 | 文献证据库 | `paper/参考文献与证据库.md` | 后续论文文献综述、模型依据和参考文献来源 |
+| 短期论文源码 | `paper/短期动态模型论文.tex` | 短期模型章节的 LaTeX 初稿 |
+| 短期论文 PDF | `output/pdf/短期动态模型论文.pdf` | 已渲染检查的 10 页论文初稿 |
+| 论文专用图 | `paper/figures/*.png` | 短期模型拟合、误差诊断、机制贡献和候选模型对比 |
 
 ## 下一步
 
@@ -84,6 +91,14 @@ flowchart LR
 - 输出三情景参数表。
 - 生成三情景价格对比图。
 - 给出平衡价格区间和库存耗尽风险说明。
+
+短期模型论文复现命令：
+
+```bash
+source scripts/project_env.sh
+python3 -m src.visualization.short_term_paper_figures
+./scripts/build_short_term_paper.sh
+```
 
 ## 阻塞点
 

@@ -45,7 +45,7 @@ flowchart TB
 
 | 项目 | 当前状态 |
 |---|---|
-| 当前阶段 | 阶段 4 已完成，下一步进入阶段 5 |
+| 当前阶段 | 阶段 4 已完成，并已形成短期模型论文初稿；下一步进入阶段 5 |
 | 真实拟合口径 | 使用附件 CSV 的 `close_price` |
 | 冲突窗口实际交易日 | 2026-03-02 至 2026-05-05 |
 | 冲突窗口最高收盘价 | 114.06 USD/barrel |
@@ -54,6 +54,7 @@ flowchart TB
 | 阶段 2 基准模型结论 | 静态供需模型给出 278-337 USD/barrel，明显高估现实价格 |
 | 阶段 3 动态模型结论 | 模拟峰值 110.90、末日价格 110.46，能解释 110 美元附近平台 |
 | 阶段 4 校准结论 | 综合最优 RMSE 3.50，分段 RMSE 均控制在 5 以内或附近，短期模型达到优秀水平 |
+| 论文初稿 | 已生成 `output/pdf/短期动态模型论文.pdf`，可作为后续总论文短期模型章节底稿 |
 
 ## 队友快速理解
 
@@ -102,6 +103,15 @@ flowchart TB
 - `output/calibration/动态模型候选参数前10.csv`
 - `output/calibration/动态模型分段误差.csv`
 - `output/reports/stage4_calibration_report.md`
+
+短期模型论文初稿已生成：
+
+- `paper/短期动态模型论文.tex`
+- `paper/figures/短期模型拟合效果.png`
+- `paper/figures/短期模型误差诊断.png`
+- `paper/figures/短期模型机制贡献.png`
+- `paper/figures/候选模型误差对比.png`
+- `output/pdf/短期动态模型论文.pdf`
 
 下一阶段是 **阶段 5：60-180 天情景预测**。阶段 5 要用校准后的中性参数作为基准，构造乐观、中性、悲观三条价格路径。
 
@@ -181,6 +191,14 @@ source scripts/project_env.sh
 python3 -m src.calibration.calibrate_dynamic_model
 ```
 
+短期模型论文图与 PDF 可复跑命令：
+
+```bash
+source scripts/project_env.sh
+python3 -m src.visualization.short_term_paper_figures
+./scripts/build_short_term_paper.sh
+```
+
 短期模型展示台：
 
 ```bash
@@ -199,6 +217,7 @@ streamlit run dashboard/streamlit_app.py
 - [docs/10_阶段2到阶段3交接说明.md](docs/10_阶段2到阶段3交接说明.md)
 - [paper/figures_mapping.md](paper/figures_mapping.md)
 - [paper/参考文献与证据库.md](paper/参考文献与证据库.md)
+- [paper/短期动态模型论文.tex](paper/短期动态模型论文.tex)
 - [dashboard/README.md](dashboard/README.md)
 
 PostgreSQL 当前只完成设计，不立即建库写入。数据库方案见 [docs/09_环境与数据库方案.md](docs/09_环境与数据库方案.md)。

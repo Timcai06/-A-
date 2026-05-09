@@ -9,6 +9,12 @@ __pycache__/
 
 # Local runtime caches
 .cache/
+tmp/
+
+# LaTeX build intermediates
+output/pdf/*.aux
+output/pdf/*.log
+output/pdf/*.out
 
 # Local secrets
 .env
