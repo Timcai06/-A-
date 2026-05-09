@@ -54,7 +54,7 @@ flowchart TB
 | 阶段 2 基准模型结论 | 静态供需模型给出 278-337 USD/barrel，明显高估现实价格 |
 | 阶段 3 动态模型结论 | 模拟峰值 110.90、末日价格 110.46，能解释 110 美元附近平台 |
 | 阶段 4 校准结论 | 综合最优 RMSE 3.47，MAE 2.89，分段 RMSE 均控制在 5 以内或附近，短期模型达到优秀水平 |
-| 论文初稿 | 已生成 `output/pdf/短期动态模型论文.pdf` 与 `output/doc/短期动态模型论文.docx`，可作为后续总论文短期模型章节底稿 |
+| 论文初稿 | 已生成 `output/final/短期动态模型论文.pdf` 与 `output/final/短期动态模型论文.docx`，可作为后续总论文短期模型章节底稿 |
 
 ## 队友快速理解
 
@@ -111,8 +111,8 @@ flowchart TB
 - `paper/figures/短期模型误差诊断.png`
 - `paper/figures/短期模型机制贡献.png`
 - `paper/figures/候选模型误差对比.png`
-- `output/pdf/短期动态模型论文.pdf`
-- `output/doc/短期动态模型论文.docx`
+- `output/final/短期动态模型论文.pdf`
+- `output/final/短期动态模型论文.docx`
 
 下一阶段是 **阶段 5：60-180 天情景预测**。阶段 5 要用校准后的中性参数作为基准，构造乐观、中性、悲观三条价格路径。
 
@@ -124,13 +124,15 @@ flowchart TB
     R --> C["config/<br/>路径与参数"]
     R --> Data["data/<br/>raw / processed / metadata"]
     R --> S["src/<br/>pipeline / models / analysis"]
-    R --> Figs["figures/<br/>论文图表"]
-    R --> Out["output/<br/>结果与报告"]
+    R --> Figs["figures/<br/>阶段图表"]
+    R --> Out["output/<br/>结果、报告与交付"]
     R --> P["paper/<br/>论文映射与草稿"]
 
     Data --> Raw["raw<br/>原始附件"]
     Data --> Processed["processed<br/>模型输入"]
     Out --> Reports["reports<br/>阶段验收"]
+    Out --> Final["final<br/>PDF / DOCX"]
+    Out --> Build["build<br/>构建临时文件"]
 ```
 
 | 目录 | 作用 |
@@ -143,8 +145,11 @@ flowchart TB
 | `data/processed/` | 可直接进入模型的数据 |
 | `data/metadata/` | 数据字典、字段说明、来源说明 |
 | `src/` | 数据处理、模型、校准、分析、可视化和流水线代码 |
-| `figures/` | 论文图表 |
+| `figures/` | 阶段图表，用于过程分析和阶段报告 |
+| `paper/figures/` | 论文专用图表，用于 LaTeX 排版和最终论文叙事 |
 | `output/` | 模型结果、参数结果、报告和多轮运行产物 |
+| `output/final/` | 当前可交付的 PDF、DOCX 等最终文件 |
+| `output/build/` | LaTeX/Pandoc 构建临时文件，不纳入 Git |
 | `paper/` | 论文大纲、章节草稿和最终稿 |
 | `dashboard/` | 短期模型交互式展示系统 |
 

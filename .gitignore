@@ -12,6 +12,7 @@ __pycache__/
 tmp/
 
 # LaTeX build intermediates
+output/build/
 output/pdf/*.aux
 output/pdf/*.log
 output/pdf/*.out
