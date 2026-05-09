@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-阶段 3：短期动态递推模型已完成。
+阶段 4：参数校准已完成。
 
 ```mermaid
 flowchart LR
@@ -18,7 +18,8 @@ flowchart LR
     S1:::done
     S2:::done
     S3:::done
-    S4:::next
+    S4:::done
+    S5:::next
 
     classDef done fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef next fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
@@ -49,6 +50,9 @@ flowchart LR
 - 阶段 3 已实现并运行 `src/models/dynamic_short_term.py`。
 - 阶段 3 已生成短期动态递推结果、误差指标、拟合对照图和阶段报告。
 - 阶段 3 结论：在 SPR、库存、绕道运输、需求收缩和恐慌衰减共同作用下，模型能把价格解释到 110 美元附近平台。
+- 阶段 4 已实现并运行 `src/calibration/calibrate_dynamic_model.py`。
+- 阶段 4 已生成校准后路径、最优参数、候选参数前 10、分段误差和阶段报告。
+- 阶段 4 结论：综合最优参数 RMSE 为 7.05，并保留 RMSE 最优、平台解释最优和综合最优三类候选，支撑论文稳健性讨论。
 
 ## 当前可直接引用的成果
 
@@ -62,20 +66,22 @@ flowchart LR
 | 动态结果 | `output/calibration/短期动态递推模型结果.csv` | 论文模型二结果表 |
 | 动态图 | `figures/fitted_vs_actual.png` | 证明动态模型能解释价格平台 |
 | 阶段报告 | `output/reports/stage3_dynamic_model_report.md` | 可直接改写进论文模型二小节 |
+| 校准参数 | `output/calibration/动态模型最优参数.csv` | 阶段 5 中性预测基准 |
+| 校准报告 | `output/reports/stage4_calibration_report.md` | 可直接改写进论文参数校准小节 |
 | 质量检查 | `output/reports/stage0_to_stage3_quality_audit_report.md` | 阶段 0 至阶段 3 完整质量审计 |
 
 ## 下一步
 
-进入阶段 4：参数校准。
+进入阶段 5：60-180 天情景预测。
 
-阶段 4 的目标是在阶段 3 模型结构上扩大参数搜索范围，系统优化 RMSE、MAE、峰值误差和末日误差，形成可写入论文的最优参数组合。
+阶段 5 的目标是以阶段 4 的综合最优参数作为中性基准，构造乐观、中性、悲观三种封锁持续情景，输出 60-180 天价格路径、平衡价格区间和库存风险。
 
-阶段 4 最小完成标准：
+阶段 5 最小完成标准：
 
-- 输出最优参数表。
-- 输出前 10 组候选参数。
-- 输出拟合误差指标。
-- 明确说明最优参数是否仍在赛题合理范围内。
+- 输出三情景价格路径。
+- 输出三情景参数表。
+- 生成三情景价格对比图。
+- 给出平衡价格区间和库存耗尽风险说明。
 
 ## 阻塞点
 
@@ -110,3 +116,12 @@ PostgreSQL 当前只设计，不建库、不写入。阶段 2 已经证明当前
 - `output/calibration/短期动态递推模型误差指标.csv`：已完成
 - `figures/fitted_vs_actual.png`：已完成
 - `output/reports/stage3_dynamic_model_report.md`：已完成
+
+## 阶段 4 验收目标
+
+- `src/calibration/calibrate_dynamic_model.py`：已完成
+- `output/calibration/动态模型校准后路径.csv`：已完成
+- `output/calibration/动态模型最优参数.csv`：已完成
+- `output/calibration/动态模型候选参数前10.csv`：已完成
+- `output/calibration/动态模型分段误差.csv`：已完成
+- `output/reports/stage4_calibration_report.md`：已完成

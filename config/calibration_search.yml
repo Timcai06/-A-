@@ -1,28 +1,53 @@
-search_method: "grid_or_random"
-objective: "rmse"
+search_method: "seeded_random_multi_objective"
+objective: "composite_score"
+sample_size: 18000
+random_seed: 20260509
+
+objective_formula: "RMSE + 0.20*abs(peak_error) + 0.25*abs(final_error) + 0.15*high_price_rmse + 0.10*late_rmse + 0.10*low_price_rmse"
 
 parameters:
-  alpha:
-    description: "供需缺口对价格变化的敏感度"
-    values: [0.002, 0.004, 0.006, 0.008, 0.010]
-  beta:
-    description: "恐慌因子对价格变化的影响强度"
-    values: [0.5, 1.0, 1.5, 2.0]
-  gamma:
-    description: "库存、SPR、绕道运输等缓冲机制的价格压制强度"
-    values: [0.001, 0.002, 0.003, 0.004]
+  supply_interruption:
+    description: "实际供应中断量"
+    values: [1400, 1500, 1600, 1700, 1800]
+  spr_max_release:
+    description: "战略储备每日释放上限"
+    values: [200, 300, 450, 600, 700]
   spr_delay_days:
     description: "战略储备启动延迟"
     values: [3, 7, 10, 14]
-  spr_max_release:
-    description: "战略储备每日释放上限"
-    values: [200, 350, 500, 700]
   route_start_day:
     description: "绕道运输开始发挥作用的日期"
     values: [7, 14, 21, 30]
+  route_max_capacity:
+    description: "绕道运输恢复能力上限"
+    values: [150, 220, 250, 300]
+  long_elasticity:
+    description: "中期需求价格弹性"
+    values: [-0.10, -0.14, -0.18, -0.22, -0.25]
+  fear_initial:
+    description: "恐慌初始强度"
+    values: [0.10, 0.13, 0.16, 0.20]
   fear_decay:
     description: "恐慌情绪衰减速度"
     values: [0.04, 0.06, 0.08, 0.10, 0.12]
+  inventory_daily_cap:
+    description: "商业库存每日缓冲上限"
+    values: [250, 350, 450, 600]
+  pressure_scale:
+    description: "剩余供需缺口对价格的压力系数"
+    values: [0.020, 0.035, 0.045, 0.060, 0.075, 0.090]
+  risk_weight:
+    description: "封锁风险溢价权重"
+    values: [1.60, 2.00, 2.20, 2.60, 3.00, 3.40]
+  uncertainty_floor:
+    description: "中期不确定性溢价平台"
+    values: [0.08, 0.12, 0.16, 0.20, 0.24, 0.28]
+  inventory_response:
+    description: "库存对原始供需缺口的响应比例"
+    values: [0.20, 0.35, 0.55, 0.75]
+  adjustment_speed:
+    description: "价格向目标价格调整的速度"
+    values: [0.18, 0.25, 0.32, 0.40]
 
 reporting:
   keep_top_n: 10
@@ -31,3 +56,6 @@ reporting:
     - mae
     - peak_price_error
     - final_price_error
+    - high_price_rmse
+    - low_price_rmse
+    - late_rmse

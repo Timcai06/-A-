@@ -1,6 +1,6 @@
 # 数学建模 A 题：霍尔木兹海峡封锁对原油价格的影响
 
-本目录用于完成浙江工商大学 2026 年大学生数学建模竞赛 A 题。项目已经从“想法规划”进入“可复算建模”阶段：阶段 1 数据清洗、阶段 2 传统供需基准模型和阶段 3 短期动态递推模型已经完成，下一步进入阶段 4 参数校准。
+本目录用于完成浙江工商大学 2026 年大学生数学建模竞赛 A 题。项目已经从“想法规划”进入“可复算建模”阶段：阶段 1 数据清洗、阶段 2 传统供需基准模型、阶段 3 短期动态递推模型和阶段 4 参数校准已经完成，下一步进入阶段 5 情景预测。
 
 当前执行主线是：
 
@@ -34,17 +34,18 @@ flowchart TB
     Data["阶段1 已完成<br/>真实附件CSV清洗与冲突窗口提取"]
     Baseline["阶段2 已完成<br/>传统供需模型显著高估现实价格"]
     Dynamic["阶段3 已完成<br/>库存 / SPR / 绕道 / 需求收缩 / 恐慌衰减"]
-    Calibration["阶段4 下一步<br/>扩大参数搜索并系统校准"]
+    Calibration["阶段4 已完成<br/>多目标参数校准"]
+    Scenario["阶段5 下一步<br/>60-180天三情景预测"]
     Paper["最终交付<br/>可复算模型 + 论文图表 + 结论证据链"]
 
-    Goal --> Data --> Baseline --> Dynamic --> Calibration --> Paper
+    Goal --> Data --> Baseline --> Dynamic --> Calibration --> Scenario --> Paper
 ```
 
 ## 当前关键结论
 
 | 项目 | 当前状态 |
 |---|---|
-| 当前阶段 | 阶段 3 已完成，下一步进入阶段 4 |
+| 当前阶段 | 阶段 4 已完成，下一步进入阶段 5 |
 | 真实拟合口径 | 使用附件 CSV 的 `close_price` |
 | 冲突窗口实际交易日 | 2026-03-02 至 2026-05-05 |
 | 冲突窗口最高收盘价 | 114.06 USD/barrel |
@@ -52,6 +53,7 @@ flowchart TB
 | 阶段 1 自动验收 | 33 项通过，0 项失败 |
 | 阶段 2 基准模型结论 | 静态供需模型给出 278-337 USD/barrel，明显高估现实价格 |
 | 阶段 3 动态模型结论 | 模拟峰值 110.90、末日价格 110.46，能解释 110 美元附近平台 |
+| 阶段 4 校准结论 | 综合最优 RMSE 7.05，保留 RMSE 最优、平台解释最优和综合最优三类候选 |
 
 ## 队友快速理解
 
@@ -63,13 +65,14 @@ flowchart TB
 | 截取 2026 冲突窗口 | 明确实际油价峰值、平台区间和拟合目标 |
 | 建立传统供需基准模型 | 证明只看供应缺口会明显高估油价 |
 | 建立短期动态递推模型 | 用缓冲机制解释现实价格平台 |
+| 完成多目标参数校准 | 比较 RMSE、峰值、末日和分段误差 |
 | 生成阶段图表和报告 | 可以直接进入论文的数据说明和模型一结果 |
 
-接下来阶段 4 不是重新建模型，而是在阶段 3 机制框架上扩大参数搜索，把 RMSE、峰值误差、末日误差一起系统校准。
+接下来阶段 5 不是重新校准，而是把阶段 4 的综合最优参数作为中性基准，扩展到乐观、中性、悲观三情景预测。
 
 ## 当前阶段
 
-当前 **阶段 3：短期动态递推模型** 已完成。
+当前 **阶段 4：参数校准** 已完成。
 
 阶段 1 已生成：
 
@@ -92,7 +95,15 @@ flowchart TB
 - `figures/fitted_vs_actual.png`
 - `output/reports/stage3_dynamic_model_report.md`
 
-下一阶段是 **阶段 4：参数校准**。阶段 4 要在阶段 3 的机制框架上扩大搜索范围，系统寻找更稳健的参数组合。
+阶段 4 已生成：
+
+- `output/calibration/动态模型校准后路径.csv`
+- `output/calibration/动态模型最优参数.csv`
+- `output/calibration/动态模型候选参数前10.csv`
+- `output/calibration/动态模型分段误差.csv`
+- `output/reports/stage4_calibration_report.md`
+
+下一阶段是 **阶段 5：60-180 天情景预测**。阶段 5 要用校准后的中性参数作为基准，构造乐观、中性、悲观三条价格路径。
 
 ## 目录说明
 
@@ -163,11 +174,19 @@ source scripts/project_env.sh
 python3 -m src.models.dynamic_short_term
 ```
 
-阶段 4 开始前推荐先看：
+阶段 4 可复跑命令：
+
+```bash
+source scripts/project_env.sh
+python3 -m src.calibration.calibrate_dynamic_model
+```
+
+阶段 5 开始前推荐先看：
 
 - [output/reports/stage1_validation_report.md](output/reports/stage1_validation_report.md)
 - [output/reports/stage2_baseline_model_report.md](output/reports/stage2_baseline_model_report.md)
 - [output/reports/stage3_dynamic_model_report.md](output/reports/stage3_dynamic_model_report.md)
+- [output/reports/stage4_calibration_report.md](output/reports/stage4_calibration_report.md)
 - [data/metadata/stage1_data_dictionary.md](data/metadata/stage1_data_dictionary.md)
 - [docs/10_阶段2到阶段3交接说明.md](docs/10_阶段2到阶段3交接说明.md)
 - [paper/figures_mapping.md](paper/figures_mapping.md)
