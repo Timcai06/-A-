@@ -19,6 +19,7 @@ RANDOM_SEED = 20260509
 SAMPLE_SIZE = 36000
 LOCAL_REFINEMENT_MAXITER = 35
 LOCAL_REFINEMENT_POPSIZE = 7
+LOCAL_STABILITY_SAMPLES = 800
 
 
 class Stage4Paths:
@@ -271,6 +272,34 @@ def decode_continuous_parameters(
     return assumptions, behavior
 
 
+def encode_continuous_parameters(
+    assumptions: dynamic.PhysicalAssumptions,
+    behavior: dynamic.BehavioralParameters,
+) -> np.ndarray:
+    values: list[float] = []
+    assumption_values = asdict(assumptions)
+    behavior_values = asdict(behavior)
+    for name in CONTINUOUS_PARAMETER_NAMES:
+        if name in assumption_values:
+            values.append(float(assumption_values[name]))
+        else:
+            values.append(float(behavior_values[name]))
+    return np.asarray(values, dtype=float)
+
+
+def perturb_continuous_parameters(center: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    bounds = np.asarray(CONTINUOUS_PARAMETER_BOUNDS, dtype=float)
+    lower = bounds[:, 0]
+    upper = bounds[:, 1]
+    width = upper - lower
+    values = np.clip(center + rng.normal(0.0, 0.035, size=center.shape) * width, lower, upper)
+    start_idx = CONTINUOUS_PARAMETER_NAMES.index("relief_start_day")
+    peak_idx = CONTINUOUS_PARAMETER_NAMES.index("relief_peak_day")
+    if values[peak_idx] <= values[start_idx] + 4:
+        values[peak_idx] = min(values[start_idx] + 4, upper[peak_idx])
+    return values
+
+
 def refine_with_continuous_search(
     event_df: pd.DataFrame,
     base_assumptions: dynamic.PhysicalAssumptions,
@@ -297,6 +326,39 @@ def refine_with_continuous_search(
     metrics = evaluate_simulation(simulation)
     metrics["局部精修目标值"] = float(result.fun)
     return assumptions, behavior, simulation, metrics
+
+
+def refine_with_local_stability_search(
+    event_df: pd.DataFrame,
+    base_assumptions: dynamic.PhysicalAssumptions,
+    center_assumptions: dynamic.PhysicalAssumptions,
+    center_behavior: dynamic.BehavioralParameters,
+) -> tuple[dynamic.PhysicalAssumptions, dynamic.BehavioralParameters, pd.DataFrame, dict[str, float]]:
+    rng = np.random.default_rng(RANDOM_SEED + 41)
+    center = encode_continuous_parameters(center_assumptions, center_behavior)
+    best_score = float("inf")
+    best_tuple: tuple[
+        dynamic.PhysicalAssumptions,
+        dynamic.BehavioralParameters,
+        pd.DataFrame,
+        dict[str, float],
+    ] | None = None
+
+    for sample_id in range(LOCAL_STABILITY_SAMPLES + 1):
+        values = center if sample_id == 0 else perturb_continuous_parameters(center, rng)
+        assumptions, behavior = decode_continuous_parameters(values, base_assumptions)
+        simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+        metrics = evaluate_simulation(simulation)
+        score = metrics["综合得分"] + excellence_penalty(metrics)
+        if score < best_score:
+            best_score = score
+            metrics["局部稳健性样本ID"] = float(sample_id)
+            metrics["局部稳健性目标值"] = float(score)
+            best_tuple = (assumptions, behavior, simulation, metrics)
+
+    if best_tuple is None:
+        raise RuntimeError("Local stability refinement did not produce any candidate.")
+    return best_tuple
 
 
 def classify_candidate(row: pd.Series, best_rmse_id: int, best_platform_id: int, best_composite_id: int) -> str:
@@ -341,6 +403,24 @@ def calibrate(event_df: pd.DataFrame, base_assumptions: dynamic.PhysicalAssumpti
         }
     )
     simulations[refined_candidate_id] = refined_simulation
+
+    stability_assumptions, stability_behavior, stability_simulation, stability_metrics = refine_with_local_stability_search(
+        event_df,
+        base_assumptions,
+        refined_assumptions,
+        refined_behavior,
+    )
+    stability_candidate_id = len(rows)
+    rows.append(
+        {
+            "candidate_id": stability_candidate_id,
+            "candidate_source": "local_stability_refinement",
+            **stability_metrics,
+            **{f"assumption_{key}": value for key, value in asdict(stability_assumptions).items()},
+            **{f"behavior_{key}": value for key, value in asdict(stability_behavior).items()},
+        }
+    )
+    simulations[stability_candidate_id] = stability_simulation
 
     all_results = pd.DataFrame(rows)
     best_composite_id = int(all_results.sort_values(["综合得分", "RMSE"]).iloc[0]["candidate_id"])
@@ -416,6 +496,7 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
     platform_best = representative[representative["候选类型"].str.contains("平台解释最优")].iloc[0]
     source_label = {
         "continuous_refinement": "连续局部精修",
+        "local_stability_refinement": "局部稳健性复核",
         "seeded_random": "固定种子随机搜索",
     }.get(str(best["candidate_source"]), str(best["candidate_source"]))
 
@@ -436,7 +517,7 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
 
 ## 运行结论
 
-阶段 4 已完成短期动态模型的多目标参数校准与连续局部精修。本阶段不只追求 RMSE 最小，而是同时考虑整体误差、峰值误差、末日价格误差、高价平台误差、前期冲击误差、中期平台误差、后期再定价误差和低价回落误差。
+阶段 4 已完成短期动态模型的多目标参数校准、连续局部精修与局部稳健性复核。本阶段不只追求 RMSE 最小，而是同时考虑整体误差、峰值误差、末日价格误差、高价平台误差、前期冲击误差、中期平台误差、后期再定价误差和低价回落误差。
 
 综合最优候选的 RMSE 为 {best["RMSE"]:.2f}，MAE 为 {best["MAE"]:.2f}，模拟峰值为 {best["模拟峰值"]:.2f}，模拟末日价格为 {best["模拟末日价格"]:.2f}。与阶段 3 初始筛选相比，本阶段给出了更完整的候选参数比较和分段误差解释。
 
@@ -444,7 +525,8 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
 
 1. 使用固定随机种子进行 36000 组多目标参数搜索，先覆盖物理参数和行为参数的合理范围。
 2. 在随机搜索基础上使用 `scipy.optimize.differential_evolution` 做连续局部精修，使模型同时满足整体误差、分段误差、峰值误差和末日误差要求。
-3. 保留综合最优、RMSE 最优、平台解释最优三类候选，用于论文中的模型比较和稳健性讨论。
+3. 围绕连续精修结果进行 800 组局部稳健性扰动复核，检验最优解附近是否存在稳定优质参数邻域，并从中保留综合得分更优的候选。
+4. 保留综合最优、RMSE 最优、平台解释最优三类候选，用于论文中的模型比较和稳健性讨论。
 
 ## 校准目标函数
 

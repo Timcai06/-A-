@@ -53,7 +53,7 @@ flowchart TB
 | 阶段 1 自动验收 | 33 项通过，0 项失败 |
 | 阶段 2 基准模型结论 | 静态供需模型给出 278-337 USD/barrel，明显高估现实价格 |
 | 阶段 3 动态模型结论 | 模拟峰值 110.90、末日价格 110.46，能解释 110 美元附近平台 |
-| 阶段 4 校准结论 | 综合最优 RMSE 3.50，分段 RMSE 均控制在 5 以内或附近，短期模型达到优秀水平 |
+| 阶段 4 校准结论 | 综合最优 RMSE 3.47，MAE 2.89，分段 RMSE 均控制在 5 以内或附近，短期模型达到优秀水平 |
 | 论文初稿 | 已生成 `output/pdf/短期动态模型论文.pdf`，可作为后续总论文短期模型章节底稿 |
 
 ## 队友快速理解
@@ -196,6 +196,7 @@ python3 -m src.calibration.calibrate_dynamic_model
 ```bash
 source scripts/project_env.sh
 python3 -m src.visualization.short_term_paper_figures
+python3 -m src.analysis.short_term_model_quality
 ./scripts/build_short_term_paper.sh
 ```
 
@@ -214,10 +215,12 @@ streamlit run dashboard/streamlit_app.py
 - [output/reports/stage4_calibration_report.md](output/reports/stage4_calibration_report.md)
 - [output/reports/短期模型质量复盘与提升方向.md](output/reports/短期模型质量复盘与提升方向.md)
 - [data/metadata/stage1_data_dictionary.md](data/metadata/stage1_data_dictionary.md)
+- [data/metadata/参数来源与可信度说明.md](data/metadata/参数来源与可信度说明.md)
 - [docs/10_阶段2到阶段3交接说明.md](docs/10_阶段2到阶段3交接说明.md)
 - [paper/figures_mapping.md](paper/figures_mapping.md)
 - [paper/参考文献与证据库.md](paper/参考文献与证据库.md)
 - [paper/短期动态模型论文.tex](paper/短期动态模型论文.tex)
+- [output/reports/短期模型质量增强报告.md](output/reports/短期模型质量增强报告.md)
 - [dashboard/README.md](dashboard/README.md)
 
 PostgreSQL 当前只完成设计，不立即建库写入。数据库方案见 [docs/09_环境与数据库方案.md](docs/09_环境与数据库方案.md)。

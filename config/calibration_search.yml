@@ -1,4 +1,4 @@
-search_method: "seeded_random_multi_objective_plus_continuous_refinement"
+search_method: "seeded_random_multi_objective_plus_continuous_refinement_plus_local_stability_refinement"
 objective: "composite_score"
 sample_size: 36000
 random_seed: 20260509
@@ -7,6 +7,11 @@ local_refinement:
   maxiter: 35
   popsize: 7
   purpose: "在随机多目标搜索后进行连续参数精修，提升短期模型分段拟合质量"
+local_stability_refinement:
+  method: "local_parameter_perturbation"
+  sample_size: 800
+  random_seed: 20260550
+  purpose: "围绕连续精修结果做局部扰动复核，确认优秀参数邻域并保留综合得分更优的候选"
 
 objective_formula: "RMSE + 0.20*abs(peak_error) + 0.25*abs(final_error) + 0.15*high_price_rmse + 0.12*early_rmse + 0.12*mid_rmse + 0.18*late_rmse + 0.18*low_price_rmse"
 

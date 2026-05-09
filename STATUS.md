@@ -54,7 +54,9 @@ flowchart LR
 - 阶段 3 结论：在 SPR、库存、绕道运输、需求收缩和恐慌衰减共同作用下，模型能把价格解释到 110 美元附近平台。
 - 阶段 4 已实现并运行 `src/calibration/calibrate_dynamic_model.py`。
 - 阶段 4 已生成校准后路径、最优参数、候选参数前 10、分段误差和阶段报告。
-- 阶段 4 结论：综合最优参数 RMSE 为 3.50，并通过固定种子随机搜索加连续局部精修，将前期、中期、后期、高价平台和低价回落误差同步压低，短期模型达到优秀水平。
+- 阶段 4 结论：综合最优参数 RMSE 为 3.47，MAE 为 2.89，并通过固定种子随机搜索、连续局部精修和局部稳健性复核，将前期、中期、后期、高价平台和低价回落误差同步压低，短期模型达到优秀水平。
+- 阶段 4.7 已新增质量增强诊断，证明短期模型相对上一日价格朴素基准 RMSE 改善 22.4%，Theil U 为 0.776，并在 800 组局部参数扰动下保持稳定。
+- 阶段 4.8 已新增参数来源与可信度说明，明确当前短期模型没有使用爬虫数值数据，校准参数必须写成模型待估参数而非真实观测数据。
 - 阶段 4.6 已建立论文参考文献与证据库，记录油价冲击、库存预期、地缘风险、需求弹性、SPR 和霍尔木兹背景资料。
 - 短期动态模型论文初稿已生成，采用 `ctexart` + `xelatex` 编译，包含公式、参数表、误差评价、机制贡献图、候选模型对比图和参考文献。
 - 本机已安装 BasicTeX，并补齐 `ctex`、中文字体和常用排版包；论文 PDF 可用 `./scripts/build_short_term_paper.sh` 复现。
@@ -78,6 +80,8 @@ flowchart LR
 | 短期论文源码 | `paper/短期动态模型论文.tex` | 短期模型章节的 LaTeX 初稿 |
 | 短期论文 PDF | `output/pdf/短期动态模型论文.pdf` | 已渲染检查的 10 页论文初稿 |
 | 论文专用图 | `paper/figures/*.png` | 短期模型拟合、误差诊断、机制贡献和候选模型对比 |
+| 质量增强报告 | `output/reports/短期模型质量增强报告.md` | 相对基准、残差诊断和局部扰动稳健性 |
+| 参数来源说明 | `data/metadata/参数来源与可信度说明.md` | 区分附件数据、题面参数、文献依据和模型校准参数 |
 
 ## 下一步
 
@@ -97,6 +101,7 @@ flowchart LR
 ```bash
 source scripts/project_env.sh
 python3 -m src.visualization.short_term_paper_figures
+python3 -m src.analysis.short_term_model_quality
 ./scripts/build_short_term_paper.sh
 ```
 
