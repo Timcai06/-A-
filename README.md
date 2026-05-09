@@ -135,7 +135,7 @@ flowchart TB
 | `figures/` | 论文图表 |
 | `output/` | 模型结果、参数结果、报告和多轮运行产物 |
 | `paper/` | 论文大纲、章节草稿和最终稿 |
-| `dashboard/` | 可选交互式展示系统 |
+| `dashboard/` | 短期模型交互式展示系统 |
 
 ## 最小运行顺序
 
@@ -181,6 +181,13 @@ source scripts/project_env.sh
 python3 -m src.calibration.calibrate_dynamic_model
 ```
 
+短期模型展示台：
+
+```bash
+source scripts/project_env.sh
+streamlit run dashboard/streamlit_app.py
+```
+
 阶段 5 开始前推荐先看：
 
 - [output/reports/stage1_validation_report.md](output/reports/stage1_validation_report.md)
@@ -192,6 +199,7 @@ python3 -m src.calibration.calibrate_dynamic_model
 - [docs/10_阶段2到阶段3交接说明.md](docs/10_阶段2到阶段3交接说明.md)
 - [paper/figures_mapping.md](paper/figures_mapping.md)
 - [paper/参考文献与证据库.md](paper/参考文献与证据库.md)
+- [dashboard/README.md](dashboard/README.md)
 
 PostgreSQL 当前只完成设计，不立即建库写入。数据库方案见 [docs/09_环境与数据库方案.md](docs/09_环境与数据库方案.md)。
 

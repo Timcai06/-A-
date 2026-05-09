@@ -9,3 +9,4 @@ statsmodels
 sqlalchemy
 psycopg2-binary
 tabulate
+streamlit

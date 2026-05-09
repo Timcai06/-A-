@@ -1,0 +1,52 @@
+title: "霍尔木兹封锁短期动态模型展示台"
+subtitle: "阶段 1-4 成果可视化：真实价格、模型拟合、误差分段、机制贡献和候选参数"
+
+paths:
+  calibrated_path_csv: "output/calibration/动态模型校准后路径.csv"
+  segment_errors_csv: "output/calibration/动态模型分段误差.csv"
+  top_candidates_csv: "output/calibration/动态模型候选参数前10.csv"
+  best_parameters_csv: "output/calibration/动态模型最优参数.csv"
+  stage4_report: "output/reports/stage4_calibration_report.md"
+  reference_evidence: "paper/参考文献与证据库.md"
+
+phase_marks:
+  early_end_day: 14
+  mid_end_day: 35
+  late_start_day: 36
+
+price_band:
+  lower: 110
+  upper: 120
+
+charts:
+  actual_price_color: "#2563eb"
+  simulated_price_color: "#dc2626"
+  price_band_color: "rgba(16, 185, 129, 0.12)"
+  positive_error_color: "#ef4444"
+  negative_error_color: "#0f766e"
+
+mechanism_columns:
+  premiums:
+    - "shortage_pressure"
+    - "blockade_risk_premium"
+    - "uncertainty_premium"
+    - "panic_premium"
+  discounts:
+    - "buffer_confirmation_discount"
+    - "expectation_relief_discount"
+
+display_columns:
+  candidate_table:
+    - "candidate_id"
+    - "candidate_source"
+    - "候选类型"
+    - "RMSE"
+    - "MAE"
+    - "峰值误差"
+    - "末日误差"
+    - "高价平台RMSE"
+    - "低价回落RMSE"
+    - "前期RMSE"
+    - "中期RMSE"
+    - "后期RMSE"
+    - "综合得分"
