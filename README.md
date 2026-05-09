@@ -191,6 +191,7 @@ python3 -m src.calibration.calibrate_dynamic_model
 - [data/metadata/stage1_data_dictionary.md](data/metadata/stage1_data_dictionary.md)
 - [docs/10_阶段2到阶段3交接说明.md](docs/10_阶段2到阶段3交接说明.md)
 - [paper/figures_mapping.md](paper/figures_mapping.md)
+- [paper/参考文献与证据库.md](paper/参考文献与证据库.md)
 
 PostgreSQL 当前只完成设计，不立即建库写入。数据库方案见 [docs/09_环境与数据库方案.md](docs/09_环境与数据库方案.md)。
 

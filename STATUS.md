@@ -53,6 +53,7 @@ flowchart LR
 - 阶段 4 已实现并运行 `src/calibration/calibrate_dynamic_model.py`。
 - 阶段 4 已生成校准后路径、最优参数、候选参数前 10、分段误差和阶段报告。
 - 阶段 4 结论：综合最优参数 RMSE 为 3.50，并通过固定种子随机搜索加连续局部精修，将前期、中期、后期、高价平台和低价回落误差同步压低，短期模型达到优秀水平。
+- 阶段 4.6 已建立论文参考文献与证据库，记录油价冲击、库存预期、地缘风险、需求弹性、SPR 和霍尔木兹背景资料。
 
 ## 当前可直接引用的成果
 
@@ -69,6 +70,7 @@ flowchart LR
 | 校准参数 | `output/calibration/动态模型最优参数.csv` | 阶段 5 中性预测基准 |
 | 校准报告 | `output/reports/stage4_calibration_report.md` | 可直接改写进论文参数校准小节 |
 | 质量检查 | `output/reports/stage0_to_stage3_quality_audit_report.md` | 阶段 0 至阶段 3 完整质量审计 |
+| 文献证据库 | `paper/参考文献与证据库.md` | 后续论文文献综述、模型依据和参考文献来源 |
 
 ## 下一步
 
