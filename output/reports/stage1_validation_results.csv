@@ -1,0 +1,34 @@
+name,status,detail
+row_count_preserved,PASS,"raw=2237, full=2237"
+event_row_count_matches_flag,PASS,"event=46, flag_sum=46"
+date_monotonic_increasing,PASS,
+date_unique,PASS,duplicates=0
+date_range_expected,PASS,2017-09-01 -> 2026-05-05
+event_window_within_config,PASS,
+event_window_actual_trading_days,PASS,2026-03-02 -> 2026-05-05
+pre_close_numeric,PASS,float64
+open_price_numeric,PASS,float64
+high_price_numeric,PASS,float64
+low_price_numeric,PASS,float64
+close_price_numeric,PASS,float64
+close_price_no_missing,PASS,
+pre_close_only_first_missing,PASS,missing=1
+positive_ohlc_prices,PASS,
+ohlc_anomalies_recorded_and_outside_event_window,PASS,"anomalies=2, in_event=0"
+log_return_formula,PASS,max_diff=9.985502008591496e-17
+return_pct_formula,PASS,max_diff=9.985502008591496e-17
+volatility_7d_formula,PASS,max_diff=1.3548190347378863e-15
+volatility_14d_formula,PASS,max_diff=2.8449465006019636e-16
+volatility_30d_formula,PASS,max_diff=3.191891195797325e-16
+event_close_max_actual,PASS,
+event_high_max_actual,PASS,
+event_final_close_actual,PASS,
+figure_exists_price_trend.png,PASS,figures/price_trend.png
+figure_nonblank_price_trend.png,PASS,std=0.093178
+figure_exists_event_window_price.png,PASS,figures/event_window_price.png
+figure_nonblank_event_window_price.png,PASS,std=0.088400
+figure_exists_return_volatility.png,PASS,figures/return_volatility.png
+figure_nonblank_return_volatility.png,PASS,std=0.149481
+reproducible_data/processed/brent_daily_clean.csv,PASS,"before=d50d5ac97c39d6e7, after=d50d5ac97c39d6e7"
+reproducible_data/processed/brent_event_window.csv,PASS,"before=6ff26ad44699bee5, after=6ff26ad44699bee5"
+reproducible_output/reports/stage1_ohlc_anomalies.csv,PASS,"before=ea02e80a2ab65a2f, after=ea02e80a2ab65a2f"

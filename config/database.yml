@@ -1,0 +1,19 @@
+database:
+  name: "math_model_oil"
+  host: "localhost"
+  port: 5432
+  user: "tim"
+  password_env: "MATH_MODEL_OIL_DB_PASSWORD"
+  url_env: "MATH_MODEL_OIL_DATABASE_URL"
+
+schemas:
+  raw: "官方原始数据和最小字段规范化"
+  processed: "清洗后特征数据和建模输入"
+  model: "参数、模型结果、校准结果、情景结果"
+  reporting: "阶段报告、图表映射、论文支撑记录"
+
+usage_policy:
+  current_stage: "design_only"
+  create_database_now: false
+  write_data_now: false
+  first_db_task: "阶段1完成CSV清洗后，再决定是否导入raw.brent_daily_prices"

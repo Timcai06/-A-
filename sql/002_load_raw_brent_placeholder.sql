@@ -1,0 +1,15 @@
+-- 阶段 1 后可使用本文件作为导入 raw.brent_daily_prices 的参考。
+-- 当前暂不执行，正式导入逻辑建议由 Python 脚本完成，以便统一处理 NA、日期和字段名。
+
+-- COPY raw.brent_daily_prices (
+--     trade_date,
+--     thscode,
+--     pre_close,
+--     open_price,
+--     high_price,
+--     low_price,
+--     close_price,
+--     source_file
+-- )
+-- FROM '/absolute/path/to/data/raw/brent_daily.csv'
+-- WITH (FORMAT csv, HEADER true);

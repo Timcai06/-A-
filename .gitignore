@@ -1,0 +1,20 @@
+# macOS / editor noise
+.DS_Store
+
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local runtime caches
+.cache/
+
+# Local secrets
+.env
+
+# Optional notebooks checkpoints
+.ipynb_checkpoints/
+
+# Future bulky run snapshots should be intentionally selected if needed
+output/runs/

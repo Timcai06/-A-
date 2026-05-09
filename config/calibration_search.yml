@@ -1,0 +1,33 @@
+search_method: "grid_or_random"
+objective: "rmse"
+
+parameters:
+  alpha:
+    description: "供需缺口对价格变化的敏感度"
+    values: [0.002, 0.004, 0.006, 0.008, 0.010]
+  beta:
+    description: "恐慌因子对价格变化的影响强度"
+    values: [0.5, 1.0, 1.5, 2.0]
+  gamma:
+    description: "库存、SPR、绕道运输等缓冲机制的价格压制强度"
+    values: [0.001, 0.002, 0.003, 0.004]
+  spr_delay_days:
+    description: "战略储备启动延迟"
+    values: [3, 7, 10, 14]
+  spr_max_release:
+    description: "战略储备每日释放上限"
+    values: [200, 350, 500, 700]
+  route_start_day:
+    description: "绕道运输开始发挥作用的日期"
+    values: [7, 14, 21, 30]
+  fear_decay:
+    description: "恐慌情绪衰减速度"
+    values: [0.04, 0.06, 0.08, 0.10, 0.12]
+
+reporting:
+  keep_top_n: 10
+  metrics:
+    - rmse
+    - mae
+    - peak_price_error
+    - final_price_error

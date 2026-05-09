@@ -1,0 +1,30 @@
+scenarios:
+  optimistic:
+    description: "战略储备释放强、绕道运输快、需求收缩明显、恐慌快速衰减。"
+    supply_interruption: 1400
+    spr_max_release: 700
+    spr_delay_days: 3
+    route_start_day: 7
+    route_max_capacity: 300
+    demand_elasticity_long_term: -0.25
+    fear_decay: 0.12
+
+  neutral:
+    description: "采用赛题中值和校准参数附近的中性假设。"
+    supply_interruption: 1600
+    spr_max_release: 450
+    spr_delay_days: 7
+    route_start_day: 14
+    route_max_capacity: 250
+    demand_elasticity_long_term: -0.18
+    fear_decay: 0.08
+
+  pessimistic:
+    description: "战略储备释放弱、绕道运输慢、需求收缩不足、恐慌持续。"
+    supply_interruption: 1800
+    spr_max_release: 200
+    spr_delay_days: 14
+    route_start_day: 30
+    route_max_capacity: 150
+    demand_elasticity_long_term: -0.10
+    fear_decay: 0.04

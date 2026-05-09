@@ -1,0 +1,20 @@
+name: mathmodel-oil
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pandas
+  - numpy
+  - scipy
+  - matplotlib
+  - seaborn
+  - plotly
+  - pyyaml
+  - statsmodels
+  - sqlalchemy
+  - psycopg2
+  - jupyterlab
+  - ipykernel
+  - pip
+  - pip:
+      - tabulate

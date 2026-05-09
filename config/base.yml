@@ -1,0 +1,30 @@
+project:
+  name: "数学建模A题_霍尔木兹海峡封锁与原油价格"
+  current_mainline: "python_dynamic_model"
+
+paths:
+  raw_brent_csv: "data/raw/brent_daily.csv"
+  raw_brent_csv_backup_cn: "data/raw/布伦特原油期货主力合约价格数据_原始.csv"
+  processed_daily_csv: "data/processed/brent_daily_clean.csv"
+  processed_event_window_csv: "data/processed/brent_event_window.csv"
+  figures_dir: "figures"
+  output_dir: "output"
+  reports_dir: "output/reports"
+
+event_window:
+  conflict_start: "2026-02-28"
+  data_end: "2026-05-05"
+
+model_units:
+  price: "USD/barrel"
+  volume: "10k barrels/day"
+  inventory: "10k barrels"
+
+baseline_assumptions:
+  pre_war_supply: 10000
+  pre_war_demand: 10000
+  hormuz_normal_transport: 2000
+  supply_interruption_low: 1400
+  supply_interruption_mid: 1600
+  supply_interruption_high: 1800
+  short_term_price_elasticity: -0.05

@@ -1,0 +1,3 @@
+trade_date,thscode,pre_close,open_price,high_price,low_price,close_price,is_event_window
+2020-10-23,BRN0W.ICE,42.67,42.68,43.09,41.83,41.53,False
+2021-01-29,BRN0W.ICE,55.03,55.13,55.99,54.92,54.91,False
