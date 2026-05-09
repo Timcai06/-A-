@@ -147,8 +147,10 @@ def configure_plot_style() -> None:
 def save_price_trend(df: pd.DataFrame, figures_dir: Path) -> Path:
     figure_path = figures_dir / "price_trend.png"
     fig, ax = plt.subplots(figsize=(11, 5.5))
+    start_year = df["trade_date"].min().year
+    end_year = df["trade_date"].max().year
     ax.plot(df["trade_date"], df["close_price"], color="#2563eb", linewidth=1.4, label="Close price")
-    ax.set_title("Brent Futures Close Price Trend")
+    ax.set_title(f"Brent Futures Close Price Trend ({start_year}-{end_year})")
     ax.set_xlabel("Date")
     ax.set_ylabel("USD/barrel")
     ax.legend()
@@ -168,10 +170,12 @@ def save_event_window_price(event_df: pd.DataFrame, event_window: EventWindow, f
         linewidth=1.8,
         marker="o",
         markersize=2.8,
-        label="Event-window close price",
+        label="2026 event-window close price",
     )
     ax.axvline(event_window.start, color="#111827", linestyle="--", linewidth=1.0, label="Conflict start")
-    ax.set_title("Brent Close Price During Event Window")
+    event_start = event_df["trade_date"].min().date()
+    event_end = event_df["trade_date"].max().date()
+    ax.set_title(f"Brent Close Price During 2026 Event Window ({event_start} to {event_end})")
     ax.set_xlabel("Date")
     ax.set_ylabel("USD/barrel")
     ax.legend()
@@ -185,16 +189,18 @@ def save_event_window_price(event_df: pd.DataFrame, event_window: EventWindow, f
 def save_return_volatility(df: pd.DataFrame, figures_dir: Path) -> Path:
     figure_path = figures_dir / "return_volatility.png"
     fig, axes = plt.subplots(2, 1, figsize=(11, 7.5), sharex=True)
+    start_year = df["trade_date"].min().year
+    end_year = df["trade_date"].max().year
 
     axes[0].plot(df["trade_date"], df["return_pct"] * 100, color="#059669", linewidth=1.0)
     axes[0].axhline(0, color="#111827", linewidth=0.8)
-    axes[0].set_title("Daily Return")
+    axes[0].set_title(f"Daily Return ({start_year}-{end_year})")
     axes[0].set_ylabel("Return (%)")
 
     axes[1].plot(df["trade_date"], df["volatility_7d"], color="#f97316", linewidth=1.2, label="7-day")
     axes[1].plot(df["trade_date"], df["volatility_14d"], color="#7c3aed", linewidth=1.2, label="14-day")
     axes[1].plot(df["trade_date"], df["volatility_30d"], color="#0f766e", linewidth=1.2, label="30-day")
-    axes[1].set_title("Rolling Log-return Volatility")
+    axes[1].set_title(f"Rolling Log-return Volatility ({start_year}-{end_year})")
     axes[1].set_xlabel("Date")
     axes[1].set_ylabel("Std. dev.")
     axes[1].legend()

@@ -187,6 +187,7 @@ python3 -m src.calibration.calibrate_dynamic_model
 - [output/reports/stage2_baseline_model_report.md](output/reports/stage2_baseline_model_report.md)
 - [output/reports/stage3_dynamic_model_report.md](output/reports/stage3_dynamic_model_report.md)
 - [output/reports/stage4_calibration_report.md](output/reports/stage4_calibration_report.md)
+- [output/reports/短期模型质量复盘与提升方向.md](output/reports/短期模型质量复盘与提升方向.md)
 - [data/metadata/stage1_data_dictionary.md](data/metadata/stage1_data_dictionary.md)
 - [docs/10_阶段2到阶段3交接说明.md](docs/10_阶段2到阶段3交接说明.md)
 - [paper/figures_mapping.md](paper/figures_mapping.md)
