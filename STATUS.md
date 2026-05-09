@@ -62,6 +62,7 @@ flowchart LR
 | 动态结果 | `output/calibration/短期动态递推模型结果.csv` | 论文模型二结果表 |
 | 动态图 | `figures/fitted_vs_actual.png` | 证明动态模型能解释价格平台 |
 | 阶段报告 | `output/reports/stage3_dynamic_model_report.md` | 可直接改写进论文模型二小节 |
+| 质量检查 | `output/reports/stage0_to_stage3_quality_audit_report.md` | 阶段 0 至阶段 3 完整质量审计 |
 
 ## 下一步
 
