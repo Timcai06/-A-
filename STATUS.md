@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-阶段 2：传统供需基准模型已完成。
+阶段 3：短期动态递推模型已完成。
 
 ```mermaid
 flowchart LR
@@ -17,7 +17,8 @@ flowchart LR
     S0:::done
     S1:::done
     S2:::done
-    S3:::next
+    S3:::done
+    S4:::next
 
     classDef done fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef next fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
@@ -45,6 +46,9 @@ flowchart LR
 - 阶段 2 已实现并运行 `src/models/baseline_supply_demand.py`。
 - 阶段 2 已生成传统供需基准结果、对照图和阶段报告。
 - 阶段 2 结论：在线性化短期弹性口径下，传统供需模型预测约 278-337 USD/barrel，明显高于附件 CSV 的冲突窗口最高收盘价 114.06 USD/barrel。
+- 阶段 3 已实现并运行 `src/models/dynamic_short_term.py`。
+- 阶段 3 已生成短期动态递推结果、误差指标、拟合对照图和阶段报告。
+- 阶段 3 结论：在 SPR、库存、绕道运输、需求收缩和恐慌衰减共同作用下，模型能把价格解释到 110 美元附近平台。
 
 ## 当前可直接引用的成果
 
@@ -55,20 +59,22 @@ flowchart LR
 | 数据验收 | `output/reports/stage1_validation_report.md` | 证明阶段 1 数据可靠 |
 | 基准结果 | `output/baseline/传统供需基准模型结果.csv` | 论文模型一结果表 |
 | 基准图 | `figures/baseline_vs_actual.png` | 证明传统模型高估现实价格 |
-| 阶段报告 | `output/reports/stage2_baseline_model_report.md` | 可直接改写进论文模型一小节 |
+| 动态结果 | `output/calibration/短期动态递推模型结果.csv` | 论文模型二结果表 |
+| 动态图 | `figures/fitted_vs_actual.png` | 证明动态模型能解释价格平台 |
+| 阶段报告 | `output/reports/stage3_dynamic_model_report.md` | 可直接改写进论文模型二小节 |
 
 ## 下一步
 
-进入阶段 3：短期动态递推模型。
+进入阶段 4：参数校准。
 
-阶段 3 的目标是把库存、战略储备、绕道运输、需求收缩和恐慌衰减放进日度递推模型，解释现实油价为什么没有按静态供需模型一路冲到 200 美元以上，并为后续参数校准和 60-180 天情景预测提供主模型。
+阶段 4 的目标是在阶段 3 模型结构上扩大参数搜索范围，系统优化 RMSE、MAE、峰值误差和末日误差，形成可写入论文的最优参数组合。
 
-阶段 3 最小完成标准：
+阶段 4 最小完成标准：
 
-- 输出 0-60 天日度模拟价格路径。
-- 每天记录有效供给、有效需求、库存缓冲、SPR 释放、绕道运输和恐慌因子。
-- 至少生成一张“动态模型 vs 实际价格”的对比图。
-- 给出 RMSE、峰值误差和末日价格误差。
+- 输出最优参数表。
+- 输出前 10 组候选参数。
+- 输出拟合误差指标。
+- 明确说明最优参数是否仍在赛题合理范围内。
 
 ## 阻塞点
 
@@ -95,3 +101,11 @@ PostgreSQL 当前只设计，不建库、不写入。阶段 2 已经证明当前
 - `figures/baseline_vs_actual.png`：已完成
 - `output/reports/stage2_baseline_model_report.md`：已完成
 - 传统模型高估现实价格的论文论证：已完成
+
+## 阶段 3 验收目标
+
+- `src/models/dynamic_short_term.py`：已完成
+- `output/calibration/短期动态递推模型结果.csv`：已完成
+- `output/calibration/短期动态递推模型误差指标.csv`：已完成
+- `figures/fitted_vs_actual.png`：已完成
+- `output/reports/stage3_dynamic_model_report.md`：已完成
