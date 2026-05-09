@@ -9,13 +9,16 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.optimize import differential_evolution
 
 from src.models import dynamic_short_term as dynamic
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RANDOM_SEED = 20260509
-SAMPLE_SIZE = 18000
+SAMPLE_SIZE = 36000
+LOCAL_REFINEMENT_MAXITER = 35
+LOCAL_REFINEMENT_POPSIZE = 7
 
 
 class Stage4Paths:
@@ -78,6 +81,7 @@ def evaluate_simulation(simulation: pd.DataFrame) -> dict[str, float]:
     full_mae = mae(df["error"])
     high_rmse = rmse(df.loc[df["actual_price"] >= 110, "error"])
     low_rmse = rmse(df.loc[df["actual_price"] < 100, "error"])
+    early_rmse = rmse(df.loc[df["day_index"] <= 14, "error"])
     late_rmse = rmse(df.loc[df["day_index"] > 35, "error"])
     mid_rmse = rmse(df.loc[(df["day_index"] > 14) & (df["day_index"] <= 35), "error"])
 
@@ -86,8 +90,10 @@ def evaluate_simulation(simulation: pd.DataFrame) -> dict[str, float]:
         + 0.20 * abs(peak_error)
         + 0.25 * abs(final_error)
         + 0.15 * high_rmse
-        + 0.10 * late_rmse
-        + 0.10 * low_rmse
+        + 0.12 * early_rmse
+        + 0.12 * mid_rmse
+        + 0.18 * late_rmse
+        + 0.18 * low_rmse
     )
     platform_score = high_rmse + 0.40 * abs(peak_error) + 0.40 * abs(final_error)
     return {
@@ -97,6 +103,7 @@ def evaluate_simulation(simulation: pd.DataFrame) -> dict[str, float]:
         "末日误差": final_error,
         "高价平台RMSE": high_rmse,
         "低价回落RMSE": low_rmse,
+        "前期RMSE": early_rmse,
         "中期RMSE": mid_rmse,
         "后期RMSE": late_rmse,
         "模拟峰值": float(df["simulated_price"].max()),
@@ -106,6 +113,16 @@ def evaluate_simulation(simulation: pd.DataFrame) -> dict[str, float]:
         "综合得分": composite_score,
         "平台解释得分": platform_score,
     }
+
+
+def excellence_penalty(metrics: dict[str, float]) -> float:
+    return (
+        0.15 * max(metrics["前期RMSE"] - 5.0, 0) ** 2
+        + 0.15 * max(metrics["中期RMSE"] - 5.0, 0) ** 2
+        + 0.15 * max(metrics["后期RMSE"] - 5.0, 0) ** 2
+        + 0.08 * max(abs(metrics["峰值误差"]) - 5.0, 0) ** 2
+        + 0.10 * max(abs(metrics["末日误差"]) - 3.0, 0) ** 2
+    )
 
 
 def draw(values: list[Any], rng: np.random.Generator) -> Any:
@@ -135,6 +152,12 @@ def sampled_parameter_sets(base_assumptions: dynamic.PhysicalAssumptions) -> lis
         "uncertainty_floor": [0.08, 0.12, 0.16, 0.20, 0.24, 0.28],
         "inventory_response": [0.20, 0.35, 0.55, 0.75],
         "adjustment_speed": [0.18, 0.25, 0.32, 0.40],
+        "buffer_relief_strength": [0.00, 0.04, 0.08, 0.12, 0.16],
+        "buffer_relief_decay_days": [6, 10, 14],
+        "relief_discount_strength": [0.00, 0.04, 0.08, 0.12, 0.16, 0.20],
+        "relief_start_day": [30, 34, 36, 38],
+        "relief_peak_day": [42, 46, 50],
+        "relief_decay_days": [8, 12, 16, 24],
     }
 
     # Always include the Stage 3 accepted baseline so Stage 4 can compare against it.
@@ -154,10 +177,126 @@ def sampled_parameter_sets(base_assumptions: dynamic.PhysicalAssumptions) -> lis
     for _ in range(SAMPLE_SIZE):
         physical_kwargs = {key: draw(values, rng) for key, values in physical_grid.items()}
         behavior_kwargs = {key: draw(values, rng) for key, values in behavior_grid.items()}
+        if behavior_kwargs["relief_peak_day"] <= behavior_kwargs["relief_start_day"]:
+            behavior_kwargs["relief_peak_day"] = behavior_kwargs["relief_start_day"] + 8
         assumptions = replace(base_assumptions, **physical_kwargs)
         behavior = dynamic.BehavioralParameters(**behavior_kwargs)
         sets.append((assumptions, behavior))
     return sets
+
+
+CONTINUOUS_PARAMETER_NAMES = [
+    "supply_interruption",
+    "spr_max_release",
+    "spr_delay_days",
+    "route_start_day",
+    "route_max_capacity",
+    "route_ramp_days",
+    "long_elasticity",
+    "fear_initial",
+    "fear_decay",
+    "inventory_daily_cap",
+    "pressure_scale",
+    "risk_weight",
+    "uncertainty_floor",
+    "inventory_response",
+    "adjustment_speed",
+    "buffer_relief_strength",
+    "buffer_relief_decay_days",
+    "relief_discount_strength",
+    "relief_start_day",
+    "relief_peak_day",
+    "relief_decay_days",
+]
+
+CONTINUOUS_PARAMETER_BOUNDS = [
+    (1400, 1800),
+    (200, 700),
+    (3, 14),
+    (7, 30),
+    (150, 300),
+    (14, 30),
+    (-0.25, -0.10),
+    (0.10, 0.20),
+    (0.04, 0.12),
+    (250, 600),
+    (0.020, 0.090),
+    (1.60, 3.40),
+    (0.08, 0.30),
+    (0.20, 0.75),
+    (0.18, 0.45),
+    (0.00, 0.22),
+    (4, 16),
+    (0.00, 0.24),
+    (24, 38),
+    (38, 52),
+    (4, 18),
+]
+
+
+def decode_continuous_parameters(
+    values: np.ndarray,
+    base_assumptions: dynamic.PhysicalAssumptions,
+) -> tuple[dynamic.PhysicalAssumptions, dynamic.BehavioralParameters]:
+    params = dict(zip(CONTINUOUS_PARAMETER_NAMES, values, strict=True))
+    if params["relief_peak_day"] <= params["relief_start_day"] + 4:
+        params["relief_peak_day"] = params["relief_start_day"] + 4
+
+    assumptions = replace(
+        base_assumptions,
+        supply_interruption=float(params["supply_interruption"]),
+        spr_max_release=float(params["spr_max_release"]),
+        spr_delay_days=int(round(params["spr_delay_days"])),
+        route_start_day=int(round(params["route_start_day"])),
+        route_max_capacity=float(params["route_max_capacity"]),
+        route_ramp_days=int(round(params["route_ramp_days"])),
+        long_elasticity=float(params["long_elasticity"]),
+        fear_initial=float(params["fear_initial"]),
+        fear_decay=float(params["fear_decay"]),
+        inventory_daily_cap=float(params["inventory_daily_cap"]),
+    )
+    behavior = dynamic.BehavioralParameters(
+        pressure_scale=float(params["pressure_scale"]),
+        risk_weight=float(params["risk_weight"]),
+        uncertainty_floor=float(params["uncertainty_floor"]),
+        inventory_response=float(params["inventory_response"]),
+        adjustment_speed=float(params["adjustment_speed"]),
+        buffer_relief_strength=float(params["buffer_relief_strength"]),
+        buffer_relief_decay_days=int(round(params["buffer_relief_decay_days"])),
+        relief_discount_strength=float(params["relief_discount_strength"]),
+        relief_start_day=int(round(params["relief_start_day"])),
+        relief_peak_day=int(round(params["relief_peak_day"])),
+        relief_decay_days=int(round(params["relief_decay_days"])),
+    )
+    return assumptions, behavior
+
+
+def refine_with_continuous_search(
+    event_df: pd.DataFrame,
+    base_assumptions: dynamic.PhysicalAssumptions,
+) -> tuple[dynamic.PhysicalAssumptions, dynamic.BehavioralParameters, pd.DataFrame, dict[str, float]]:
+    def objective(values: np.ndarray) -> float:
+        assumptions, behavior = decode_continuous_parameters(values, base_assumptions)
+        simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+        metrics = evaluate_simulation(simulation)
+        return metrics["综合得分"] + excellence_penalty(metrics)
+
+    result = differential_evolution(
+        objective,
+        CONTINUOUS_PARAMETER_BOUNDS,
+        seed=RANDOM_SEED,
+        maxiter=LOCAL_REFINEMENT_MAXITER,
+        popsize=LOCAL_REFINEMENT_POPSIZE,
+        polish=True,
+        updating="immediate",
+        workers=1,
+        tol=0.002,
+    )
+    assumptions, behavior = decode_continuous_parameters(result.x, base_assumptions)
+    simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+    metrics = evaluate_simulation(simulation)
+    metrics["局部精修目标值"] = float(result.fun)
+    return assumptions, behavior, simulation, metrics
 
 
 def classify_candidate(row: pd.Series, best_rmse_id: int, best_platform_id: int, best_composite_id: int) -> str:
@@ -180,12 +319,28 @@ def calibrate(event_df: pd.DataFrame, base_assumptions: dynamic.PhysicalAssumpti
         rows.append(
             {
                 "candidate_id": candidate_id,
+                "candidate_source": "seeded_random",
                 **metrics,
                 **{f"assumption_{key}": value for key, value in asdict(assumptions).items()},
                 **{f"behavior_{key}": value for key, value in asdict(behavior).items()},
             }
         )
         simulations[candidate_id] = simulation
+
+    refined_assumptions, refined_behavior, refined_simulation, refined_metrics = refine_with_continuous_search(
+        event_df, base_assumptions
+    )
+    refined_candidate_id = len(rows)
+    rows.append(
+        {
+            "candidate_id": refined_candidate_id,
+            "candidate_source": "continuous_refinement",
+            **refined_metrics,
+            **{f"assumption_{key}": value for key, value in asdict(refined_assumptions).items()},
+            **{f"behavior_{key}": value for key, value in asdict(refined_behavior).items()},
+        }
+    )
+    simulations[refined_candidate_id] = refined_simulation
 
     all_results = pd.DataFrame(rows)
     best_composite_id = int(all_results.sort_values(["综合得分", "RMSE"]).iloc[0]["candidate_id"])
@@ -229,10 +384,10 @@ def save_figure(simulation: pd.DataFrame) -> None:
         marker="s",
         markersize=2.4,
         linewidth=1.7,
-        label="阶段4校准后动态模型",
+        label="阶段4精修后动态模型",
     )
     ax.axhspan(110, 120, color="#10b981", alpha=0.10, label="题面110-120区间")
-    ax.set_title("阶段4校准后动态模型与实际价格对比")
+    ax.set_title("阶段4精修后动态模型与实际价格对比")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
     ax.legend(loc="upper left")
@@ -259,6 +414,17 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
     best = top_candidates.iloc[0]
     rmse_best = representative[representative["候选类型"].str.contains("RMSE最优")].iloc[0]
     platform_best = representative[representative["候选类型"].str.contains("平台解释最优")].iloc[0]
+    source_label = {
+        "continuous_refinement": "连续局部精修",
+        "seeded_random": "固定种子随机搜索",
+    }.get(str(best["candidate_source"]), str(best["candidate_source"]))
+
+    def fmt2(value: float) -> str:
+        number = float(value)
+        if abs(number) < 0.005:
+            number = 0.0
+        return f"{number:.2f}"
+
     segment_rows = "\n".join(
         "| {分段} | {样本数:.0f} | {RMSE:.2f} | {MAE:.2f} | {平均偏差:.2f} | {最大绝对误差:.2f} |".format(
             **row
@@ -270,9 +436,15 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
 
 ## 运行结论
 
-阶段 4 已完成短期动态模型的多目标参数校准。本阶段不只追求 RMSE 最小，而是同时考虑整体误差、峰值误差、末日价格误差、高价平台误差、后期误差和低价回落误差。
+阶段 4 已完成短期动态模型的多目标参数校准与连续局部精修。本阶段不只追求 RMSE 最小，而是同时考虑整体误差、峰值误差、末日价格误差、高价平台误差、前期冲击误差、中期平台误差、后期再定价误差和低价回落误差。
 
 综合最优候选的 RMSE 为 {best["RMSE"]:.2f}，MAE 为 {best["MAE"]:.2f}，模拟峰值为 {best["模拟峰值"]:.2f}，模拟末日价格为 {best["模拟末日价格"]:.2f}。与阶段 3 初始筛选相比，本阶段给出了更完整的候选参数比较和分段误差解释。
+
+## 校准流程
+
+1. 使用固定随机种子进行 36000 组多目标参数搜索，先覆盖物理参数和行为参数的合理范围。
+2. 在随机搜索基础上使用 `scipy.optimize.differential_evolution` 做连续局部精修，使模型同时满足整体误差、分段误差、峰值误差和末日误差要求。
+3. 保留综合最优、RMSE 最优、平台解释最优三类候选，用于论文中的模型比较和稳健性讨论。
 
 ## 校准目标函数
 
@@ -281,19 +453,21 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
         + 0.20 * abs(峰值误差)
         + 0.25 * abs(末日误差)
         + 0.15 * 高价平台RMSE
-        + 0.10 * 后期RMSE
-        + 0.10 * 低价回落RMSE
+        + 0.12 * 前期RMSE
+        + 0.12 * 中期RMSE
+        + 0.18 * 后期RMSE
+        + 0.18 * 低价回落RMSE
 ```
 
-该目标函数用于避免单纯追求 RMSE 时牺牲峰值和平台解释能力。
+该目标函数用于避免单纯追求 RMSE 时牺牲峰值、平台解释能力和后期再定价解释能力。
 
 ## 三类代表候选
 
 | 类型 | RMSE | 峰值误差 | 末日误差 | 高价平台RMSE | 低价回落RMSE | 综合得分 |
 |---|---:|---:|---:|---:|---:|---:|
-| 综合最优 | {best["RMSE"]:.2f} | {best["峰值误差"]:.2f} | {best["末日误差"]:.2f} | {best["高价平台RMSE"]:.2f} | {best["低价回落RMSE"]:.2f} | {best["综合得分"]:.2f} |
-| RMSE最优 | {rmse_best["RMSE"]:.2f} | {rmse_best["峰值误差"]:.2f} | {rmse_best["末日误差"]:.2f} | {rmse_best["高价平台RMSE"]:.2f} | {rmse_best["低价回落RMSE"]:.2f} | {rmse_best["综合得分"]:.2f} |
-| 平台解释最优 | {platform_best["RMSE"]:.2f} | {platform_best["峰值误差"]:.2f} | {platform_best["末日误差"]:.2f} | {platform_best["高价平台RMSE"]:.2f} | {platform_best["低价回落RMSE"]:.2f} | {platform_best["综合得分"]:.2f} |
+| 综合最优 | {best["RMSE"]:.2f} | {fmt2(best["峰值误差"])} | {fmt2(best["末日误差"])} | {best["高价平台RMSE"]:.2f} | {best["低价回落RMSE"]:.2f} | {best["综合得分"]:.2f} |
+| RMSE最优 | {rmse_best["RMSE"]:.2f} | {fmt2(rmse_best["峰值误差"])} | {fmt2(rmse_best["末日误差"])} | {rmse_best["高价平台RMSE"]:.2f} | {rmse_best["低价回落RMSE"]:.2f} | {rmse_best["综合得分"]:.2f} |
+| 平台解释最优 | {platform_best["RMSE"]:.2f} | {fmt2(platform_best["峰值误差"])} | {fmt2(platform_best["末日误差"])} | {platform_best["高价平台RMSE"]:.2f} | {platform_best["低价回落RMSE"]:.2f} | {platform_best["综合得分"]:.2f} |
 
 ## 综合最优参数
 
@@ -308,11 +482,18 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
 | 恐慌初始强度 | {best["assumption_fear_initial"]:.2f} |
 | 恐慌衰减速度 | {best["assumption_fear_decay"]:.2f} |
 | 库存日缓冲上限 | {best["assumption_inventory_daily_cap"]:.0f} |
+| 候选来源 | {source_label} |
 | pressure_scale | {best["behavior_pressure_scale"]:.3f} |
 | risk_weight | {best["behavior_risk_weight"]:.3f} |
 | uncertainty_floor | {best["behavior_uncertainty_floor"]:.3f} |
 | inventory_response | {best["behavior_inventory_response"]:.3f} |
 | adjustment_speed | {best["behavior_adjustment_speed"]:.3f} |
+| buffer_relief_strength | {best["behavior_buffer_relief_strength"]:.3f} |
+| buffer_relief_decay_days | {best["behavior_buffer_relief_decay_days"]:.0f} |
+| relief_discount_strength | {best["behavior_relief_discount_strength"]:.3f} |
+| relief_start_day | {best["behavior_relief_start_day"]:.0f} |
+| relief_peak_day | {best["behavior_relief_peak_day"]:.0f} |
+| relief_decay_days | {best["behavior_relief_decay_days"]:.0f} |
 
 ## 分段误差
 
@@ -327,6 +508,8 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
 - 绕道启动时间仍在赛题范围 7-30 天内。
 - 绕道能力不超过题面给出的约 300 万桶/日。
 - 长期需求弹性比短期弹性绝对值更大，符合中长期需求调整更充分的直觉。
+- `buffer_relief_strength` 表示供需缺口被缓冲机制压住后，市场出现第一轮降温折价。
+- `relief_discount_strength` 表示中后期市场预期修复带来的阶段性再定价折价。
 
 ## 输出产物
 

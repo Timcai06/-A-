@@ -62,6 +62,12 @@ class BehavioralParameters:
     uncertainty_floor: float
     inventory_response: float
     adjustment_speed: float
+    buffer_relief_strength: float = 0.0
+    buffer_relief_decay_days: int = 10
+    relief_discount_strength: float = 0.0
+    relief_start_day: int = 35
+    relief_peak_day: int = 46
+    relief_decay_days: int = 16
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -141,6 +147,33 @@ def interpolate_elasticity(day: float, assumptions: PhysicalAssumptions, horizon
     return assumptions.base_elasticity + (assumptions.long_elasticity - assumptions.base_elasticity) * weight
 
 
+def expectation_relief_discount(day: float, base_price: float, behavior: BehavioralParameters) -> float:
+    """Temporary discount after markets observe buffers and rerouting taking effect."""
+    if behavior.relief_discount_strength <= 0 or day < behavior.relief_start_day:
+        return 0.0
+
+    ramp_days = max(behavior.relief_peak_day - behavior.relief_start_day, 1)
+    buildup = min((day - behavior.relief_start_day) / ramp_days, 1.0)
+    fade = np.exp(-max(day - behavior.relief_peak_day, 0) / max(behavior.relief_decay_days, 1))
+    return float(base_price * behavior.relief_discount_strength * buildup * fade)
+
+
+def buffer_confirmation_discount(
+    day: float,
+    gap_closure_day: float | None,
+    base_price: float,
+    behavior: BehavioralParameters,
+) -> float:
+    """Short-lived discount after the residual supply gap is visibly buffered."""
+    if behavior.buffer_relief_strength <= 0 or gap_closure_day is None or day < gap_closure_day:
+        return 0.0
+
+    days_since_closure = day - gap_closure_day
+    buildup = 1 - np.exp(-days_since_closure / 3)
+    fade = np.exp(-days_since_closure / max(behavior.buffer_relief_decay_days, 1))
+    return float(base_price * behavior.buffer_relief_strength * buildup * fade)
+
+
 def simulate_dynamic_model(
     event_df: pd.DataFrame,
     assumptions: PhysicalAssumptions,
@@ -151,6 +184,7 @@ def simulate_dynamic_model(
     previous_price = base_price
     previous_fear_excess = assumptions.fear_initial
     inventory_remaining = assumptions.commercial_inventory
+    gap_closure_day: int | None = None
     rows: list[dict[str, Any]] = []
 
     for _, actual_row in event_df.iterrows():
@@ -186,6 +220,8 @@ def simulate_dynamic_model(
         inventory_remaining -= inventory_buffer
         effective_supply = supply_without_inventory + inventory_buffer
         residual_gap = max(effective_demand - effective_supply, 0.0)
+        if gap_closure_day is None and residual_gap <= assumptions.base_demand * 0.005:
+            gap_closure_day = day_index
 
         fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * day_index)
         shortage_pressure = (
@@ -203,7 +239,17 @@ def simulate_dynamic_model(
         )
         uncertainty_premium = base_price * behavior.uncertainty_floor * (1 - np.exp(-day_index / 18))
         panic_premium = base_price * 0.45 * fear_excess
-        target_price = base_price + shortage_pressure + blockade_risk_premium + uncertainty_premium + panic_premium
+        buffer_discount = buffer_confirmation_discount(day_index, gap_closure_day, base_price, behavior)
+        relief_discount = expectation_relief_discount(day_index, base_price, behavior)
+        target_price = (
+            base_price
+            + shortage_pressure
+            + blockade_risk_premium
+            + uncertainty_premium
+            + panic_premium
+            - buffer_discount
+            - relief_discount
+        )
 
         simulated_price = previous_price + behavior.adjustment_speed * (target_price - previous_price)
         simulated_price += 2.5 * (fear_excess - previous_fear_excess)
@@ -229,6 +275,8 @@ def simulate_dynamic_model(
                 "blockade_risk_premium": blockade_risk_premium,
                 "uncertainty_premium": uncertainty_premium,
                 "panic_premium": panic_premium,
+                "buffer_confirmation_discount": buffer_discount,
+                "expectation_relief_discount": relief_discount,
             }
         )
         previous_price = simulated_price
@@ -257,6 +305,12 @@ def compute_metrics(simulated: pd.DataFrame, behavior: BehavioralParameters) -> 
         "uncertainty_floor": behavior.uncertainty_floor,
         "inventory_response": behavior.inventory_response,
         "adjustment_speed": behavior.adjustment_speed,
+        "buffer_relief_strength": behavior.buffer_relief_strength,
+        "buffer_relief_decay_days": behavior.buffer_relief_decay_days,
+        "relief_discount_strength": behavior.relief_discount_strength,
+        "relief_start_day": behavior.relief_start_day,
+        "relief_peak_day": behavior.relief_peak_day,
+        "relief_decay_days": behavior.relief_decay_days,
     }
     metrics["selection_score"] = rmse + 0.20 * abs(peak_price_error) + 0.35 * abs(final_price_error)
     return metrics

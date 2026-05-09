@@ -1,9 +1,14 @@
-search_method: "seeded_random_multi_objective"
+search_method: "seeded_random_multi_objective_plus_continuous_refinement"
 objective: "composite_score"
-sample_size: 18000
+sample_size: 36000
 random_seed: 20260509
+local_refinement:
+  method: "scipy.optimize.differential_evolution"
+  maxiter: 35
+  popsize: 7
+  purpose: "在随机多目标搜索后进行连续参数精修，提升短期模型分段拟合质量"
 
-objective_formula: "RMSE + 0.20*abs(peak_error) + 0.25*abs(final_error) + 0.15*high_price_rmse + 0.10*late_rmse + 0.10*low_price_rmse"
+objective_formula: "RMSE + 0.20*abs(peak_error) + 0.25*abs(final_error) + 0.15*high_price_rmse + 0.12*early_rmse + 0.12*mid_rmse + 0.18*late_rmse + 0.18*low_price_rmse"
 
 parameters:
   supply_interruption:
@@ -48,6 +53,24 @@ parameters:
   adjustment_speed:
     description: "价格向目标价格调整的速度"
     values: [0.18, 0.25, 0.32, 0.40]
+  buffer_relief_strength:
+    description: "供需缺口被缓冲机制压住后，市场第一轮降温折价强度"
+    values: [0.00, 0.04, 0.08, 0.12, 0.16]
+  buffer_relief_decay_days:
+    description: "缓冲确认折价的消退速度"
+    values: [6, 10, 14]
+  relief_discount_strength:
+    description: "市场预期修复导致的阶段性折价强度"
+    values: [0.00, 0.04, 0.08, 0.12, 0.16, 0.20]
+  relief_start_day:
+    description: "预期修复折价开始生效的日期"
+    values: [30, 34, 36, 38]
+  relief_peak_day:
+    description: "预期修复折价达到峰值的日期"
+    values: [42, 46, 50]
+  relief_decay_days:
+    description: "预期修复折价消退速度"
+    values: [8, 12, 16, 24]
 
 reporting:
   keep_top_n: 10
@@ -58,4 +81,6 @@ reporting:
     - final_price_error
     - high_price_rmse
     - low_price_rmse
+    - early_rmse
+    - mid_rmse
     - late_rmse
