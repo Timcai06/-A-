@@ -55,11 +55,11 @@
 - PASS: `figure_nonblank_event_window_price.png` std=0.088400
 - PASS: `figure_exists_return_volatility.png` figures/return_volatility.png
 - PASS: `figure_nonblank_return_volatility.png` std=0.149481
-- PASS: `reproducible_data/processed/brent_daily_clean.csv` before=d50d5ac97c39d6e7, after=d50d5ac97c39d6e7
-- PASS: `reproducible_data/processed/brent_event_window.csv` before=6ff26ad44699bee5, after=6ff26ad44699bee5
-- PASS: `reproducible_output/reports/stage1_ohlc_anomalies.csv` before=ea02e80a2ab65a2f, after=ea02e80a2ab65a2f
+- PASS: `reproducible_data/processed/布伦特原油期货主力合约价格数据_清洗后.csv` before=d50d5ac97c39d6e7, after=d50d5ac97c39d6e7
+- PASS: `reproducible_data/processed/布伦特原油期货主力合约价格数据_冲突窗口.csv` before=6ff26ad44699bee5, after=6ff26ad44699bee5
+- PASS: `reproducible_output/reports/阶段1_OHLC异常记录.csv` before=ea02e80a2ab65a2f, after=ea02e80a2ab65a2f
 
 ## 机器可读文件
 
-- `output/reports/stage1_validation_results.csv`
+- `output/reports/阶段1_自动验收结果.csv`
 - `output/reports/stage1_manifest.json`

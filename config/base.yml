@@ -3,10 +3,10 @@ project:
   current_mainline: "python_dynamic_model"
 
 paths:
-  raw_brent_csv: "data/raw/brent_daily.csv"
+  raw_brent_csv: "data/raw/布伦特原油期货主力合约价格数据.csv"
   raw_brent_csv_backup_cn: "data/raw/布伦特原油期货主力合约价格数据_原始.csv"
-  processed_daily_csv: "data/processed/brent_daily_clean.csv"
-  processed_event_window_csv: "data/processed/brent_event_window.csv"
+  processed_daily_csv: "data/processed/布伦特原油期货主力合约价格数据_清洗后.csv"
+  processed_event_window_csv: "data/processed/布伦特原油期货主力合约价格数据_冲突窗口.csv"
   figures_dir: "figures"
   output_dir: "output"
   reports_dir: "output/reports"

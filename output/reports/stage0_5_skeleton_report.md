@@ -14,7 +14,7 @@
 - 新增 `requirements.txt`，固定阶段 1 起步依赖。
 - 新增 `docs/08_架构决策记录.md`，明确当前主线与后置增强项。
 - 新增 `paper/figures_mapping.md`，提前建立图表到论文结论的映射。
-- 标准化原始数据入口为 `data/raw/brent_daily.csv`。
+- 标准化原始数据入口为 `data/raw/布伦特原油期货主力合约价格数据.csv`。
 
 ## 当前主线
 

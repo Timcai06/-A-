@@ -11,5 +11,5 @@
 --     close_price,
 --     source_file
 -- )
--- FROM '/absolute/path/to/data/raw/brent_daily.csv'
+-- FROM '/absolute/path/to/data/raw/布伦特原油期货主力合约价格数据.csv'
 -- WITH (FORMAT csv, HEADER true);

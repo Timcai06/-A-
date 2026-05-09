@@ -321,7 +321,7 @@ def find_ohlc_anomalies(df: pd.DataFrame) -> pd.DataFrame:
 
 def write_report(df: pd.DataFrame, event_df: pd.DataFrame, figures: list[Path], paths: Stage1Paths) -> Path:
     paths.reports_dir.mkdir(parents=True, exist_ok=True)
-    anomaly_path = paths.reports_dir / "stage1_ohlc_anomalies.csv"
+    anomaly_path = paths.reports_dir / "阶段1_OHLC异常记录.csv"
     ohlc_anomalies = find_ohlc_anomalies(df)
     ohlc_anomalies.to_csv(anomaly_path, index=False)
 

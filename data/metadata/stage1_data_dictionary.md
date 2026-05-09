@@ -1,6 +1,6 @@
 # 阶段 1 数据字典
 
-本文档说明 `data/processed/brent_daily_clean.csv` 和 `data/processed/brent_event_window.csv` 的字段含义。两个文件字段一致，后者是前者按冲突窗口筛选后的子集。
+本文档说明 `data/processed/布伦特原油期货主力合约价格数据_清洗后.csv` 和 `data/processed/布伦特原油期货主力合约价格数据_冲突窗口.csv` 的字段含义。两个文件字段一致，后者是前者按冲突窗口筛选后的子集。
 
 | 字段 | 类型 | 含义 | 生成方式 |
 |---|---|---|---|

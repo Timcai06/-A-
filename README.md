@@ -40,8 +40,8 @@ flowchart LR
 
 阶段 1 已生成：
 
-- `data/processed/brent_daily_clean.csv`
-- `data/processed/brent_event_window.csv`
+- `data/processed/布伦特原油期货主力合约价格数据_清洗后.csv`
+- `data/processed/布伦特原油期货主力合约价格数据_冲突窗口.csv`
 - `figures/price_trend.png`
 - `figures/event_window_price.png`
 - `figures/return_volatility.png`
@@ -116,7 +116,7 @@ PostgreSQL 当前只完成设计，不立即建库写入。数据库方案见 [d
 标准原始数据路径为：
 
 ```text
-data/raw/brent_daily.csv
+data/raw/布伦特原油期货主力合约价格数据.csv
 ```
 
 `data/raw/布伦特原油期货主力合约价格数据_原始.csv` 作为人工可读备份保留。

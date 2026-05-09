@@ -40,8 +40,8 @@ PostgreSQL 当前只设计，不建库、不写入。阶段 1 已完成后，可
 
 ## 阶段 1 验收目标
 
-- `data/processed/brent_daily_clean.csv`：已完成
-- `data/processed/brent_event_window.csv`：已完成
+- `data/processed/布伦特原油期货主力合约价格数据_清洗后.csv`：已完成
+- `data/processed/布伦特原油期货主力合约价格数据_冲突窗口.csv`：已完成
 - `figures/price_trend.png`：已完成
 - `figures/event_window_price.png`：已完成
 - `figures/return_volatility.png`：已完成

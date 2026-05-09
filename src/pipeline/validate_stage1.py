@@ -186,7 +186,7 @@ def capture_hashes(config: dict[str, Any]) -> dict[str, str]:
     files = [
         PROJECT_ROOT / paths["processed_daily_csv"],
         PROJECT_ROOT / paths["processed_event_window_csv"],
-        PROJECT_ROOT / paths["reports_dir"] / "stage1_ohlc_anomalies.csv",
+        PROJECT_ROOT / paths["reports_dir"] / "阶段1_OHLC异常记录.csv",
     ]
     return {rel(path): sha256_16(path) for path in files if path.exists()}
 
@@ -215,7 +215,7 @@ def write_outputs(
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     result_rows = [result.__dict__ for result in results]
-    results_csv = reports_dir / "stage1_validation_results.csv"
+    results_csv = reports_dir / "阶段1_自动验收结果.csv"
     pd.DataFrame(result_rows).to_csv(results_csv, index=False)
 
     manifest = {
