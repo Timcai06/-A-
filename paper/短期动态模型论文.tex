@@ -54,11 +54,13 @@
 
 \maketitle
 
-\begin{abstract}
+\begin{center}
+\textbf{摘\quad 要}
+\end{center}
+
 霍尔木兹海峡封锁会造成显著的原油运输中断。若直接采用静态供需弹性模型，油价上界容易被推高到远高于附件数据观测水平的区间。针对这一现象，本文以布伦特原油期货主力合约价格数据为基础，构建了一个用于解释冲突窗口短期油价演化的动态递推模型。模型将供应中断、战略石油储备释放、绕道运输恢复、商业库存缓冲、需求弹性调整、恐慌溢价、地缘风险溢价、缓冲确认折价和预期修复折价纳入统一框架，并通过固定种子多目标随机搜索、连续局部精修和局部稳健性复核进行参数校准。结果表明，精修后的短期动态模型在冲突窗口内取得 RMSE 为 3.47 美元/桶、MAE 为 2.89 美元/桶的拟合效果；其中后期再定价 RMSE 为 2.84 美元/桶，低价回落区间 RMSE 为 3.48 美元/桶。相对于上一日价格朴素基准，模型 RMSE 改善 22.4\%，Theil U 为 0.78。模型不仅能解释价格冲击和高位平台，也能解释缓冲机制生效后的阶段性回落，并在局部参数扰动下保持稳定。该模型可作为后续 60--180 天情景预测与敏感性分析的中性基准。
 
 \textbf{关键词：} 霍尔木兹海峡；原油价格；动态递推模型；战略石油储备；地缘风险；参数校准
-\end{abstract}
 
 \begin{tcolorbox}[colback=OilLight,colframe=OilBlue,title=核心结论]
 传统静态供需模型给出的价格区间明显高估现实价格；加入库存、SPR、绕道、需求调整和预期修复后的短期动态模型，可以把冲突窗口油价解释到 110 美元/桶附近，并在后期回落段保持较低误差。
@@ -269,22 +271,23 @@ P_t
 \subsection{多目标校准}
 
 为避免模型只追求整体 RMSE 而牺牲峰值、末日价格或分段解释能力，本文采用多目标校准函数：
-\begin{align}
-\mathcal{L}
-=&
-\mathrm{RMSE}
+\begin{equation}
+\begin{gathered}
+\mathcal{L}=
+\operatorname{RMSE}
 +0.20|\Delta P_{\mathrm{peak}}|
-+0.25|\Delta P_{\mathrm{final}}| \notag\\
-&+0.15\mathrm{RMSE}_{\mathrm{high}}
-+0.12\mathrm{RMSE}_{\mathrm{early}}
-+0.12\mathrm{RMSE}_{\mathrm{mid}} \notag\\
-&+0.18\mathrm{RMSE}_{\mathrm{late}}
-+0.18\mathrm{RMSE}_{\mathrm{low}} .
-\end{align}
++0.25|\Delta P_{\mathrm{final}}| \\
++0.15\operatorname{RMSE}_{\mathrm{high}}
++0.12\operatorname{RMSE}_{\mathrm{early}}
++0.12\operatorname{RMSE}_{\mathrm{mid}} \\
++0.18\operatorname{RMSE}_{\mathrm{late}}
++0.18\operatorname{RMSE}_{\mathrm{low}} .
+\end{gathered}
+\end{equation}
 
 其中 RMSE 和 MAE 定义为：
 \begin{equation}
-\mathrm{RMSE}
+\operatorname{RMSE}
   =
   \sqrt{
   \frac{1}{n}
@@ -292,7 +295,7 @@ P_t
   (P_t-\hat{P}_t)^2
   },
 \qquad
-\mathrm{MAE}
+\operatorname{MAE}
   =
   \frac{1}{n}
   \sum_{t=1}^{n}

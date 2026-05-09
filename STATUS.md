@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-阶段 4：参数校准已完成。短期动态模型论文初稿已生成。
+阶段 4：参数校准已完成。短期动态模型论文初稿已生成，并已同时导出 PDF 与 DOCX。
 
 ```mermaid
 flowchart LR
@@ -12,7 +12,7 @@ flowchart LR
     S1 --> S2["阶段2<br/>传统供需基准模型"]
     S2 --> S3["阶段3<br/>短期动态递推模型"]
     S3 --> S4["阶段4<br/>参数校准"]
-    S4 --> P0["短期模型论文初稿<br/>LaTeX/PDF"]
+    S4 --> P0["短期模型论文初稿<br/>LaTeX/PDF/DOCX"]
     P0 --> S5["阶段5-7<br/>预测/敏感性/总论文"]
 
     S0:::done
@@ -59,7 +59,8 @@ flowchart LR
 - 阶段 4.8 已新增参数来源与可信度说明，明确当前短期模型没有使用爬虫数值数据，校准参数必须写成模型待估参数而非真实观测数据。
 - 阶段 4.6 已建立论文参考文献与证据库，记录油价冲击、库存预期、地缘风险、需求弹性、SPR 和霍尔木兹背景资料。
 - 短期动态模型论文初稿已生成，采用 `ctexart` + `xelatex` 编译，包含公式、参数表、误差评价、机制贡献图、候选模型对比图和参考文献。
-- 本机已安装 BasicTeX，并补齐 `ctex`、中文字体和常用排版包；论文 PDF 可用 `./scripts/build_short_term_paper.sh` 复现。
+- 本机已安装 BasicTeX，并补齐 `ctex`、中文字体和常用排版包；论文 PDF 与 DOCX 可用 `./scripts/build_short_term_paper.sh` 一键复现。
+- 短期模型 PDF 已渲染检查为 13 页，DOCX 已通过 LibreOffice 转 PDF 后抽样检查，适合作为后续人工润色和队友批注版本。
 
 ## 当前可直接引用的成果
 
@@ -78,7 +79,8 @@ flowchart LR
 | 质量检查 | `output/reports/stage0_to_stage3_quality_audit_report.md` | 阶段 0 至阶段 3 完整质量审计 |
 | 文献证据库 | `paper/参考文献与证据库.md` | 后续论文文献综述、模型依据和参考文献来源 |
 | 短期论文源码 | `paper/短期动态模型论文.tex` | 短期模型章节的 LaTeX 初稿 |
-| 短期论文 PDF | `output/pdf/短期动态模型论文.pdf` | 已渲染检查的 10 页论文初稿 |
+| 短期论文 PDF | `output/pdf/短期动态模型论文.pdf` | 已渲染检查的 13 页论文初稿 |
+| 短期论文 DOCX | `output/doc/短期动态模型论文.docx` | 可编辑 Word 版本，已做基础版式检查 |
 | 论文专用图 | `paper/figures/*.png` | 短期模型拟合、误差诊断、机制贡献和候选模型对比 |
 | 质量增强报告 | `output/reports/短期模型质量增强报告.md` | 相对基准、残差诊断和局部扰动稳健性 |
 | 参数来源说明 | `data/metadata/参数来源与可信度说明.md` | 区分附件数据、题面参数、文献依据和模型校准参数 |
@@ -96,7 +98,7 @@ flowchart LR
 - 生成三情景价格对比图。
 - 给出平衡价格区间和库存耗尽风险说明。
 
-短期模型论文复现命令：
+短期模型论文 PDF/DOCX 复现命令：
 
 ```bash
 source scripts/project_env.sh

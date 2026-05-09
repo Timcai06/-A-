@@ -54,7 +54,7 @@ flowchart TB
 | 阶段 2 基准模型结论 | 静态供需模型给出 278-337 USD/barrel，明显高估现实价格 |
 | 阶段 3 动态模型结论 | 模拟峰值 110.90、末日价格 110.46，能解释 110 美元附近平台 |
 | 阶段 4 校准结论 | 综合最优 RMSE 3.47，MAE 2.89，分段 RMSE 均控制在 5 以内或附近，短期模型达到优秀水平 |
-| 论文初稿 | 已生成 `output/pdf/短期动态模型论文.pdf`，可作为后续总论文短期模型章节底稿 |
+| 论文初稿 | 已生成 `output/pdf/短期动态模型论文.pdf` 与 `output/doc/短期动态模型论文.docx`，可作为后续总论文短期模型章节底稿 |
 
 ## 队友快速理解
 
@@ -112,6 +112,7 @@ flowchart TB
 - `paper/figures/短期模型机制贡献.png`
 - `paper/figures/候选模型误差对比.png`
 - `output/pdf/短期动态模型论文.pdf`
+- `output/doc/短期动态模型论文.docx`
 
 下一阶段是 **阶段 5：60-180 天情景预测**。阶段 5 要用校准后的中性参数作为基准，构造乐观、中性、悲观三条价格路径。
 
@@ -191,7 +192,7 @@ source scripts/project_env.sh
 python3 -m src.calibration.calibrate_dynamic_model
 ```
 
-短期模型论文图与 PDF 可复跑命令：
+短期模型论文图、PDF 与 DOCX 可复跑命令：
 
 ```bash
 source scripts/project_env.sh
@@ -199,6 +200,8 @@ python3 -m src.visualization.short_term_paper_figures
 python3 -m src.analysis.short_term_model_quality
 ./scripts/build_short_term_paper.sh
 ```
+
+`./scripts/build_short_term_paper.sh` 会先用 `xelatex` 编译 13 页论文 PDF，再用 `pandoc` 导出可编辑 DOCX。PDF 是正式排版版本，DOCX 主要用于后续人工修改、给队友批注和提交 Word 版。
 
 短期模型展示台：
 
