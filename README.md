@@ -1,6 +1,6 @@
 # 数学建模 A 题：霍尔木兹海峡封锁对原油价格的影响
 
-本目录用于完成浙江工商大学 2026 年大学生数学建模竞赛 A 题。项目已经从“想法规划”进入“可复算建模”阶段：阶段 1 数据清洗、阶段 2 传统供需基准模型、阶段 3 短期动态递推模型、阶段 4 参数校准和阶段 5 三情景预测已经完成，下一步进入阶段 6 敏感性分析。
+本目录用于完成浙江工商大学 2026 年大学生数学建模竞赛 A 题。项目已经从“想法规划”进入“可复算建模”阶段：阶段 1 数据清洗、阶段 2 传统供需基准模型、阶段 3 短期动态递推模型、阶段 4 参数校准、短期模型防御性检验和阶段 5 三情景预测已经完成，下一步进入阶段 6 敏感性分析。
 
 当前执行主线是：
 
@@ -55,6 +55,7 @@ flowchart TB
 | 阶段 2 基准模型结论 | 静态供需模型给出 278-337 USD/barrel，明显高估现实价格 |
 | 阶段 3 动态模型结论 | 模拟峰值 110.90、末日价格 110.46，能解释 110 美元附近平台 |
 | 阶段 4 校准结论 | 综合最优 RMSE 3.47，MAE 2.89，分段 RMSE 均控制在 5 以内或附近，短期模型达到优秀水平 |
+| 短期模型防御检验 | RMSE 3.47 优于朴素上一日基准 4.47 和滚动 ARIMA 4.53；MAPE 2.90%；平移检验原始位置最优，主要拐点 8/10 同步捕捉 |
 | 阶段 5 情景结论 | 中性情景第 180 天约 104.27 USD/barrel，悲观情景第 180 天约 119.26 USD/barrel且存在高二次跳涨风险 |
 | 论文初稿 | 已生成 `output/final/短期动态模型论文.pdf` 与 `output/final/短期动态模型论文.docx`，可作为后续总论文短期模型章节底稿 |
 
@@ -69,6 +70,7 @@ flowchart TB
 | 建立传统供需基准模型 | 证明只看供应缺口会明显高估油价 |
 | 建立短期动态递推模型 | 用缓冲机制解释现实价格平台 |
 | 完成多目标参数校准 | 比较 RMSE、峰值、末日和分段误差 |
+| 完成短期模型防御性检验 | 回答是否打败 Random Walk、是否滞后复制、预测步长是什么、相对误差是否足够小 |
 | 生成阶段图表和报告 | 可以直接进入论文的数据说明和模型一结果 |
 | 完成三情景预测 | 回答 60-180 天油价路径和二次跳涨风险 |
 
@@ -115,6 +117,18 @@ flowchart TB
 - `figures/scenario_price_paths.png`
 - `figures/inventory_depletion_risk.png`
 - `output/reports/stage5_scenario_forecast_report.md`
+
+短期模型防御性检验已生成：
+
+- `output/calibration/短期模型基准对比.csv`
+- `output/calibration/短期模型滞后平移检验.csv`
+- `output/calibration/短期模型拐点检验.csv`
+- `output/calibration/短期模型历史窗口边界检验.csv`
+- `output/reports/短期模型评委质疑防御报告.md`
+- `output/reports/短期模型预测步长说明.md`
+- `paper/figures/短期模型基准对比.png`
+- `paper/figures/短期模型滞后平移检验.png`
+- `paper/figures/短期模型拐点局部检验.png`
 
 短期模型论文初稿已生成：
 
@@ -222,10 +236,11 @@ source scripts/project_env.sh
 source scripts/project_env.sh
 python3 -m src.visualization.short_term_paper_figures
 python3 -m src.analysis.short_term_model_quality
+python3 -m src.analysis.short_term_model_defense
 ./scripts/build_short_term_paper.sh
 ```
 
-`./scripts/build_short_term_paper.sh` 会先用 `xelatex` 编译 13 页论文 PDF，再用 `pandoc` 导出可编辑 DOCX。PDF 是正式排版版本，DOCX 主要用于后续人工修改、给队友批注和提交 Word 版。
+`./scripts/build_short_term_paper.sh` 会先用 `xelatex` 编译论文 PDF，再用 `pandoc` 导出可编辑 DOCX。PDF 是正式排版版本，DOCX 主要用于后续人工修改、给队友批注和提交 Word 版。
 
 短期模型展示台：
 
@@ -249,6 +264,8 @@ streamlit run dashboard/streamlit_app.py
 - [paper/参考文献与证据库.md](paper/参考文献与证据库.md)
 - [paper/短期动态模型论文.tex](paper/短期动态模型论文.tex)
 - [output/reports/短期模型质量增强报告.md](output/reports/短期模型质量增强报告.md)
+- [output/reports/短期模型评委质疑防御报告.md](output/reports/短期模型评委质疑防御报告.md)
+- [output/reports/短期模型预测步长说明.md](output/reports/短期模型预测步长说明.md)
 - [dashboard/README.md](dashboard/README.md)
 
 PostgreSQL 当前只完成设计，不立即建库写入。数据库方案见 [docs/09_环境与数据库方案.md](docs/09_环境与数据库方案.md)。

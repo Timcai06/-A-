@@ -2,7 +2,7 @@
 
 本文档用于记录每张图如何进入论文正文，避免最后阶段重新整理材料。
 
-当前 `figures/` 目录中实际已有 5 张图，对应图 1 至图 5。图 6 至图 8 是后续阶段的计划图，只有完成阶段 5 情景预测和阶段 6 敏感性分析后才会生成。
+当前 `figures/` 目录中实际已有 7 张图，对应图 1 至图 7。图 8 是后续阶段的计划图，只有完成阶段 6 敏感性分析后才会生成。
 
 需要注意：图 1 和图 3 使用 2017-2026 全历史数据；图 2、图 4、图 5 聚焦 2026 冲突窗口，因此横轴只显示 2026 年附近的日期。
 
@@ -12,9 +12,9 @@
 
 | 状态 | 数量 | 图号 |
 |---|---:|---|
-| 已生成 | 5 | 图1-图5 |
-| 待生成 | 3 | 图6-图8 |
-| 短期论文专用 | 6 | 论文初稿内图4-图9 |
+| 已生成 | 7 | 图1-图7 |
+| 待生成 | 1 | 图8 |
+| 短期论文专用 | 9 | 论文初稿内图4-图12 |
 
 ## 图表清单
 
@@ -25,8 +25,8 @@
 | 图3 | `figures/return_volatility.png` | 2017-09-01 至 2026-05-05 | 数据说明 | 冲突窗口前后可结合收益率和波动率观察市场冲击 | `data/processed/布伦特原油期货主力合约价格数据_清洗后.csv` | 已生成 |
 | 图4 | `figures/baseline_vs_actual.png` | 2026-03-02 至 2026-05-05 | 模型一结果 | 传统供需模型高估现实价格 | `output/baseline/传统供需基准模型结果.csv` | 已生成 |
 | 图5 | `figures/fitted_vs_actual.png` | 2026-03-02 至 2026-05-05 | 模型二结果 | 校准后的动态模型能解释 110-120 美元平台 | `output/calibration/动态模型校准后路径.csv` | 已生成 |
-| 图6 | `figures/scenario_price_paths.png` | 阶段 5 生成后确定 | 模型三结果 | 三情景下长期均衡价格不同 | `output/scenarios/三情景预测结果.csv` | 待生成 |
-| 图7 | `figures/inventory_depletion_risk.png` | 阶段 5 生成后确定 | 模型三结果 | 库存耗尽可能触发二次跳涨风险 | `output/scenarios/三情景预测结果.csv` | 待生成 |
+| 图6 | `figures/scenario_price_paths.png` | 2026-05-06 至外推第180天 | 模型三结果 | 三情景下长期均衡价格不同 | `output/scenarios/三情景预测结果.csv` | 已生成 |
+| 图7 | `figures/inventory_depletion_risk.png` | 2026-05-06 至外推第180天 | 模型三结果 | 库存耗尽可能触发二次跳涨风险 | `output/scenarios/三情景预测结果.csv` | 已生成 |
 | 图8 | `figures/sensitivity_tornado.png` | 阶段 6 生成后确定 | 敏感性分析 | SPR、需求弹性等因素影响最大 | `output/sensitivity/敏感性分析结果.csv` | 待生成 |
 
 ## 短期模型论文专用图
@@ -37,13 +37,14 @@
 | 初稿图5 | `paper/figures/短期模型误差诊断.png` | 2026-03-02 至 2026-05-05 | 误差集中在局部阶段，整体无系统性漂移 | `output/calibration/动态模型校准后路径.csv`、`output/calibration/动态模型分段误差.csv` | 已生成 |
 | 初稿图6 | `paper/figures/短期模型机制贡献.png` | 2026-03-02 至 2026-05-05 | 风险溢价推高价格，缓冲和预期修复压低价格 | `output/calibration/动态模型校准后路径.csv` | 已生成 |
 | 初稿图7 | `paper/figures/候选模型误差对比.png` | 阶段 4 候选模型 | 综合最优模型同时控制整体误差与分段误差 | `output/calibration/动态模型候选参数前10.csv` | 已生成 |
-| 初稿图8 | `paper/figures/短期模型残差诊断增强.png` | 2026-03-02 至 2026-05-05 | 检查残差分布、滚动误差和自相关 | `output/calibration/动态模型校准后路径.csv`、`output/calibration/短期模型滚动误差.csv` | 已生成 |
-| 初稿图9 | `paper/figures/短期模型稳健性带.png` | 2026-03-02 至 2026-05-05 | 展示优秀局部扰动样本形成的稳定价格带 | `output/calibration/短期模型稳健性区间.csv` | 已生成 |
+| 初稿图8 | `paper/figures/短期模型基准对比.png` | 2026-03-02 至 2026-05-05 | 证明短期模型优于 Random Walk、三日均值、漂移随机游走和滚动 ARIMA 基准 | `output/calibration/短期模型基准对比.csv` | 已生成 |
+| 初稿图9 | `paper/figures/短期模型滞后平移检验.png` | 2026-03-02 至 2026-05-05 | 检查预测曲线是否只是滞后复制真实曲线 | `output/calibration/短期模型滞后平移检验.csv` | 已生成 |
+| 初稿图10 | `paper/figures/短期模型拐点局部检验.png` | 2026-03-02 至 2026-03-14；2026-04-22 至 2026-05-05 | 放大暴涨和反转窗口，验证主要拐点不是马后炮跟随 | `output/calibration/短期模型拐点检验.csv` | 已生成 |
+| 初稿图11 | `paper/figures/短期模型残差诊断增强.png` | 2026-03-02 至 2026-05-05 | 检查残差分布、滚动误差和自相关 | `output/calibration/动态模型校准后路径.csv`、`output/calibration/短期模型滚动误差.csv` | 已生成 |
+| 初稿图12 | `paper/figures/短期模型稳健性带.png` | 2026-03-02 至 2026-05-05 | 展示优秀局部扰动样本形成的稳定价格带 | `output/calibration/短期模型稳健性区间.csv` | 已生成 |
 
 ## 待生成图表来源
 
 | 图号 | 生成阶段 | 触发条件 |
 |---|---|---|
-| 图6 | 阶段 5 | `output/scenarios/三情景预测结果.csv` 生成后 |
-| 图7 | 阶段 5 | 情景预测输出库存路径和库存风险后 |
 | 图8 | 阶段 6 | `output/sensitivity/敏感性分析结果.csv` 生成后 |
