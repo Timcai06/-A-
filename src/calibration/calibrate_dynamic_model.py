@@ -565,7 +565,7 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
 | 恐慌衰减速度 | {best["assumption_fear_decay"]:.2f} |
 | 库存日缓冲上限 | {best["assumption_inventory_daily_cap"]:.0f} |
 | 候选来源 | {source_label} |
-| pressure_scale | {best["behavior_pressure_scale"]:.3f} |
+| price transmission coefficient (`pressure_scale`) | {best["behavior_pressure_scale"]:.3f} |
 | risk_weight | {best["behavior_risk_weight"]:.3f} |
 | uncertainty_floor | {best["behavior_uncertainty_floor"]:.3f} |
 | inventory_response | {best["behavior_inventory_response"]:.3f} |
@@ -590,6 +590,7 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
 - 绕道启动时间仍在赛题范围 7-30 天内。
 - 绕道能力不超过题面给出的约 300 万桶/日。
 - 长期需求弹性比短期弹性绝对值更大，符合中长期需求调整更充分的直觉。
+- `pressure_scale` 表示剩余物理供需缺口向布伦特期货目标价格传导的价格形成系数，不替代题面给定的短期需求弹性。
 - `buffer_relief_strength` 表示供需缺口被缓冲机制压住后，市场出现第一轮降温折价。
 - `relief_discount_strength` 表示中后期市场预期修复带来的阶段性再定价折价。
 

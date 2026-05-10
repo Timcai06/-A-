@@ -44,7 +44,7 @@ parameters:
     description: "商业库存每日缓冲上限"
     values: [250, 350, 450, 600]
   pressure_scale:
-    description: "剩余供需缺口对价格的压力系数"
+    description: "剩余物理供需缺口向布伦特期货目标价格传导的价格形成系数，不替代需求弹性"
     values: [0.020, 0.035, 0.045, 0.060, 0.075, 0.090]
   risk_weight:
     description: "封锁风险溢价权重"

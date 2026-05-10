@@ -128,12 +128,15 @@ flowchart TB
 - `output/reports/短期模型评委质疑防御报告.md`
 - `output/reports/短期模型预测步长说明.md`
 - `output/reports/短期模型致命质疑补充防御报告.md`
+- `output/reports/短期模型机制消融实验报告.md`
+- `output/calibration/短期模型机制消融实验.csv`
 - `output/calibration/短期模型过拟合压力测试.csv`
 - `output/calibration/传统供需基准弹性敏感性.csv`
 - `output/calibration/短期模型硬编码审计.csv`
 - `paper/figures/短期模型基准对比.png`
 - `paper/figures/短期模型滞后平移检验.png`
 - `paper/figures/短期模型拐点局部检验.png`
+- `paper/figures/短期模型机制消融实验.png`
 - `paper/figures/短期模型过拟合压力测试.png`
 
 短期模型论文初稿已生成：
@@ -244,6 +247,7 @@ python3 -m src.visualization.short_term_paper_figures
 python3 -m src.analysis.short_term_model_quality
 python3 -m src.analysis.short_term_model_defense
 python3 -m src.analysis.short_term_model_fatal_challenges
+python3 -m src.analysis.short_term_model_ablation
 ./scripts/build_short_term_paper.sh
 ```
 

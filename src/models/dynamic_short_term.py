@@ -57,6 +57,8 @@ class PhysicalAssumptions:
 
 @dataclass(frozen=True)
 class BehavioralParameters:
+    # Price-transmission coefficient from residual physical gap to Brent futures target price.
+    # It does not replace demand elasticity; elasticity is still used in effective demand.
     pressure_scale: float
     risk_weight: float
     uncertainty_floor: float
