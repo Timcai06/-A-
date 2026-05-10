@@ -354,10 +354,12 @@ def draw_turning_figure(path: pd.DataFrame) -> None:
     plt.close(fig)
 
 
-def write_horizon_note(path: pd.DataFrame) -> None:
+def write_horizon_note(path: pd.DataFrame, baseline: pd.DataFrame) -> None:
     start = path["trade_date"].min().date()
     end = path["trade_date"].max().date()
     days = int(path["day_index"].max())
+    model = baseline[baseline["模型"] == "本文短期动态模型"].iloc[0]
+    rmse = float(model["RMSE"])
     text = f"""# 短期模型预测步长说明
 
 本文短期动态模型不是传统意义上的单步 T+1 日度交易预测器，而是条件机制递推模型。
@@ -369,7 +371,7 @@ def write_horizon_note(path: pd.DataFrame) -> None:
 - 递推方式：给定冲突开始、题面参数和阶段 4 校准参数后，从初始价格开始逐日递推。
 - 真实价格使用边界：真实价格只用于校准和事后评价，不在每日递推中作为当日输入喂给模型。
 
-因此，RMSE=3.47 的含义不是“每天只预测明天还误差 3.47”，而是“在极端冲突窗口内，模型用一套固定机制参数递推出整段价格路径后的平均偏离”。论文表述应强调机制解释与条件路径预测，不应把它包装成可交易的 T+1 高频预测模型。
+因此，RMSE={rmse:.2f} 的含义不是“每天只预测明天还误差 {rmse:.2f}”，而是“在极端冲突窗口内，模型用一套固定机制参数递推出整段价格路径后的平均偏离”。论文表述应强调机制解释与条件路径预测，不应把它包装成可交易的 T+1 高频预测模型。
 """
     DefensePaths.horizon_note.write_text(text, encoding="utf-8")
 
@@ -424,7 +426,7 @@ def build_report(
 |---|---:|---:|---:|---:|---|
 {baseline_rows}
 
-相对于朴素上一日基准，本文模型 RMSE 改善 {float(naive["本文相对该基准改善率"]):.1f}%。这说明 3.47 美元/桶不是孤立数字，而是在强随机游走基准下仍有增量解释力。
+相对于朴素上一日基准，本文模型 RMSE 改善 {float(naive["本文相对该基准改善率"]):.1f}%。这说明 {model["RMSE"]:.2f} 美元/桶不是孤立数字，而是在强随机游走基准下仍有增量解释力。
 
 ## 二、滞后平移检验
 
@@ -483,7 +485,7 @@ def main() -> None:
     lag.to_csv(DefensePaths.lag_csv, index=False)
     turning.to_csv(DefensePaths.turning_points_csv, index=False)
     placebo.to_csv(DefensePaths.placebo_windows_csv, index=False)
-    write_horizon_note(path)
+    write_horizon_note(path, baseline)
 
     draw_baseline_figure(baseline)
     draw_lag_figure(lag)

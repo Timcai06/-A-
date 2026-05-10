@@ -25,3 +25,6 @@ output/pdf/*.out
 
 # Future bulky run snapshots should be intentionally selected if needed
 output/runs/
+
+# Local render QA snapshots
+output/qa/
