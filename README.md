@@ -1,6 +1,6 @@
 # 数学建模 A 题：霍尔木兹海峡封锁对原油价格的影响
 
-本目录用于完成浙江工商大学 2026 年大学生数学建模竞赛 A 题。项目已经从“想法规划”进入“可复算建模”阶段：阶段 1 数据清洗、阶段 2 传统供需基准模型、阶段 3 短期动态递推模型和阶段 4 参数校准已经完成，下一步进入阶段 5 情景预测。
+本目录用于完成浙江工商大学 2026 年大学生数学建模竞赛 A 题。项目已经从“想法规划”进入“可复算建模”阶段：阶段 1 数据清洗、阶段 2 传统供需基准模型、阶段 3 短期动态递推模型、阶段 4 参数校准和阶段 5 三情景预测已经完成，下一步进入阶段 6 敏感性分析。
 
 当前执行主线是：
 
@@ -35,17 +35,18 @@ flowchart TB
     Baseline["阶段2 已完成<br/>传统供需模型显著高估现实价格"]
     Dynamic["阶段3 已完成<br/>库存 / SPR / 绕道 / 需求收缩 / 恐慌衰减"]
     Calibration["阶段4 已完成<br/>多目标参数校准"]
-    Scenario["阶段5 下一步<br/>60-180天三情景预测"]
+    Scenario["阶段5 已完成<br/>60-180天三情景预测"]
+    Sensitivity["阶段6 下一步<br/>敏感性分析"]
     Paper["最终交付<br/>可复算模型 + 论文图表 + 结论证据链"]
 
-    Goal --> Data --> Baseline --> Dynamic --> Calibration --> Scenario --> Paper
+    Goal --> Data --> Baseline --> Dynamic --> Calibration --> Scenario --> Sensitivity --> Paper
 ```
 
 ## 当前关键结论
 
 | 项目 | 当前状态 |
 |---|---|
-| 当前阶段 | 阶段 4 已完成，并已形成短期模型论文初稿；下一步进入阶段 5 |
+| 当前阶段 | 阶段 5 已完成；下一步进入阶段 6 敏感性分析 |
 | 真实拟合口径 | 使用附件 CSV 的 `close_price` |
 | 冲突窗口实际交易日 | 2026-03-02 至 2026-05-05 |
 | 冲突窗口最高收盘价 | 114.06 USD/barrel |
@@ -54,6 +55,7 @@ flowchart TB
 | 阶段 2 基准模型结论 | 静态供需模型给出 278-337 USD/barrel，明显高估现实价格 |
 | 阶段 3 动态模型结论 | 模拟峰值 110.90、末日价格 110.46，能解释 110 美元附近平台 |
 | 阶段 4 校准结论 | 综合最优 RMSE 3.47，MAE 2.89，分段 RMSE 均控制在 5 以内或附近，短期模型达到优秀水平 |
+| 阶段 5 情景结论 | 中性情景第 180 天约 104.27 USD/barrel，悲观情景第 180 天约 119.26 USD/barrel且存在高二次跳涨风险 |
 | 论文初稿 | 已生成 `output/final/短期动态模型论文.pdf` 与 `output/final/短期动态模型论文.docx`，可作为后续总论文短期模型章节底稿 |
 
 ## 队友快速理解
@@ -68,12 +70,13 @@ flowchart TB
 | 建立短期动态递推模型 | 用缓冲机制解释现实价格平台 |
 | 完成多目标参数校准 | 比较 RMSE、峰值、末日和分段误差 |
 | 生成阶段图表和报告 | 可以直接进入论文的数据说明和模型一结果 |
+| 完成三情景预测 | 回答 60-180 天油价路径和二次跳涨风险 |
 
-接下来阶段 5 不是重新校准，而是把阶段 4 的综合最优参数作为中性基准，扩展到乐观、中性、悲观三情景预测。
+接下来阶段 6 不是重做预测，而是在阶段 5 的三情景路径上，检验哪些参数最影响 180 天价格和二次跳涨风险。
 
 ## 当前阶段
 
-当前 **阶段 4：参数校准** 已完成。
+当前 **阶段 5：60-180 天三情景预测** 已完成。
 
 阶段 1 已生成：
 
@@ -104,6 +107,15 @@ flowchart TB
 - `output/calibration/动态模型分段误差.csv`
 - `output/reports/stage4_calibration_report.md`
 
+阶段 5 已生成：
+
+- `output/scenarios/三情景预测结果.csv`
+- `output/scenarios/三情景关键指标.csv`
+- `output/scenarios/三情景参数表.csv`
+- `figures/scenario_price_paths.png`
+- `figures/inventory_depletion_risk.png`
+- `output/reports/stage5_scenario_forecast_report.md`
+
 短期模型论文初稿已生成：
 
 - `paper/短期动态模型论文.tex`
@@ -114,7 +126,7 @@ flowchart TB
 - `output/final/短期动态模型论文.pdf`
 - `output/final/短期动态模型论文.docx`
 
-下一阶段是 **阶段 5：60-180 天情景预测**。阶段 5 要用校准后的中性参数作为基准，构造乐观、中性、悲观三条价格路径。
+下一阶段是 **阶段 6：敏感性分析**。阶段 6 要围绕供应中断、SPR 释放、绕道恢复、需求弹性、风险权重和预期修复强度，判断哪些因素最影响第 180 天油价和二次跳涨风险。
 
 ## 目录说明
 
@@ -197,6 +209,13 @@ source scripts/project_env.sh
 python3 -m src.calibration.calibrate_dynamic_model
 ```
 
+阶段 5 可复跑命令：
+
+```bash
+source scripts/project_env.sh
+/opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 -m src.scenarios.forecast_stage5
+```
+
 短期模型论文图、PDF 与 DOCX 可复跑命令：
 
 ```bash
@@ -215,12 +234,13 @@ source scripts/project_env.sh
 streamlit run dashboard/streamlit_app.py
 ```
 
-阶段 5 开始前推荐先看：
+阶段 6 开始前推荐先看：
 
 - [output/reports/stage1_validation_report.md](output/reports/stage1_validation_report.md)
 - [output/reports/stage2_baseline_model_report.md](output/reports/stage2_baseline_model_report.md)
 - [output/reports/stage3_dynamic_model_report.md](output/reports/stage3_dynamic_model_report.md)
 - [output/reports/stage4_calibration_report.md](output/reports/stage4_calibration_report.md)
+- [output/reports/stage5_scenario_forecast_report.md](output/reports/stage5_scenario_forecast_report.md)
 - [output/reports/短期模型质量复盘与提升方向.md](output/reports/短期模型质量复盘与提升方向.md)
 - [data/metadata/stage1_data_dictionary.md](data/metadata/stage1_data_dictionary.md)
 - [data/metadata/参数来源与可信度说明.md](data/metadata/参数来源与可信度说明.md)

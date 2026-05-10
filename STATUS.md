@@ -1,10 +1,10 @@
 # 当前状态
 
-更新时间：2026-05-09
+更新时间：2026-05-10
 
 ## 当前阶段
 
-阶段 4：参数校准已完成。短期动态模型论文初稿已生成，并已同时导出 PDF 与 DOCX。
+阶段 5：60-180 天三情景预测已完成。下一步进入阶段 6 敏感性分析。
 
 ```mermaid
 flowchart LR
@@ -13,7 +13,9 @@ flowchart LR
     S2 --> S3["阶段3<br/>短期动态递推模型"]
     S3 --> S4["阶段4<br/>参数校准"]
     S4 --> P0["短期模型论文初稿<br/>LaTeX/PDF/DOCX"]
-    P0 --> S5["阶段5-7<br/>预测/敏感性/总论文"]
+    P0 --> S5["阶段5<br/>三情景预测"]
+    S5 --> S6["阶段6<br/>敏感性分析"]
+    S6 --> S7["阶段7<br/>总论文"]
 
     S0:::done
     S1:::done
@@ -21,7 +23,9 @@ flowchart LR
     S3:::done
     S4:::done
     P0:::done
-    S5:::next
+    S5:::done
+    S6:::next
+    S7:::next
 
     classDef done fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef next fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
@@ -61,6 +65,8 @@ flowchart LR
 - 短期动态模型论文初稿已生成，采用 `ctexart` + `xelatex` 编译，包含公式、参数表、误差评价、机制贡献图、候选模型对比图和参考文献。
 - 本机已安装 BasicTeX，并补齐 `ctex`、中文字体和常用排版包；论文 PDF 与 DOCX 可用 `./scripts/build_short_term_paper.sh` 一键复现。
 - 短期模型 PDF 已渲染检查为 13 页，DOCX 已通过 LibreOffice 转 PDF 后抽样检查，适合作为后续人工润色和队友批注版本。
+- 阶段 5 已实现并运行 `src/scenarios/forecast_stage5.py`，基于阶段 4 综合最优参数构造乐观、中性、悲观三条 60-180 天路径。
+- 阶段 5 结论：中性情景第 180 天约 104.27 USD/barrel；悲观情景第 180 天约 119.26 USD/barrel，且存在高二次跳涨风险。
 
 ## 当前可直接引用的成果
 
@@ -84,19 +90,24 @@ flowchart LR
 | 论文专用图 | `paper/figures/*.png` | 短期模型拟合、误差诊断、机制贡献和候选模型对比 |
 | 质量增强报告 | `output/reports/短期模型质量增强报告.md` | 相对基准、残差诊断和局部扰动稳健性 |
 | 参数来源说明 | `data/metadata/参数来源与可信度说明.md` | 区分附件数据、题面参数、文献依据和模型校准参数 |
+| 三情景路径 | `output/scenarios/三情景预测结果.csv` | 阶段 5 乐观、中性、悲观价格路径 |
+| 三情景指标 | `output/scenarios/三情景关键指标.csv` | 第 60/90/120/180 天价格、均价、二次跳涨风险 |
+| 情景预测图 | `figures/scenario_price_paths.png` | 三情景 60-180 天路径图 |
+| 库存风险图 | `figures/inventory_depletion_risk.png` | 商业库存和剩余供需缺口变化 |
+| 阶段 5 报告 | `output/reports/stage5_scenario_forecast_report.md` | 可直接改写进论文情景预测小节 |
 
 ## 下一步
 
-进入阶段 5：60-180 天情景预测。
+进入阶段 6：敏感性分析。
 
-阶段 5 的目标是以阶段 4 的综合最优参数作为中性基准，构造乐观、中性、悲观三种封锁持续情景，输出 60-180 天价格路径、平衡价格区间和库存风险。
+阶段 6 的目标是在阶段 5 三情景路径基础上，识别最影响第 180 天价格、外推期峰值和二次跳涨风险的参数。
 
-阶段 5 最小完成标准：
+阶段 6 最小完成标准：
 
-- 输出三情景价格路径。
-- 输出三情景参数表。
-- 生成三情景价格对比图。
-- 给出平衡价格区间和库存耗尽风险说明。
+- 输出敏感性分析结果表。
+- 生成龙卷风图或关键参数排序图。
+- 生成 2-3 个关键参数响应曲线。
+- 给出“最关键影响因素”和“政策缓冲优先级”解释。
 
 短期模型论文 PDF/DOCX 复现命令：
 
@@ -105,6 +116,13 @@ source scripts/project_env.sh
 python3 -m src.visualization.short_term_paper_figures
 python3 -m src.analysis.short_term_model_quality
 ./scripts/build_short_term_paper.sh
+```
+
+阶段 5 复现命令：
+
+```bash
+source scripts/project_env.sh
+/opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 -m src.scenarios.forecast_stage5
 ```
 
 ## 阻塞点
