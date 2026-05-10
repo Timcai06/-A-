@@ -1,0 +1,577 @@
+\documentclass[UTF8,fontset=none,a4paper,12pt]{ctexart}
+
+\setCJKmainfont[Path=/System/Library/Fonts/Supplemental/]{Songti.ttc}
+\setCJKsansfont[Path=/System/Library/Fonts/]{STHeiti Medium.ttc}
+\setCJKmonofont[Path=/System/Library/Fonts/]{STHeiti Light.ttc}
+
+\usepackage[a4paper,margin=2.35cm]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+\graphicspath{{figures/}{paper/figures/}}
+
+\definecolor{OilBlue}{HTML}{1D4ED8}
+\definecolor{OilDark}{HTML}{111827}
+\definecolor{OilGray}{HTML}{4B5563}
+\definecolor{OilLight}{HTML}{EFF6FF}
+\definecolor{OilGreen}{HTML}{047857}
+\definecolor{OilRed}{HTML}{B91C1C}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=OilBlue,
+  urlcolor=OilBlue,
+  citecolor=OilBlue
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{霍尔木兹海峡封锁对国际原油价格的影响}
+\rhead{\thepage}
+\setlength{\headheight}{15pt}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}{\Large\bfseries\color{OilBlue}}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\large\bfseries\color{OilGray}}{\thesubsection}{0.7em}{}
+\setlist[itemize]{leftmargin=2em}
+\setlist[enumerate]{leftmargin=2em}
+
+\title{\sffamily\bfseries 霍尔木兹海峡封锁对国际原油价格影响的动态建模与情景预测}
+\author{数学建模 A 题项目组}
+\date{2026 年 5 月}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+\textbf{摘\quad 要}
+\end{center}
+
+霍尔木兹海峡是全球原油运输的关键咽喉，一旦发生封锁，供应中断、地缘风险重估、战略储备释放、商业库存缓冲、绕道运输恢复和市场预期修复会同时作用于国际原油价格。本文以附件给出的布伦特原油期货主力合约价格数据为基础，建立了从静态供需上界到动态递推解释、再到 60--180 天情景预测与敏感性分析的完整模型链条。
+
+首先，本文完成 2017 年 9 月至 2026 年 5 月的原始价格序列清洗，截取 2026 年 3 月 2 日至 2026 年 5 月 5 日的冲突窗口作为主要拟合区间。数据表明，冲突窗口内最高收盘价为 114.06 美元/桶，最高盘中价为 119.50 美元/桶。其次，本文以题面给出的短期需求价格弹性和供应中断范围构造传统供需基准模型。在线性化低弹性口径下，传统模型给出约 278--337 美元/桶的理论价格区间，明显高于附件数据观测水平，说明必须引入缓冲机制和市场预期机制。
+
+为解释现实价格路径，本文构建短期动态递推模型。模型在题面物理供需层纳入供应中断、SPR 释放、商业库存、绕道运输、需求收缩和恐慌衰减，在市场价格形成层纳入地缘风险溢价、不确定性平台、缓冲确认折价和预期修复折价。通过固定种子随机搜索、差分进化连续精修、局部稳健性复核和拟合质量精修，综合最优模型在 46 个交易日冲突窗口内取得 RMSE 为 3.44 美元/桶、MAE 为 2.85 美元/桶的拟合效果，并优于上一日价格朴素基准和滚动 ARIMA 基准。进一步的滞后平移检验、拐点检验、机制消融、过拟合压力测试和硬编码审计表明，该模型不是简单滞后复制，也没有把 120 美元平台写成代码上限。
+
+在此基础上，本文构建乐观、中性、悲观三种 60--180 天情景路径。中性情景第 180 天价格约为 104.49 美元/桶，悲观情景第 180 天约为 119.53 美元/桶，且存在较高二次跳涨风险。最后，本文围绕 10 个关键参数进行单因素敏感性分析，发现综合敏感度最高的三个因素为不确定性平台、地缘风险权重和供应中断量；SPR 释放和绕道运输对第 180 天终点价格影响较小，但能够影响外推期峰值和削峰能力。研究结果表明，短期油价平台由物理缺口和市场风险重估共同决定，长期风险则取决于高风险溢价、供应中断规模和政策缓冲能否形成组合对冲。
+
+\textbf{关键词：} 霍尔木兹海峡；原油价格；动态递推模型；战略石油储备；情景预测；敏感性分析
+
+\begin{center}
+\fcolorbox{OilBlue}{OilLight}{%
+\begin{minipage}{0.92\linewidth}
+\textbf{核心结论：}
+传统低弹性供需模型会显著高估封锁后的油价上界；加入 SPR、库存、绕道、需求收缩和市场预期修复后，动态模型可以解释现实价格为何停留在约 110 美元/桶平台。若封锁延长至 180 天，中性情景价格约为 104.49 美元/桶，悲观情景约为 119.53 美元/桶；最关键的不确定因素是市场不确定性平台、地缘风险权重和供应中断量。
+\end{minipage}}
+\end{center}
+
+\section{问题重述}
+
+霍尔木兹海峡连接波斯湾和阿曼湾，是中东原油进入国际市场的重要通道。若该通道发生封锁，全球原油市场将面对突发供应缺口。赛题要求分析封锁对国际原油价格的影响，并特别关注短期价格冲击、缓冲机制、持续 60--180 天时的价格路径以及关键因素敏感性。
+
+本文将问题拆解为四个层次：
+
+\begin{enumerate}
+  \item 数据层：清洗附件价格数据，确定真实拟合口径和冲突窗口。
+  \item 基准层：用传统低弹性供需模型估计无缓冲理论上界。
+  \item 动态层：引入 SPR、库存、绕道、需求调整、恐慌衰减和预期修复，解释现实价格路径。
+  \item 外推层：构建 60--180 天三情景预测，并通过敏感性分析识别关键变量。
+\end{enumerate}
+
+\section{数据处理与描述性分析}
+
+\subsection{数据来源与清洗口径}
+
+本文使用附件中的布伦特原油期货主力合约价格数据，字段包括交易日期、开盘价、最高价、最低价、收盘价和前收盘价。原始数据共 2237 条，覆盖 2017 年 9 月 1 日至 2026 年 5 月 5 日。数据清洗步骤包括日期解析、数值字段标准化、收益率计算、滚动波动率计算和冲突窗口截取。第一条记录的前收盘价缺失属于正常时间序列边界，冲突窗口内收盘价不存在缺失。
+
+本文采用附件 CSV 中的 \texttt{close\_price} 作为拟合目标。题面中提到的极端峰值和附件 CSV 的收盘价口径并不完全一致，因此本文在建模评价中坚持“以附件数据为准”，并把题面峰值作为极端冲击叙述背景。
+
+\begin{table}[H]
+\centering
+\caption{附件数据和冲突窗口关键统计}
+\begin{tabular}{lr}
+\toprule
+指标 & 数值 \\
+\midrule
+原始记录数 & 2237 \\
+全样本日期范围 & 2017-09-01 至 2026-05-05 \\
+冲突窗口日期范围 & 2026-03-02 至 2026-05-05 \\
+冲突窗口交易日数 & 46 \\
+冲突窗口最低收盘价 & 78.07 \\
+冲突窗口最高收盘价 & 114.06 \\
+冲突窗口最高盘中价 & 119.50 \\
+冲突窗口平均收盘价 & 99.72 \\
+冲突窗口末日收盘价 & 110.31 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{price_trend.png}
+\caption{布伦特原油期货主力合约收盘价长期走势。}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{event_window_price.png}
+\caption{冲突窗口内附件真实价格路径。}
+\end{figure}
+
+\subsection{波动率特征}
+
+冲突窗口内，油价从 78.07 美元/桶快速上行至高位平台，并在后期出现再定价回落和反复震荡。这一现象说明，价格不只是由供应缺口单向推升，还受到政策缓冲、市场确认和预期修复的共同影响。滚动波动率图显示，冲突窗口附近波动明显放大，适合使用事件机制模型而不是普通平稳时间序列模型。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{return_volatility.png}
+\caption{收益率与滚动波动率。冲突窗口波动放大，为事件机制建模提供依据。}
+\end{figure}
+
+\section{模型假设与符号说明}
+
+\subsection{基本假设}
+
+\begin{enumerate}
+  \item 附件 CSV 中的收盘价是本文拟合、校准和误差评价的唯一真实价格序列。
+  \item 供应中断、SPR 释放上限、绕道运输能力等变量遵循赛题给定范围，不在范围外任意调整。
+  \item 短期需求弹性按题面给定低弹性口径处理；中长期需求弹性允许逐步过渡，以反映高价下需求调整更充分。
+  \item 模型不使用新闻爬虫数据，也不把外部新闻情绪作为观测输入；恐慌强度和衰减率是行为机制参数。
+  \item 60--180 天预测为条件情景外推，不代表真实未来观测，也不编造任何未来真实价格。
+\end{enumerate}
+
+\subsection{符号说明}
+
+\begin{table}[H]
+\centering
+\caption{主要符号说明}
+\begin{tabularx}{\linewidth}{lXl}
+\toprule
+符号 & 含义 & 单位 \\
+\midrule
+$P_t$ & 第 $t$ 日实际收盘价 & 美元/桶 \\
+$\hat P_t$ & 第 $t$ 日模型递推价格 & 美元/桶 \\
+$P_0$ & 冲突窗口前收盘基准价 & 美元/桶 \\
+$S_0,D_0$ & 战前基准供给和需求 & 万桶/日 \\
+$I$ & 封锁造成的供应中断量 & 万桶/日 \\
+$R_t$ & 第 $t$ 日 SPR 释放量 & 万桶/日 \\
+$Q_t$ & 第 $t$ 日绕道运输恢复量 & 万桶/日 \\
+$B_t$ & 商业库存当日缓冲量 & 万桶/日 \\
+$G_t$ & 剩余供需缺口 & 万桶/日 \\
+$\varepsilon_t$ & 需求价格弹性 & 无量纲 \\
+$F_t$ & 恐慌溢价强度 & 无量纲 \\
+$\beta$ & 地缘风险权重 & 无量纲 \\
+$U$ & 不确定性平台强度 & 无量纲 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{传统供需基准模型}
+
+\subsection{模型建立}
+
+传统供需基准模型用于刻画“没有显著缓冲机制时”的理论价格压力。设基准价格为 $P_0$，供应中断占需求比例为 $I/D_0$，短期需求价格弹性为 $\varepsilon$，线性化价格上界写为
+
+\begin{equation}
+  P_{\mathrm{base}}
+  =
+  P_0
+  \left(
+    1+\frac{I/D_0}{|\varepsilon|}
+  \right).
+\end{equation}
+
+该模型不是最终预测模型，而是用于说明低弹性短期供需框架会产生多高的理论上界。赛题给出的短期弹性约为 $-0.05$，供应中断范围约为 1400--1800 万桶/日。
+
+\subsection{基准模型结果}
+
+\begin{table}[H]
+\centering
+\caption{传统供需基准模型结果}
+\begin{tabular}{lrrr}
+\toprule
+情景 & 供应中断量 & 线性化价格 & 相对实际最高收盘价倍数 \\
+\midrule
+低中断 & 1400 & 278.20 & 2.44 \\
+中中断 & 1600 & 307.48 & 2.70 \\
+高中断 & 1800 & 336.77 & 2.95 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\linewidth]{baseline_vs_actual.png}
+\caption{传统供需基准模型与附件真实价格对比。低弹性静态模型明显高估现实价格。}
+\end{figure}
+
+结果显示，传统模型给出的 278--337 美元/桶显著高于附件冲突窗口最高收盘价 114.06 美元/桶。这说明单纯依靠供应缺口和低短期弹性无法解释现实价格，必须进一步引入 SPR、库存、绕道运输、需求收缩和市场预期修复。
+
+\section{短期动态递推模型}
+
+\subsection{物理供需层}
+
+本文首先构造题面物理供需层。第 $t$ 日有效需求为
+
+\begin{equation}
+  D_t
+  =
+  D_0\left(\frac{\hat P_{t-1}}{P_0}\right)^{\varepsilon_t}
+  - C_t,
+\end{equation}
+
+其中 $C_t$ 表示高价下需求收缩量。第 $t$ 日不含库存的有效供给为
+
+\begin{equation}
+  S_t^{(0)}
+  =
+  S_0 - I + R_t + Q_t.
+\end{equation}
+
+商业库存缓冲量 $B_t$ 受剩余缺口、库存日释放上限和剩余库存约束：
+
+\begin{equation}
+  B_t
+  =
+  \min\left\{
+    \lambda \max(D_t-S_t^{(0)},0),\,
+    B_{\max},\,
+    K_{t-1}
+  \right\}.
+\end{equation}
+
+最终剩余缺口为
+
+\begin{equation}
+  G_t = \max(D_t-S_t^{(0)}-B_t,0).
+\end{equation}
+
+\subsection{市场价格形成层}
+
+原油期货价格不仅反映当日物理缺口，也反映市场对冲突持续时间、政策缓冲可信度和运输修复进度的预期。因此本文在物理供需层之上增加市场价格形成层：
+
+\begin{equation}
+\begin{aligned}
+  P_t^\ast
+  ={}& P_0
+  + \phi P_0 \frac{G_t/D_0}{|\varepsilon_t|}
+  + P_0\beta\frac{I}{D_0}
+    \left(1-e^{-t/7}\right)e^{-0.004t} \\
+  & + P_0U\left(1-e^{-t/18}\right)
+  + 0.45P_0F_t
+  - H_t - L_t .
+\end{aligned}
+\end{equation}
+
+其中 $\phi$ 为物理缺口向期货目标价格传导的价格形成系数，不替代题面需求弹性；$H_t$ 为缓冲确认折价，$L_t$ 为预期修复折价。模型递推式为
+
+\begin{equation}
+  \hat P_t
+  =
+  \hat P_{t-1}
+  + v(P_t^\ast-\hat P_{t-1})
+  + 2.5(F_t-F_{t-1}).
+\end{equation}
+
+该结构保留了题面中的离散递推思想，同时允许期货市场对风险和预期做非线性再定价。
+
+\section{参数校准与模型检验}
+
+\subsection{多目标校准}
+
+为了避免模型只追求总体 RMSE 而牺牲峰值、末日价格和局部阶段解释能力，本文采用多目标校准函数：
+
+\begin{equation}
+\begin{aligned}
+\mathcal L={}&
+\mathrm{RMSE}
++0.20|\Delta P_{\mathrm{peak}}|
++0.25|\Delta P_{\mathrm{final}}| \\
+&+0.15\mathrm{RMSE}_{\mathrm{high}}
++0.12\mathrm{RMSE}_{\mathrm{early}}
++0.12\mathrm{RMSE}_{\mathrm{mid}} \\
+&+0.18\mathrm{RMSE}_{\mathrm{late}}
++0.18\mathrm{RMSE}_{\mathrm{low}} .
+\end{aligned}
+\end{equation}
+
+校准过程包括 36000 组固定种子随机搜索、差分进化连续精修、800 组局部稳健性复核以及 60000 组拟合质量精修。所有精修均在既有模型结构内完成，不新增额外机制项。
+
+\begin{table}[H]
+\centering
+\caption{综合最优短期动态模型参数}
+\begin{tabular}{lr@{\quad}lr}
+\toprule
+参数 & 数值 & 参数 & 数值 \\
+\midrule
+供应中断量 & 1493 & SPR 释放上限 & 670 \\
+SPR 启动延迟 & 3 & 绕道启动日 & 8 \\
+绕道能力上限 & 237 & 长期需求弹性 & -0.25 \\
+恐慌初始强度 & 0.12 & 恐慌衰减速度 & 0.11 \\
+库存日缓冲上限 & 250 & 调整速度 $v$ & 0.344 \\
+风险权重 $\beta$ & 2.462 & 不确定性平台 & 0.247 \\
+缓冲确认强度 & 0.220 & 预期修复强度 & 0.240 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{拟合结果}
+
+综合最优模型在冲突窗口内取得 RMSE 为 3.44 美元/桶、MAE 为 2.85 美元/桶。模拟峰值为 110.42 美元/桶，实际最高收盘价为 114.06 美元/桶，峰值低估 3.64 美元/桶；末日模拟价格为 110.42 美元/桶，实际末日价格为 110.31 美元/桶，末日误差仅为 0.11 美元/桶。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{短期模型拟合效果.png}
+\caption{短期动态模型拟合效果。模型较好刻画了前期冲击、中期平台和后期再定价。}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{短期动态模型分段误差}
+\begin{tabular}{lrrrr}
+\toprule
+分段 & 样本数 & RMSE & MAE & 最大绝对误差 \\
+\midrule
+全窗口 & 46 & 3.44 & 2.85 & 7.43 \\
+前期冲击 & 11 & 3.14 & 2.72 & 5.91 \\
+中期平台 & 14 & 4.39 & 3.72 & 7.43 \\
+后期再定价 & 21 & 2.81 & 2.35 & 5.24 \\
+高价平台 & 4 & 2.83 & 2.34 & 3.91 \\
+低价回落 & 21 & 3.38 & 2.94 & 5.91 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{短期模型机制贡献.png}
+\caption{短期模型机制贡献分解。风险溢价推升价格，缓冲确认和预期修复压低价格。}
+\end{figure}
+
+\subsection{基准对比与防御性检验}
+
+金融时间序列中，上一日价格朴素基准是强基准。如果模型不能优于“今天等于昨天”，则复杂机制缺乏价值。本文设置朴素上一日基准、三日均值基准、漂移随机游走基准和滚动 ARIMA(1,1,0) 基准，所有基准在预测第 $t$ 日时只使用 $t-1$ 日及以前信息。
+
+\begin{table}[H]
+\centering
+\caption{短期模型与朴素/时间序列基准对比}
+\begin{tabular}{lrrrr}
+\toprule
+模型 & RMSE & MAE & MAPE & 方向命中率 \\
+\midrule
+本文短期动态模型 & 3.44 & 2.85 & 2.86\% & 64.4\% \\
+朴素上一日基准 & 4.47 & 3.57 & 3.54\% & 46.7\% \\
+三日均值基准 & 5.18 & 4.16 & 4.15\% & 44.4\% \\
+漂移随机游走基准 & 4.84 & 3.94 & 3.91\% & 46.7\% \\
+滚动 ARIMA(1,1,0) 基准 & 4.53 & 3.67 & 3.63\% & 46.7\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.86\linewidth]{短期模型基准对比.png}
+\caption{短期模型与朴素/时间序列基准 RMSE 对比。本文模型相对朴素基准改善约 23.0\%。}
+\end{figure}
+
+为排除“模型只是滞后复制真实曲线”的风险，本文将模型曲线整体向左、向右平移 1--5 天后重新计算 RMSE。结果显示，原始位置 RMSE 最低，为 3.44；向左平移 1 天后 RMSE 升至 3.87，向左平移 2 天后升至 4.64，说明模型不存在明显滞后复制。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.84\linewidth]{短期模型滞后平移检验.png}
+\caption{模型曲线平移后的 RMSE 检验。原始位置误差最低。}
+\end{figure}
+
+\subsection{机制消融与过拟合防御}
+
+本文在同一短期模型中逐项关闭关键机制，并保持其余参数不重新校准。消融结果显示，去除 SPR 后 RMSE 从 3.44 升至 5.86；去除风险与不确定性溢价后 RMSE 升至 30.69；去除预期修复折价后后期 RMSE 升至 10.09。这说明题面物理层和市场价格形成层均有边际贡献。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.90\linewidth]{短期模型机制消融实验.png}
+\caption{短期模型机制消融实验。关闭关键机制后误差结构显著恶化。}
+\end{figure}
+
+由于冲突窗口只有 46 个交易日，而校准参数较多，本文主动进行过拟合压力测试和代码硬编码审计。结果显示，在 1000 组 $\pm 15\%$ 参数扰动中，96.6\% 的样本模拟峰值仍落在 105--125 美元/桶区间；代码审计确认递推核心未出现将 120 美元硬编码为上限的条件分支。本文因此将模型定位为“事件机制递推模型”，而非通用日度交易预测器。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\linewidth]{短期模型过拟合压力测试.png}
+\caption{短期模型过拟合压力测试。多数扰动样本仍保持在合理价格平台附近。}
+\end{figure}
+
+\section{60--180 天三情景预测}
+
+\subsection{情景设定}
+
+阶段 5 在阶段 4 综合最优参数基础上构建乐观、中性和悲观三种情景。附件真实价格只覆盖到 2026 年 5 月 5 日，之后全部为条件情景外推，不作为真实观测数据。
+
+\begin{table}[H]
+\centering
+\caption{三情景关键参数}
+\begin{tabular}{lrrrrrr}
+\toprule
+情景 & 供应中断 & SPR 上限 & 绕道能力 & 长期弹性 & 恐慌衰减 & 风险权重 \\
+\midrule
+乐观 & 1400 & 700 & 300 & -0.25 & 0.12 & 2.02 \\
+中性 & 1493 & 670 & 237 & -0.25 & 0.11 & 2.46 \\
+悲观 & 1800 & 200 & 150 & -0.10 & 0.04 & 3.32 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{预测结果}
+
+\begin{table}[H]
+\centering
+\caption{60--180 天三情景预测结果}
+\begin{tabular}{lrrrrrrr}
+\toprule
+情景 & 第60天 & 第90天 & 第120天 & 第180天 & 外推期最高价 & 外推期均价 & 风险 \\
+\midrule
+乐观 & 109.77 & 98.40 & 98.33 & 95.99 & 104.75 & 97.73 & 低 \\
+中性 & 109.77 & 109.99 & 108.04 & 104.49 & 110.89 & 107.88 & 低 \\
+悲观 & 109.77 & 127.32 & 122.59 & 119.53 & 130.18 & 123.57 & 高 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{scenario_price_paths.png}
+\caption{阶段 5：60--180 天三情景原油价格路径。}
+\end{figure}
+
+结果显示，中性情景下价格在 180 天附近回落至约 104.49 美元/桶；悲观情景下，若供应中断偏大、SPR 释放弱、绕道恢复慢且风险溢价维持高位，价格可能再次升至 120 美元/桶附近，并在外推期达到约 130.18 美元/桶的高点。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{inventory_depletion_risk.png}
+\caption{商业库存剩余量与剩余供需缺口变化。悲观情景下缓冲能力下降，二次跳涨风险上升。}
+\end{figure}
+
+\section{敏感性分析}
+
+\subsection{分析方法}
+
+阶段 6 以阶段 5 中性情景为基准，对 10 个关键参数进行单因素扰动，观察第 180 天价格、外推期最高价、剩余供需缺口和二次跳涨风险变化。综合敏感度定义为
+
+\begin{equation}
+  \mathcal S
+  =
+  \Delta P_{180}
+  +0.45\Delta P_{\max}
+  +0.002\Delta G_{180},
+\end{equation}
+
+其中 $\Delta P_{180}$ 是第 180 天价格波动范围，$\Delta P_{\max}$ 是外推期最高价波动范围，$\Delta G_{180}$ 是第 180 天剩余缺口波动范围。该指标兼顾终点价格、阶段峰值和供需风险。
+
+\subsection{参数重要性排序}
+
+\begin{table}[H]
+\centering
+\caption{阶段 6 参数综合敏感度排序}
+\begin{tabular}{rlrrr}
+\toprule
+排名 & 参数 & 综合敏感度 & 第180天波动 & 外推峰值波动 \\
+\midrule
+1 & 不确定性平台 & 17.93 & 12.45 & 12.19 \\
+2 & 地缘风险权重 & 12.30 & 7.24 & 11.26 \\
+3 & 供应中断量 & 5.91 & 3.54 & 5.27 \\
+4 & SPR 释放上限 & 0.24 & 0.00 & 0.52 \\
+5 & 恐慌衰减速度 & 0.14 & 0.00 & 0.30 \\
+6 & 预期修复强度 & 0.07 & 0.00 & 0.16 \\
+7 & SPR 启动延迟 & 0.05 & 0.00 & 0.11 \\
+8 & 长期需求弹性 & 0.04 & 0.00 & 0.08 \\
+9 & 绕道运输能力 & 0.01 & 0.00 & 0.03 \\
+10 & 绕道恢复耗时 & 0.01 & 0.00 & 0.03 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{sensitivity_tornado_180day.png}
+\caption{阶段 6：关键参数综合敏感度排序。}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{sensitivity_parameter_response.png}
+\caption{前三个高敏感参数响应曲线。}
+\end{figure}
+
+敏感性分析表明，第 180 天终点价格对市场价格形成层最敏感，尤其是不确定性平台和地缘风险权重；供应中断量决定价格上行压力的物理底座。SPR 释放、启动延迟和绕道运输在中性路径下对第 180 天终点价影响较小，但会改变外推期峰值和二次跳涨幅度，因此更适合被解释为“削峰”和“争取恢复时间”的政策缓冲变量。
+
+\section{模型评价}
+
+\subsection{优点}
+
+\begin{enumerate}
+  \item 证据链完整：从附件数据清洗、传统供需基准、动态模型、校准、防御性检验、三情景预测到敏感性分析均可复现。
+  \item 机制解释清晰：模型没有把价格平台硬编码为 120 美元，而是由供应缺口、风险溢价和缓冲折价共同递推形成。
+  \item 主动回应评委质疑：本文设置 Random Walk 基准、ARIMA 基准、滞后平移检验、机制消融和过拟合压力测试。
+  \item 数据口径保守：所有真实价格均来自附件 CSV；外推阶段明确标注为情景预测，不作为真实观测。
+\end{enumerate}
+
+\subsection{局限性}
+
+\begin{enumerate}
+  \item 冲突窗口只有 46 个交易日，参数自由度相对较高，尽管有压力测试和边界检验，仍不宜把模型包装为通用油价交易预测器。
+  \item 地缘风险、不确定性平台和预期修复仍以参数化方式刻画，未引入期权隐含波动率、真实库存周报或新闻情绪等外生数据。
+  \item 单因素敏感性不能完全描述参数联动风险，因此悲观情景仍是判断二次跳涨风险的重要补充。
+\end{enumerate}
+
+\section{结论}
+
+本文围绕霍尔木兹海峡封锁对国际原油价格的影响，建立了一套从传统供需上界到动态缓冲解释、再到 60--180 天情景预测与敏感性分析的完整模型。研究表明：
+
+\begin{enumerate}
+  \item 在赛题低短期弹性假设下，传统供需模型会给出约 278--337 美元/桶的理论价格，显著高估附件真实价格。
+  \item 加入 SPR、商业库存、绕道运输、需求收缩、恐慌衰减、地缘风险溢价和预期修复后，短期动态模型可将冲突窗口 RMSE 控制在 3.44 美元/桶，MAE 控制在 2.85 美元/桶。
+  \item 模型优于朴素上一日基准和滚动 ARIMA 基准，且通过滞后平移检验、机制消融和过拟合压力测试，具备较好的解释力和防御性。
+  \item 60--180 天情景预测显示，中性情景第 180 天价格约为 104.49 美元/桶；悲观情景第 180 天约为 119.53 美元/桶，并存在较高二次跳涨风险。
+  \item 敏感性分析显示，不确定性平台、地缘风险权重和供应中断量是最关键影响因素；SPR 和绕道运输更偏向削峰和争取恢复时间。
+\end{enumerate}
+
+因此，霍尔木兹封锁对国际油价的影响不应被理解为简单的“供应缺口乘以低弹性”问题，而应被理解为物理缺口、政策缓冲、库存约束、替代运输和市场风险预期共同作用下的动态系统。
+
+\begin{thebibliography}{99}
+\bibitem{kilian2009}
+Kilian, L. (2009). Not All Oil Price Shocks Are Alike: Disentangling Demand and Supply Shocks in the Crude Oil Market. \textit{American Economic Review}, 99(3), 1053--1069.
+
+\bibitem{hamilton2009}
+Hamilton, J. D. (2009). Causes and Consequences of the Oil Shock of 2007--08. \textit{Brookings Papers on Economic Activity}, Spring 2009, 215--261.
+
+\bibitem{kilianmurphy2014}
+Kilian, L., \& Murphy, D. P. (2014). The Role of Inventories and Speculative Trading in the Global Market for Crude Oil. \textit{Journal of Applied Econometrics}, 29(3), 454--478.
+
+\bibitem{baumeister2016}
+Baumeister, C., \& Kilian, L. (2016). Understanding the Decline in the Price of Oil since June 2014. \textit{Journal of the Association of Environmental and Resource Economists}, 3(1), 131--158.
+
+\bibitem{caldara2022}
+Caldara, D., \& Iacoviello, M. (2022). Measuring Geopolitical Risk. \textit{American Economic Review}, 112(4), 1194--1225.
+
+\bibitem{cooper2003}
+Cooper, J. C. B. (2003). Price elasticity of demand for crude oil: estimates for 23 countries. \textit{OPEC Review}, 27(1), 1--8.
+
+\bibitem{stevens2021}
+Stevens, P., \& Zhang, D. (2021). The asymmetric impact of strategic petroleum reserve releases on crude oil prices. \textit{Energy Economics}, 102, 105474.
+
+\bibitem{eia}
+U.S. Energy Information Administration. World Oil Transit Chokepoints. \url{https://www.eia.gov/international/analysis/special-topics/World_Oil_Transit_Chokepoints}
+\end{thebibliography}
+
+\end{document}

@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-阶段 6：敏感性分析已完成。短期模型、三情景预测和关键参数排序已经形成完整证据链。下一步进入阶段 7 总论文整合。
+阶段 7：总论文初稿已完成。短期模型、三情景预测、敏感性分析和评委质疑防御已经整合进一份可编译的总论文，并导出 PDF 与 DOCX。
 
 ```mermaid
 flowchart LR
@@ -16,7 +16,7 @@ flowchart LR
     P0 --> D0["短期模型防御检验<br/>基准/滞后/拐点"]
     D0 --> S5["阶段5<br/>三情景预测"]
     S5 --> S6["阶段6<br/>敏感性分析"]
-    S6 --> S7["阶段7<br/>总论文"]
+    S6 --> S7["阶段7<br/>总论文初稿"]
 
     S0:::done
     S1:::done
@@ -27,7 +27,7 @@ flowchart LR
     D0:::done
     S5:::done
     S6:::done
-    S7:::next
+    S7:::done
 
     classDef done fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef next fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
@@ -75,6 +75,8 @@ flowchart LR
 - 阶段 5 结论：中性情景第 180 天约 104.49 USD/barrel；悲观情景第 180 天约 119.53 USD/barrel，且存在高二次跳涨风险。
 - 阶段 6 已实现并运行 `src/analysis/sensitivity_stage6.py`，围绕 10 个关键参数做单因素敏感性分析。
 - 阶段 6 结论：综合敏感度前三为不确定性平台、地缘风险权重、供应中断量；SPR 释放上限主要影响外推期峰值和削峰能力，对中性路径第 180 天终点价影响较小。
+- 阶段 7 已新增 `paper/总论文.tex` 和 `scripts/build_final_paper.sh`，将阶段 1-6 的数据、模型、校准、防御检验、三情景预测和敏感性分析整合成总论文。
+- 总论文 PDF 已编译为 18 页，输出到 `output/final/总论文.pdf`；总论文 DOCX 已输出到 `output/final/总论文.docx`，并通过 LibreOffice 转 PDF 做了基础版式抽查。
 
 ## 当前可直接引用的成果
 
@@ -111,19 +113,21 @@ flowchart LR
 | 敏感性排序 | `output/sensitivity/阶段6_参数重要性排序.csv` | 关键参数综合敏感度排序 |
 | 敏感性报告 | `output/reports/stage6_sensitivity_analysis_report.md` | 可直接改写进论文敏感性分析小节 |
 | 敏感性图 | `figures/sensitivity_tornado_180day.png` | 关键参数综合敏感度排序图 |
+| 总论文源码 | `paper/总论文.tex` | 整合阶段 1-6 的 LaTeX 总论文初稿 |
+| 总论文 PDF | `output/final/总论文.pdf` | 已编译并抽查的 18 页总论文 PDF |
+| 总论文 DOCX | `output/final/总论文.docx` | 可编辑 Word 版本，已做基础预览检查 |
 
 ## 下一步
 
-进入阶段 7：总论文整合。
+进入总论文精修与提交准备。
 
-阶段 7 的目标是把阶段 1-6 的数据清洗、传统基准、短期动态模型、三情景预测、敏感性分析和评委质疑防御整合成最终论文。
+下一轮建议重点：
 
-阶段 7 最小完成标准：
-
-- 形成完整论文目录和摘要。
-- 把短期模型 PDF 的核心内容迁移进总论文。
-- 加入阶段 5 情景预测和阶段 6 敏感性分析章节。
-- 统一所有图表编号、公式编号、参数表和参考文献。
+- 压缩摘要，让它更接近正式数模论文摘要。
+- 统一“美元/桶”“USD/barrel”等单位表述。
+- 检查图表是否还需要降噪或替换为更适合论文版式的高分辨率图。
+- 让队友按章节批注，再集中合并修改。
+- 准备答辩或展示用的一页核心结论图。
 
 短期模型论文 PDF/DOCX 复现命令：
 
@@ -149,6 +153,13 @@ source scripts/project_env.sh
 ```bash
 source scripts/project_env.sh
 /opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 -m src.analysis.sensitivity_stage6
+```
+
+总论文 PDF/DOCX 复现命令：
+
+```bash
+source scripts/project_env.sh
+./scripts/build_final_paper.sh
 ```
 
 ## 阻塞点

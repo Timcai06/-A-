@@ -1,11 +1,11 @@
 # 数学建模 A 题：霍尔木兹海峡封锁对原油价格的影响
 
-本目录用于完成浙江工商大学 2026 年大学生数学建模竞赛 A 题。项目已经从“想法规划”进入“可复算建模”阶段：阶段 1 数据清洗、阶段 2 传统供需基准模型、阶段 3 短期动态递推模型、阶段 4 参数校准、短期模型防御性检验、阶段 5 三情景预测和阶段 6 敏感性分析已经完成，下一步进入阶段 7 总论文整合。
+本目录用于完成浙江工商大学 2026 年大学生数学建模竞赛 A 题。项目已经从“想法规划”进入“可复算交付”阶段：阶段 1 数据清洗、阶段 2 传统供需基准模型、阶段 3 短期动态递推模型、阶段 4 参数校准、短期模型防御性检验、阶段 5 三情景预测、阶段 6 敏感性分析和阶段 7 总论文初稿已经完成。
 
 当前执行主线是：
 
 ```text
-原始 CSV -> 数据清洗 -> 传统供需基准模型 -> 动态递推模型 -> 参数校准 -> 情景预测 -> 敏感性分析 -> 论文图表
+原始 CSV -> 数据清洗 -> 传统供需基准模型 -> 动态递推模型 -> 参数校准 -> 情景预测 -> 敏感性分析 -> 总论文 PDF/DOCX
 ```
 
 `A题初步实施方案_V1.*` 保留为早期思路稿；当前开发和协作以 `docs/`、`config/`、`src/` 中的约定为准。
@@ -46,7 +46,7 @@ flowchart TB
 
 | 项目 | 当前状态 |
 |---|---|
-| 当前阶段 | 阶段 6 已完成；下一步进入阶段 7 总论文整合 |
+| 当前阶段 | 阶段 7 总论文初稿已完成；下一步是人工精修、摘要压缩和提交版排版 |
 | 真实拟合口径 | 使用附件 CSV 的 `close_price` |
 | 冲突窗口实际交易日 | 2026-03-02 至 2026-05-05 |
 | 冲突窗口最高收盘价 | 114.06 USD/barrel |
@@ -59,7 +59,8 @@ flowchart TB
 | 致命质疑补充防御 | 承认 46 个样本对应 21 个连续校准参数有过拟合风险；\(\pm 15\%\) 压力测试下 96.6% 峰值仍在 105-125 区间；代码审计确认没有 120 美元硬编码上限 |
 | 阶段 5 情景结论 | 中性情景第 180 天约 104.49 USD/barrel，悲观情景第 180 天约 119.53 USD/barrel 且存在高二次跳涨风险 |
 | 阶段 6 敏感性结论 | 综合敏感度前三为不确定性平台、地缘风险权重、供应中断量；SPR 主要影响外推期峰值和削峰能力 |
-| 论文初稿 | 已生成 `output/final/短期动态模型论文.pdf` 与 `output/final/短期动态模型论文.docx`，可作为后续总论文短期模型章节底稿 |
+| 短期论文初稿 | 已生成 `output/final/短期动态模型论文.pdf` 与 `output/final/短期动态模型论文.docx`，可作为短期模型章节底稿 |
+| 总论文初稿 | 已生成 `output/final/总论文.pdf` 与 `output/final/总论文.docx`，PDF 已渲染抽查，DOCX 已通过 LibreOffice 转 PDF 抽查 |
 
 ## 队友快速理解
 
@@ -77,11 +78,11 @@ flowchart TB
 | 完成三情景预测 | 回答 60-180 天油价路径和二次跳涨风险 |
 | 完成敏感性分析 | 判断哪些参数最影响第 180 天价格、外推期峰值和政策缓冲优先级 |
 
-接下来阶段 7 不是重做模型，而是把阶段 1-6 的数据、模型、图表和防御逻辑整合成最终论文。
+接下来不是重做模型，而是在总论文初稿上继续压缩摘要、统一术语、补充队友修改意见，并准备答辩展示材料。
 
 ## 当前阶段
 
-当前 **阶段 6：敏感性分析** 已完成。
+当前 **阶段 7：总论文初稿** 已完成。
 
 阶段 1 已生成：
 
@@ -160,7 +161,14 @@ flowchart TB
 - `output/final/短期动态模型论文.pdf`
 - `output/final/短期动态模型论文.docx`
 
-下一阶段是 **阶段 7：总论文整合**。阶段 7 要把短期模型、三情景预测、敏感性分析和评委质疑防御整合成一篇完整论文。
+总论文初稿已生成：
+
+- `paper/总论文.tex`
+- `scripts/build_final_paper.sh`
+- `output/final/总论文.pdf`
+- `output/final/总论文.docx`
+
+当前阶段 7 已形成总论文初稿。下一步是基于 `paper/总论文.tex` 和 `output/final/总论文.docx` 做人工精修、队友批注合并和提交版排版。
 
 ## 目录说明
 
@@ -264,6 +272,15 @@ python3 -m src.analysis.short_term_model_ablation
 
 `./scripts/build_short_term_paper.sh` 会先用 `xelatex` 编译论文 PDF，再用 `pandoc` 导出可编辑 DOCX。PDF 是正式排版版本，DOCX 主要用于后续人工修改、给队友批注和提交 Word 版。
 
+总论文 PDF 与 DOCX 可复跑命令：
+
+```bash
+source scripts/project_env.sh
+./scripts/build_final_paper.sh
+```
+
+`./scripts/build_final_paper.sh` 会生成 `output/final/总论文.pdf` 和 `output/final/总论文.docx`。当前 PDF 为 18 页，DOCX 可正常转出预览 PDF。
+
 短期模型展示台：
 
 ```bash
@@ -271,7 +288,7 @@ source scripts/project_env.sh
 streamlit run dashboard/streamlit_app.py
 ```
 
-阶段 7 开始前推荐先看：
+总论文继续精修前推荐先看：
 
 - [output/reports/stage1_validation_report.md](output/reports/stage1_validation_report.md)
 - [output/reports/stage2_baseline_model_report.md](output/reports/stage2_baseline_model_report.md)
@@ -286,6 +303,9 @@ streamlit run dashboard/streamlit_app.py
 - [paper/figures_mapping.md](paper/figures_mapping.md)
 - [paper/参考文献与证据库.md](paper/参考文献与证据库.md)
 - [paper/短期动态模型论文.tex](paper/短期动态模型论文.tex)
+- [paper/总论文.tex](paper/总论文.tex)
+- [output/final/总论文.pdf](output/final/总论文.pdf)
+- [output/final/总论文.docx](output/final/总论文.docx)
 - [output/reports/短期模型质量增强报告.md](output/reports/短期模型质量增强报告.md)
 - [output/reports/短期模型评委质疑防御报告.md](output/reports/短期模型评委质疑防御报告.md)
 - [output/reports/短期模型致命质疑补充防御报告.md](output/reports/短期模型致命质疑补充防御报告.md)
