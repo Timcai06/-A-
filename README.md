@@ -56,6 +56,7 @@ flowchart TB
 | 阶段 3 动态模型结论 | 模拟峰值 110.90、末日价格 110.46，能解释 110 美元附近平台 |
 | 阶段 4 校准结论 | 综合最优 RMSE 3.47，MAE 2.89，分段 RMSE 均控制在 5 以内或附近，短期模型达到优秀水平 |
 | 短期模型防御检验 | RMSE 3.47 优于朴素上一日基准 4.47 和滚动 ARIMA 4.53；MAPE 2.90%；平移检验原始位置最优，主要拐点 8/10 同步捕捉 |
+| 致命质疑补充防御 | 承认 46 个样本对应 21 个连续校准参数有过拟合风险；\(\pm 15\%\) 压力测试下 96.9% 峰值仍在 105-125 区间；代码审计确认没有 120 美元硬编码上限 |
 | 阶段 5 情景结论 | 中性情景第 180 天约 104.27 USD/barrel，悲观情景第 180 天约 119.26 USD/barrel且存在高二次跳涨风险 |
 | 论文初稿 | 已生成 `output/final/短期动态模型论文.pdf` 与 `output/final/短期动态模型论文.docx`，可作为后续总论文短期模型章节底稿 |
 
@@ -126,9 +127,14 @@ flowchart TB
 - `output/calibration/短期模型历史窗口边界检验.csv`
 - `output/reports/短期模型评委质疑防御报告.md`
 - `output/reports/短期模型预测步长说明.md`
+- `output/reports/短期模型致命质疑补充防御报告.md`
+- `output/calibration/短期模型过拟合压力测试.csv`
+- `output/calibration/传统供需基准弹性敏感性.csv`
+- `output/calibration/短期模型硬编码审计.csv`
 - `paper/figures/短期模型基准对比.png`
 - `paper/figures/短期模型滞后平移检验.png`
 - `paper/figures/短期模型拐点局部检验.png`
+- `paper/figures/短期模型过拟合压力测试.png`
 
 短期模型论文初稿已生成：
 
@@ -237,6 +243,7 @@ source scripts/project_env.sh
 python3 -m src.visualization.short_term_paper_figures
 python3 -m src.analysis.short_term_model_quality
 python3 -m src.analysis.short_term_model_defense
+python3 -m src.analysis.short_term_model_fatal_challenges
 ./scripts/build_short_term_paper.sh
 ```
 
@@ -265,6 +272,7 @@ streamlit run dashboard/streamlit_app.py
 - [paper/短期动态模型论文.tex](paper/短期动态模型论文.tex)
 - [output/reports/短期模型质量增强报告.md](output/reports/短期模型质量增强报告.md)
 - [output/reports/短期模型评委质疑防御报告.md](output/reports/短期模型评委质疑防御报告.md)
+- [output/reports/短期模型致命质疑补充防御报告.md](output/reports/短期模型致命质疑补充防御报告.md)
 - [output/reports/短期模型预测步长说明.md](output/reports/短期模型预测步长说明.md)
 - [dashboard/README.md](dashboard/README.md)
 
