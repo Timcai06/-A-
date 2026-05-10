@@ -1,6 +1,6 @@
 # 数学建模 A 题：霍尔木兹海峡封锁对原油价格的影响
 
-本目录用于完成浙江工商大学 2026 年大学生数学建模竞赛 A 题。项目已经从“想法规划”进入“可复算建模”阶段：阶段 1 数据清洗、阶段 2 传统供需基准模型、阶段 3 短期动态递推模型、阶段 4 参数校准、短期模型防御性检验和阶段 5 三情景预测已经完成，下一步进入阶段 6 敏感性分析。
+本目录用于完成浙江工商大学 2026 年大学生数学建模竞赛 A 题。项目已经从“想法规划”进入“可复算建模”阶段：阶段 1 数据清洗、阶段 2 传统供需基准模型、阶段 3 短期动态递推模型、阶段 4 参数校准、短期模型防御性检验、阶段 5 三情景预测和阶段 6 敏感性分析已经完成，下一步进入阶段 7 总论文整合。
 
 当前执行主线是：
 
@@ -36,7 +36,7 @@ flowchart TB
     Dynamic["阶段3 已完成<br/>库存 / SPR / 绕道 / 需求收缩 / 恐慌衰减"]
     Calibration["阶段4 已完成<br/>多目标参数校准"]
     Scenario["阶段5 已完成<br/>60-180天三情景预测"]
-    Sensitivity["阶段6 下一步<br/>敏感性分析"]
+    Sensitivity["阶段6 已完成<br/>敏感性分析"]
     Paper["最终交付<br/>可复算模型 + 论文图表 + 结论证据链"]
 
     Goal --> Data --> Baseline --> Dynamic --> Calibration --> Scenario --> Sensitivity --> Paper
@@ -46,7 +46,7 @@ flowchart TB
 
 | 项目 | 当前状态 |
 |---|---|
-| 当前阶段 | 阶段 5 已完成；下一步进入阶段 6 敏感性分析 |
+| 当前阶段 | 阶段 6 已完成；下一步进入阶段 7 总论文整合 |
 | 真实拟合口径 | 使用附件 CSV 的 `close_price` |
 | 冲突窗口实际交易日 | 2026-03-02 至 2026-05-05 |
 | 冲突窗口最高收盘价 | 114.06 USD/barrel |
@@ -58,6 +58,7 @@ flowchart TB
 | 短期模型防御检验 | RMSE 3.44 优于朴素上一日基准 4.47 和滚动 ARIMA 4.53；MAPE 2.86%；平移检验原始位置最优，主要拐点 8/10 同步捕捉 |
 | 致命质疑补充防御 | 承认 46 个样本对应 21 个连续校准参数有过拟合风险；\(\pm 15\%\) 压力测试下 96.6% 峰值仍在 105-125 区间；代码审计确认没有 120 美元硬编码上限 |
 | 阶段 5 情景结论 | 中性情景第 180 天约 104.49 USD/barrel，悲观情景第 180 天约 119.53 USD/barrel 且存在高二次跳涨风险 |
+| 阶段 6 敏感性结论 | 综合敏感度前三为不确定性平台、地缘风险权重、供应中断量；SPR 主要影响外推期峰值和削峰能力 |
 | 论文初稿 | 已生成 `output/final/短期动态模型论文.pdf` 与 `output/final/短期动态模型论文.docx`，可作为后续总论文短期模型章节底稿 |
 
 ## 队友快速理解
@@ -74,12 +75,13 @@ flowchart TB
 | 完成短期模型防御性检验 | 回答是否打败 Random Walk、是否滞后复制、预测步长是什么、相对误差是否足够小 |
 | 生成阶段图表和报告 | 可以直接进入论文的数据说明和模型一结果 |
 | 完成三情景预测 | 回答 60-180 天油价路径和二次跳涨风险 |
+| 完成敏感性分析 | 判断哪些参数最影响第 180 天价格、外推期峰值和政策缓冲优先级 |
 
-接下来阶段 6 不是重做预测，而是在阶段 5 的三情景路径上，检验哪些参数最影响 180 天价格和二次跳涨风险。
+接下来阶段 7 不是重做模型，而是把阶段 1-6 的数据、模型、图表和防御逻辑整合成最终论文。
 
 ## 当前阶段
 
-当前 **阶段 5：60-180 天三情景预测** 已完成。
+当前 **阶段 6：敏感性分析** 已完成。
 
 阶段 1 已生成：
 
@@ -119,6 +121,15 @@ flowchart TB
 - `figures/inventory_depletion_risk.png`
 - `output/reports/stage5_scenario_forecast_report.md`
 
+阶段 6 已生成：
+
+- `src/analysis/sensitivity_stage6.py`
+- `output/sensitivity/阶段6_敏感性分析结果.csv`
+- `output/sensitivity/阶段6_参数重要性排序.csv`
+- `figures/sensitivity_tornado_180day.png`
+- `figures/sensitivity_parameter_response.png`
+- `output/reports/stage6_sensitivity_analysis_report.md`
+
 短期模型防御性检验已生成：
 
 - `output/calibration/短期模型基准对比.csv`
@@ -149,7 +160,7 @@ flowchart TB
 - `output/final/短期动态模型论文.pdf`
 - `output/final/短期动态模型论文.docx`
 
-下一阶段是 **阶段 6：敏感性分析**。阶段 6 要围绕供应中断、SPR 释放、绕道恢复、需求弹性、风险权重和预期修复强度，判断哪些因素最影响第 180 天油价和二次跳涨风险。
+下一阶段是 **阶段 7：总论文整合**。阶段 7 要把短期模型、三情景预测、敏感性分析和评委质疑防御整合成一篇完整论文。
 
 ## 目录说明
 
@@ -260,13 +271,14 @@ source scripts/project_env.sh
 streamlit run dashboard/streamlit_app.py
 ```
 
-阶段 6 开始前推荐先看：
+阶段 7 开始前推荐先看：
 
 - [output/reports/stage1_validation_report.md](output/reports/stage1_validation_report.md)
 - [output/reports/stage2_baseline_model_report.md](output/reports/stage2_baseline_model_report.md)
 - [output/reports/stage3_dynamic_model_report.md](output/reports/stage3_dynamic_model_report.md)
 - [output/reports/stage4_calibration_report.md](output/reports/stage4_calibration_report.md)
 - [output/reports/stage5_scenario_forecast_report.md](output/reports/stage5_scenario_forecast_report.md)
+- [output/reports/stage6_sensitivity_analysis_report.md](output/reports/stage6_sensitivity_analysis_report.md)
 - [output/reports/短期模型质量复盘与提升方向.md](output/reports/短期模型质量复盘与提升方向.md)
 - [data/metadata/stage1_data_dictionary.md](data/metadata/stage1_data_dictionary.md)
 - [data/metadata/参数来源与可信度说明.md](data/metadata/参数来源与可信度说明.md)

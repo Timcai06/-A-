@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-阶段 5：60-180 天三情景预测已完成。短期模型评委质疑防御性检验已补强完成。下一步进入阶段 6 敏感性分析。
+阶段 6：敏感性分析已完成。短期模型、三情景预测和关键参数排序已经形成完整证据链。下一步进入阶段 7 总论文整合。
 
 ```mermaid
 flowchart LR
@@ -26,7 +26,7 @@ flowchart LR
     P0:::done
     D0:::done
     S5:::done
-    S6:::next
+    S6:::done
     S7:::next
 
     classDef done fill:#dcfce7,stroke:#16a34a,color:#14532d
@@ -73,6 +73,8 @@ flowchart LR
 - 短期模型 PDF 已渲染检查为 19 页，DOCX 已通过 LibreOffice 转 PDF 后检查为 19 页，适合作为后续人工润色和队友批注版本。
 - 阶段 5 已实现并运行 `src/scenarios/forecast_stage5.py`，基于阶段 4 综合最优参数构造乐观、中性、悲观三条 60-180 天路径。
 - 阶段 5 结论：中性情景第 180 天约 104.49 USD/barrel；悲观情景第 180 天约 119.53 USD/barrel，且存在高二次跳涨风险。
+- 阶段 6 已实现并运行 `src/analysis/sensitivity_stage6.py`，围绕 10 个关键参数做单因素敏感性分析。
+- 阶段 6 结论：综合敏感度前三为不确定性平台、地缘风险权重、供应中断量；SPR 释放上限主要影响外推期峰值和削峰能力，对中性路径第 180 天终点价影响较小。
 
 ## 当前可直接引用的成果
 
@@ -105,19 +107,23 @@ flowchart LR
 | 情景预测图 | `figures/scenario_price_paths.png` | 三情景 60-180 天路径图 |
 | 库存风险图 | `figures/inventory_depletion_risk.png` | 商业库存和剩余供需缺口变化 |
 | 阶段 5 报告 | `output/reports/stage5_scenario_forecast_report.md` | 可直接改写进论文情景预测小节 |
+| 敏感性结果 | `output/sensitivity/阶段6_敏感性分析结果.csv` | 阶段 6 单因素扰动全量结果 |
+| 敏感性排序 | `output/sensitivity/阶段6_参数重要性排序.csv` | 关键参数综合敏感度排序 |
+| 敏感性报告 | `output/reports/stage6_sensitivity_analysis_report.md` | 可直接改写进论文敏感性分析小节 |
+| 敏感性图 | `figures/sensitivity_tornado_180day.png` | 关键参数综合敏感度排序图 |
 
 ## 下一步
 
-进入阶段 6：敏感性分析。
+进入阶段 7：总论文整合。
 
-阶段 6 的目标是在阶段 5 三情景路径基础上，识别最影响第 180 天价格、外推期峰值和二次跳涨风险的参数。
+阶段 7 的目标是把阶段 1-6 的数据清洗、传统基准、短期动态模型、三情景预测、敏感性分析和评委质疑防御整合成最终论文。
 
-阶段 6 最小完成标准：
+阶段 7 最小完成标准：
 
-- 输出敏感性分析结果表。
-- 生成龙卷风图或关键参数排序图。
-- 生成 2-3 个关键参数响应曲线。
-- 给出“最关键影响因素”和“政策缓冲优先级”解释。
+- 形成完整论文目录和摘要。
+- 把短期模型 PDF 的核心内容迁移进总论文。
+- 加入阶段 5 情景预测和阶段 6 敏感性分析章节。
+- 统一所有图表编号、公式编号、参数表和参考文献。
 
 短期模型论文 PDF/DOCX 复现命令：
 
@@ -136,6 +142,13 @@ python3 -m src.analysis.short_term_model_ablation
 ```bash
 source scripts/project_env.sh
 /opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 -m src.scenarios.forecast_stage5
+```
+
+阶段 6 复现命令：
+
+```bash
+source scripts/project_env.sh
+/opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 -m src.analysis.sensitivity_stage6
 ```
 
 ## 阻塞点
