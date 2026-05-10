@@ -59,8 +59,8 @@ flowchart TB
 | 致命质疑补充防御 | 承认 46 个样本对应 21 个连续校准参数有过拟合风险；\(\pm 15\%\) 压力测试下 96.6% 峰值仍在 105-125 区间；代码审计确认没有 120 美元硬编码上限 |
 | 阶段 5 情景结论 | 中性情景第 180 天约 104.49 USD/barrel，悲观情景第 180 天约 119.53 USD/barrel 且存在高二次跳涨风险 |
 | 阶段 6 敏感性结论 | 综合敏感度前三为不确定性平台、地缘风险权重、供应中断量；SPR 主要影响外推期峰值和削峰能力 |
-| 短期论文初稿 | 已生成 `output/final/短期动态模型论文.pdf` 与 `output/final/短期动态模型论文.docx`，可作为短期模型章节底稿 |
-| 总论文初稿 | 已生成 `output/final/总论文.pdf` 与 `output/final/总论文.docx`，PDF 已渲染抽查，DOCX 已通过 LibreOffice 转 PDF 抽查 |
+| 短期论文素材 | `paper/短期动态模型论文.tex` 仅作为素材稿保留，最终交付不再使用短期论文 PDF/DOCX |
+| 最终主论文 | 已生成 `output/final/总论文.pdf` 与 `output/final/总论文.docx`，PDF 为 24 页并已渲染抽查 |
 
 ## 队友快速理解
 
@@ -151,17 +151,15 @@ flowchart TB
 - `paper/figures/短期模型机制消融实验.png`
 - `paper/figures/短期模型过拟合压力测试.png`
 
-短期模型论文初稿已生成：
+短期模型素材稿已生成：
 
 - `paper/短期动态模型论文.tex`
 - `paper/figures/短期模型拟合效果.png`
 - `paper/figures/短期模型误差诊断.png`
 - `paper/figures/短期模型机制贡献.png`
 - `paper/figures/候选模型误差对比.png`
-- `output/final/短期动态模型论文.pdf`
-- `output/final/短期动态模型论文.docx`
 
-总论文初稿已生成：
+最终主论文已生成：
 
 - `paper/总论文.tex`
 - `scripts/build_final_paper.sh`
@@ -279,7 +277,7 @@ source scripts/project_env.sh
 ./scripts/build_final_paper.sh
 ```
 
-`./scripts/build_final_paper.sh` 会生成 `output/final/总论文.pdf` 和 `output/final/总论文.docx`。当前 PDF 为 18 页，DOCX 可正常转出预览 PDF。
+`./scripts/build_final_paper.sh` 会生成 `output/final/总论文.pdf` 和 `output/final/总论文.docx`。当前 PDF 为 24 页，DOCX 可正常转出预览 PDF。最终提交只使用这一个主论文版本。
 
 短期模型展示台：
 

@@ -68,15 +68,15 @@ flowchart LR
 - 已对原始 CSV 的其他历史高波动窗口做固定参数边界检验：霍尔木兹机制参数在非霍尔木兹窗口通常弱于朴素基准，说明模型是事件机制模型，不应包装成通用油价短线交易器。
 - 阶段 4.8 已新增参数来源与可信度说明，明确当前短期模型没有使用爬虫数值数据，校准参数必须写成模型待估参数而非真实观测数据。
 - 阶段 4.6 已建立论文参考文献与证据库，记录油价冲击、库存预期、地缘风险、需求弹性、SPR 和霍尔木兹背景资料。
-- 短期动态模型论文初稿已生成，采用 `ctexart` + `xelatex` 编译，包含公式、参数表、误差评价、机制贡献图、候选模型对比图和参考文献。
+- 短期动态模型论文初稿已生成，作为 `paper/总论文.tex` 的素材稿保留；最终交付不再单独使用短期模型 PDF/DOCX。
 - 本机已安装 BasicTeX，并补齐 `ctex`、中文字体和常用排版包；论文 PDF 与 DOCX 可用 `./scripts/build_short_term_paper.sh` 一键复现。
-- 短期模型 PDF 已渲染检查为 19 页，DOCX 已通过 LibreOffice 转 PDF 后检查为 19 页，适合作为后续人工润色和队友批注版本。
+- 短期模型中的防御检验、消融实验、拐点检验、过拟合压力测试和稳健性带已经迁移进总论文。
 - 阶段 5 已实现并运行 `src/scenarios/forecast_stage5.py`，基于阶段 4 综合最优参数构造乐观、中性、悲观三条 60-180 天路径。
 - 阶段 5 结论：中性情景第 180 天约 104.49 USD/barrel；悲观情景第 180 天约 119.53 USD/barrel，且存在高二次跳涨风险。
 - 阶段 6 已实现并运行 `src/analysis/sensitivity_stage6.py`，围绕 10 个关键参数做单因素敏感性分析。
 - 阶段 6 结论：综合敏感度前三为不确定性平台、地缘风险权重、供应中断量；SPR 释放上限主要影响外推期峰值和削峰能力，对中性路径第 180 天终点价影响较小。
 - 阶段 7 已新增 `paper/总论文.tex` 和 `scripts/build_final_paper.sh`，将阶段 1-6 的数据、模型、校准、防御检验、三情景预测和敏感性分析整合成总论文。
-- 总论文 PDF 已编译为 18 页，输出到 `output/final/总论文.pdf`；总论文 DOCX 已输出到 `output/final/总论文.docx`，并通过 LibreOffice 转 PDF 做了基础版式抽查。
+- 总论文 PDF 已扩充并编译为 24 页，输出到 `output/final/总论文.pdf`；总论文 DOCX 已输出到 `output/final/总论文.docx`，并通过 LibreOffice 转 PDF 做基础版式抽查。
 
 ## 当前可直接引用的成果
 
@@ -94,9 +94,7 @@ flowchart LR
 | 校准报告 | `output/reports/stage4_calibration_report.md` | 可直接改写进论文参数校准小节 |
 | 质量检查 | `output/reports/stage0_to_stage3_quality_audit_report.md` | 阶段 0 至阶段 3 完整质量审计 |
 | 文献证据库 | `paper/参考文献与证据库.md` | 后续论文文献综述、模型依据和参考文献来源 |
-| 短期论文源码 | `paper/短期动态模型论文.tex` | 短期模型章节的 LaTeX 初稿 |
-| 短期论文 PDF | `output/final/短期动态模型论文.pdf` | 已渲染检查的 19 页论文初稿 |
-| 短期论文 DOCX | `output/final/短期动态模型论文.docx` | 可编辑 Word 版本，已做基础版式检查 |
+| 短期论文素材源码 | `paper/短期动态模型论文.tex` | 短期模型章节素材稿，不作为最终交付 |
 | 论文专用图 | `paper/figures/*.png` | 短期模型拟合、误差诊断、机制贡献和候选模型对比 |
 | 质量增强报告 | `output/reports/短期模型质量增强报告.md` | 相对基准、残差诊断和局部扰动稳健性 |
 | 防御检验报告 | `output/reports/短期模型评委质疑防御报告.md` | 回应 Random Walk、滞后曲线、预测步长、MAPE 和历史窗口边界质疑 |
@@ -114,7 +112,7 @@ flowchart LR
 | 敏感性报告 | `output/reports/stage6_sensitivity_analysis_report.md` | 可直接改写进论文敏感性分析小节 |
 | 敏感性图 | `figures/sensitivity_tornado_180day.png` | 关键参数综合敏感度排序图 |
 | 总论文源码 | `paper/总论文.tex` | 整合阶段 1-6 的 LaTeX 总论文初稿 |
-| 总论文 PDF | `output/final/总论文.pdf` | 已编译并抽查的 18 页总论文 PDF |
+| 总论文 PDF | `output/final/总论文.pdf` | 已编译并抽查的 24 页总论文 PDF |
 | 总论文 DOCX | `output/final/总论文.docx` | 可编辑 Word 版本，已做基础预览检查 |
 
 ## 下一步
