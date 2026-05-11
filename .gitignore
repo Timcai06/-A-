@@ -26,5 +26,6 @@ output/pdf/*.out
 # Future bulky run snapshots should be intentionally selected if needed
 output/runs/
 
-# Local render QA snapshots
-output/qa/
+# Local render QA snapshots; keep small CSV audit tables as reproducible evidence
+output/qa/*
+!output/qa/*.csv
