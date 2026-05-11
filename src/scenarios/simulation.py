@@ -67,22 +67,26 @@ def adaptive_spr_release(
     base_price: float,
     assumptions: dynamic.PhysicalAssumptions,
 ) -> tuple[float, float]:
-    """Taper SPR releases once the physical shortage is mostly covered."""
+    """Taper SPR releases once the physical shortage is mostly covered.
+
+    The release is demand-led instead of schedule-led: when the remaining
+    physical gap closes, planned SPR capacity is not mechanically exhausted.
+    """
     if scheduled_spr <= 0:
         return 0.0, 0.0
 
-    reserve_buffer = assumptions.base_demand * 0.01
+    reserve_buffer = assumptions.base_demand * 0.005
     coverage_need = max(gross_gap_before_spr + reserve_buffer, 0.0)
     demand_based_release = min(scheduled_spr, coverage_need)
 
     stress_ratio = np.clip(gross_gap_before_spr / max(assumptions.supply_interruption, 1.0), 0.0, 1.0)
     price_stress = np.clip((previous_price / base_price - 1.03) / 0.25, 0.0, 1.0)
-    minimum_policy_share = 0.12 + 0.18 * price_stress
+    minimum_policy_share = 0.08 + 0.16 * price_stress
     stress_share = max(minimum_policy_share, stress_ratio)
 
     time_taper = 1.0
     if day_index > 75:
-        time_taper = 0.35 + 0.65 * np.exp(-(day_index - 75) / 45)
+        time_taper = 0.25 + 0.75 * np.exp(-(day_index - 75) / 45)
 
     tapered_release = scheduled_spr * stress_share * time_taper
     actual_release = float(max(demand_based_release, tapered_release))
@@ -100,7 +104,12 @@ def uncertainty_components(
     route_supply: float,
     demand_decline: float,
 ) -> tuple[float, float, float]:
-    """Split early shock uncertainty from persistent blockade-regime risk."""
+    """Split early shock uncertainty from persistent blockade-regime risk.
+
+    Regime risk is still allowed to persist, but it now depends on unresolved
+    physical stress and fades as the market observes buffers working. This
+    avoids a constant long-run uncertainty floor after the shortage is covered.
+    """
     buildup = 1 - np.exp(-day_index / 18)
     shock_decay = np.exp(-max(day_index - 45, 0) / 70)
     shock_uncertainty = base_price * behavior.uncertainty_floor * 0.45 * buildup * shock_decay
@@ -111,8 +120,11 @@ def uncertainty_components(
         - route_supply
         - demand_decline
     ) / max(assumptions.supply_interruption, 1.0)
-    regime_share = 0.45 + 0.55 * np.clip(unresolved_stress, 0.0, 1.0)
-    regime_risk = base_price * behavior.uncertainty_floor * 0.90 * regime_share
+    regime_share = 0.20 + 0.80 * np.clip(unresolved_stress, 0.0, 1.0)
+    confidence_decay = 1.0
+    if day_index > 60:
+        confidence_decay = 0.40 + 0.60 * np.exp(-(day_index - 60) / 120)
+    regime_risk = base_price * behavior.uncertainty_floor * 0.90 * regime_share * confidence_decay
 
     return float(shock_uncertainty + regime_risk), float(shock_uncertainty), float(regime_risk)
 
@@ -130,7 +142,7 @@ def oversupply_discount(
     return float(
         base_price
         * behavior.pressure_scale
-        * 0.55
+        * 1.35
         * (oversupply / assumptions.base_demand)
         / max(abs(elasticity), 0.01)
     )
