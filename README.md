@@ -137,6 +137,11 @@ flowchart TB
 - `src/common/paths.py`
 - `src/common/metrics.py`
 - `src/common/plotting.py`
+- `src/calibration/settings.py`
+- `src/calibration/evaluation.py`
+- `src/calibration/parameter_space.py`
+- `src/calibration/search.py`
+- `src/calibration/reporting.py`
 - `src/analysis/factor_selection_stage8.py`
 - `output/reports/综合主模型因素覆盖矩阵.csv`
 - `output/reports/综合主模型因素覆盖矩阵.md`

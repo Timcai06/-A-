@@ -80,7 +80,8 @@ flowchart LR
 - 阶段 7 已新增 `paper/总论文.tex` 和 `scripts/build_final_paper.sh`，将阶段 1-6 的数据、模型、校准、防御检验、三情景预测和敏感性分析整合成总论文。
 - 总论文 PDF 当前正文预览为 26 页，输出到 `output/final/总论文.pdf`；总论文 DOCX 已输出到 `output/final/总论文.docx`，并通过 LibreOffice 转 PDF 做基础版式抽查。26 页不是硬性目标，后续加入代码附录和复现说明后页数会继续增加。
 - 阶段 8 已新增 `docs/12_综合主模型与因素覆盖矩阵.md` 和 `src/analysis/factor_selection_stage8.py`，生成 `output/reports/综合主模型因素覆盖矩阵.csv` 与 `.md`。当前结论是：赛题明确因素和已通过检验证明有效的价格形成因素进入综合机制递推主模型；OPEC+ 剩余产能、非 OPEC 供给响应和冲突升级概率进入长期/悲观情景；缺少真实外生数据的油轮保险费、美元指数、期货期限结构和投机资金暂不单独参数化。
-- 阶段 8 已新增 `docs/13_代码结构治理说明.md` 和 `src/common/` 公共模块，把项目根目录、输出目录创建、误差指标和 Matplotlib 中文图表风格统一管理。当前是轻量治理，尚未拆分参数校准和长期情景两个大文件。
+- 阶段 8 已新增 `docs/13_代码结构治理说明.md` 和 `src/common/` 公共模块，把项目根目录、输出目录创建、误差指标和 Matplotlib 中文图表风格统一管理。
+- 阶段 8 已完成阶段 4 校准脚本拆分：`src/calibration/calibrate_dynamic_model.py` 保留原命令入口和兼容导出，具体职责拆到 `settings.py`、`evaluation.py`、`parameter_space.py`、`search.py`、`reporting.py`。
 
 ## 当前可直接引用的成果
 
@@ -129,7 +130,7 @@ flowchart LR
 
 - 把综合机制递推模型在论文中明确写成最终主模型，而不是多个模型并列。
 - 把因素覆盖矩阵压缩成论文中的“因素纳入说明”表。
-- 下一轮若继续治理代码，优先拆 `src/calibration/calibrate_dynamic_model.py` 和 `src/scenarios/forecast_stage5.py`，不要先动论文入口命令。
+- 下一轮若继续治理代码，优先拆 `src/scenarios/forecast_stage5.py`，不要先动论文入口命令。
 - 评估是否需要把 OPEC+ 剩余产能、非 OPEC 供给响应和冲突升级概率进一步量化进长期情景。
 - 统一“美元/桶”“USD/barrel”等单位表述。
 - 检查图表是否还需要降噪或替换为更适合论文版式的高分辨率图。
