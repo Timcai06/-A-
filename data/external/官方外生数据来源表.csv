@@ -1,0 +1,6 @@
+来源,数据集,series_id,URL,单位,当前状态,模型用途
+EIA,美国SPR原油库存,WCSSTUS1,https://www.eia.gov/dnav/pet/hist_xls/WCSSTUS1w.xls,千桶,已自动抓取,审计战略储备释放强度；美国口径不能直接等同全球联合释放。
+EIA,美国商业原油库存_不含SPR,WCESTUS1,https://www.eia.gov/dnav/pet/hist_xls/WCESTUS1w.xls,千桶,已自动抓取,审计商业库存缓冲方向；美国库存不代表全球商业库存。
+EIA,美国原油产量,WCRFPUS2,https://www.eia.gov/dnav/pet/hist_xls/WCRFPUS2w.xls,千桶/日,已自动抓取,审计非海湾供给弹性；只代表美国供给响应。
+IEA,Oil Market Report,OMR,https://www.iea.org/reports/oil-market-report-april-2026,报告/摘要,官方摘要可引用，完整数据通常需订阅；暂不自动入模,支撑全球供需、库存和炼厂运行的背景，不直接作为数值输入。
+OPEC,Monthly Oil Market Report,MOMR,https://www.opec.org/monthly-oil-market-report.html,报告/附录表,官方入口已记录；按可获取附件表再决定是否自动入模,支撑世界供需平衡和非OPEC供给背景，不直接覆盖赛题参数。

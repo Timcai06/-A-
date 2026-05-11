@@ -17,6 +17,7 @@ fi
 
 "${PYTHON_BIN}" -m src.visualization.final_paper_figures
 "${PYTHON_BIN}" -m src.visualization.short_term_paper_figures
+"${PYTHON_BIN}" -m src.analysis.monte_carlo_stage7
 
 if ! command -v xelatex >/dev/null 2>&1; then
   if [ -x /Library/TeX/texbin/xelatex ]; then
