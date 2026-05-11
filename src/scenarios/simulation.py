@@ -59,6 +59,83 @@ def infer_gap_closure_day(prefix: pd.DataFrame, assumptions: dynamic.PhysicalAss
     return int(closed.iloc[0]["day_index"])
 
 
+def adaptive_spr_release(
+    day_index: int,
+    scheduled_spr: float,
+    gross_gap_before_spr: float,
+    previous_price: float,
+    base_price: float,
+    assumptions: dynamic.PhysicalAssumptions,
+) -> tuple[float, float]:
+    """Taper SPR releases once the physical shortage is mostly covered."""
+    if scheduled_spr <= 0:
+        return 0.0, 0.0
+
+    reserve_buffer = assumptions.base_demand * 0.01
+    coverage_need = max(gross_gap_before_spr + reserve_buffer, 0.0)
+    demand_based_release = min(scheduled_spr, coverage_need)
+
+    stress_ratio = np.clip(gross_gap_before_spr / max(assumptions.supply_interruption, 1.0), 0.0, 1.0)
+    price_stress = np.clip((previous_price / base_price - 1.03) / 0.25, 0.0, 1.0)
+    minimum_policy_share = 0.12 + 0.18 * price_stress
+    stress_share = max(minimum_policy_share, stress_ratio)
+
+    time_taper = 1.0
+    if day_index > 75:
+        time_taper = 0.35 + 0.65 * np.exp(-(day_index - 75) / 45)
+
+    tapered_release = scheduled_spr * stress_share * time_taper
+    actual_release = float(max(demand_based_release, tapered_release))
+    actual_release = float(min(scheduled_spr, actual_release))
+    taper_ratio = actual_release / scheduled_spr
+    return actual_release, taper_ratio
+
+
+def uncertainty_components(
+    day_index: int,
+    base_price: float,
+    behavior: dynamic.BehavioralParameters,
+    assumptions: dynamic.PhysicalAssumptions,
+    spr_release: float,
+    route_supply: float,
+    demand_decline: float,
+) -> tuple[float, float, float]:
+    """Split early shock uncertainty from persistent blockade-regime risk."""
+    buildup = 1 - np.exp(-day_index / 18)
+    shock_decay = np.exp(-max(day_index - 45, 0) / 70)
+    shock_uncertainty = base_price * behavior.uncertainty_floor * 0.45 * buildup * shock_decay
+
+    unresolved_stress = (
+        assumptions.supply_interruption
+        - spr_release
+        - route_supply
+        - demand_decline
+    ) / max(assumptions.supply_interruption, 1.0)
+    regime_share = 0.45 + 0.55 * np.clip(unresolved_stress, 0.0, 1.0)
+    regime_risk = base_price * behavior.uncertainty_floor * 0.90 * regime_share
+
+    return float(shock_uncertainty + regime_risk), float(shock_uncertainty), float(regime_risk)
+
+
+def oversupply_discount(
+    oversupply: float,
+    base_price: float,
+    elasticity: float,
+    assumptions: dynamic.PhysicalAssumptions,
+    behavior: dynamic.BehavioralParameters,
+) -> float:
+    """Allow persistent excess supply to pull the target price downward."""
+    if oversupply <= 0:
+        return 0.0
+    return float(
+        base_price
+        * behavior.pressure_scale
+        * 0.55
+        * (oversupply / assumptions.base_demand)
+        / max(abs(elasticity), 0.01)
+    )
+
+
 def simulate_future_from_prefix(
     prefix: pd.DataFrame,
     future_frame: pd.DataFrame,
@@ -88,7 +165,7 @@ def simulate_future_from_prefix(
         )
         effective_demand = max(price_adjusted_demand - demand_decline, assumptions.base_demand * 0.70)
 
-        spr_release = dynamic.ramp(
+        scheduled_spr_release = dynamic.ramp(
             day_index,
             assumptions.spr_delay_days,
             assumptions.spr_ramp_days,
@@ -100,8 +177,19 @@ def simulate_future_from_prefix(
             assumptions.route_ramp_days,
             assumptions.route_max_capacity,
         )
-        supply_without_inventory = assumptions.base_supply - assumptions.supply_interruption + spr_release + route_supply
-        raw_gap = max(effective_demand - supply_without_inventory, 0.0)
+        supply_before_spr = assumptions.base_supply - assumptions.supply_interruption + route_supply
+        gross_gap_before_spr = max(effective_demand - supply_before_spr, 0.0)
+        spr_release, spr_taper_ratio = adaptive_spr_release(
+            day_index,
+            scheduled_spr_release,
+            gross_gap_before_spr,
+            previous_price,
+            base_price,
+            assumptions,
+        )
+        supply_without_inventory = supply_before_spr + spr_release
+        raw_balance = effective_demand - supply_without_inventory
+        raw_gap = max(raw_balance, 0.0)
 
         inventory_buffer = min(
             raw_gap * behavior.inventory_response,
@@ -110,7 +198,9 @@ def simulate_future_from_prefix(
         )
         inventory_remaining -= inventory_buffer
         effective_supply = supply_without_inventory + inventory_buffer
-        residual_gap = max(effective_demand - effective_supply, 0.0)
+        supply_balance = effective_supply - effective_demand
+        residual_gap = max(-supply_balance, 0.0)
+        oversupply = max(supply_balance, 0.0)
         if gap_closure_day is None and residual_gap <= assumptions.base_demand * 0.005:
             gap_closure_day = day_index
 
@@ -128,10 +218,19 @@ def simulate_future_from_prefix(
             * (1 - np.exp(-day_index / 7))
             * np.exp(-0.004 * day_index)
         )
-        uncertainty_premium = base_price * behavior.uncertainty_floor * (1 - np.exp(-day_index / 18))
+        uncertainty_premium, shock_uncertainty_premium, regime_risk_premium = uncertainty_components(
+            day_index,
+            base_price,
+            behavior,
+            assumptions,
+            spr_release,
+            route_supply,
+            demand_decline,
+        )
         panic_premium = base_price * 0.45 * fear_excess
         buffer_discount = dynamic.buffer_confirmation_discount(day_index, gap_closure_day, base_price, behavior)
         relief_discount = dynamic.expectation_relief_discount(day_index, base_price, behavior)
+        excess_supply_discount = oversupply_discount(oversupply, base_price, elasticity, assumptions, behavior)
         target_price = (
             base_price
             + shortage_pressure
@@ -140,6 +239,7 @@ def simulate_future_from_prefix(
             + panic_premium
             - buffer_discount
             - relief_discount
+            - excess_supply_discount
         )
 
         simulated_price = previous_price + behavior.adjustment_speed * (target_price - previous_price)
@@ -155,7 +255,11 @@ def simulate_future_from_prefix(
                 "effective_supply": effective_supply,
                 "effective_demand": effective_demand,
                 "supply_gap": residual_gap,
+                "supply_balance": supply_balance,
+                "gross_supply_gap_before_spr": gross_gap_before_spr,
+                "scheduled_spr_release": scheduled_spr_release,
                 "spr_release": spr_release,
+                "spr_taper_ratio": spr_taper_ratio,
                 "route_supply": route_supply,
                 "inventory_buffer": inventory_buffer,
                 "inventory_remaining": inventory_remaining,
@@ -165,9 +269,12 @@ def simulate_future_from_prefix(
                 "shortage_pressure": shortage_pressure,
                 "blockade_risk_premium": blockade_risk_premium,
                 "uncertainty_premium": uncertainty_premium,
+                "shock_uncertainty_premium": shock_uncertainty_premium,
+                "regime_risk_premium": regime_risk_premium,
                 "panic_premium": panic_premium,
                 "buffer_confirmation_discount": buffer_discount,
                 "expectation_relief_discount": relief_discount,
+                "oversupply_discount": excess_supply_discount,
                 "阶段": "情景外推期",
                 "is_observed_price": False,
                 "forecast_price": simulated_price,
