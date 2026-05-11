@@ -12,7 +12,7 @@
 
 | 状态 | 数量 | 图号 |
 |---|---:|---|
-| 阶段图 | 9 | 数据、基准、三情景、敏感性分析 |
+| 阶段图 | 11 | 数据、基准、三情景、敏感性分析、蒙特卡洛、GPR审计 |
 | 短期模型素材图 | 13 | 精选迁移进总论文，其余保留备用 |
 
 ## 图表清单
@@ -30,6 +30,8 @@
 | 图9 | `figures/sensitivity_parameter_response.png` | 阶段 6 | 敏感性分析 | 前三高敏感参数的响应曲线 | `output/sensitivity/阶段6_敏感性分析结果.csv` | 已生成 |
 | 图10 | `figures/monte_carlo_price_fan.png` | 阶段 6.5 | 蒙特卡洛情景树 | 2000 条联合扰动路径形成价格概率区间 | `output/monte_carlo/蒙特卡洛路径分位数.csv` | 已生成 |
 | 图11 | `figures/monte_carlo_tail_risk.png` | 阶段 6.5 | 蒙特卡洛情景树 | 量化突破 120/130 美元和高二次跳涨风险概率 | `output/monte_carlo/蒙特卡洛尾部风险摘要.csv` | 已生成 |
+| 图12 | `figures/gpr_event_window_audit.png` | 2025-01 至 2026-05 | 滞后风险审计 | 对比同步 GPR 与滞后可用 GPR，说明不能用同月新闻解释同月油价 | `data/external/risk/地缘政治风险与油价_滞后审计样本.csv` | 已生成 |
+| 图13 | `figures/lagged_gpr_brent_return.png` | 2017-10 至 2026-04 | 滞后风险审计 | 检查滞后 1 月 GPR 与布伦特月度收益关系 | `output/risk/滞后风险指数审计指标.csv` | 已生成 |
 
 ## 短期模型论文专用图
 
