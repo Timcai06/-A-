@@ -1,0 +1,233 @@
+"""Stage 5 scenario forecast simulation utilities."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import numpy as np
+import pandas as pd
+
+from src.models import dynamic_short_term as dynamic
+from src.scenarios.settings import CALIBRATED_PATH, FORECAST_END_DAY, MARKER_DAYS, SCENARIO_NAMES
+
+
+def build_forecast_frame(event_df: pd.DataFrame) -> pd.DataFrame:
+    event_start = event_df["trade_date"].min()
+    last_day_index = int((event_df["trade_date"].max() - event_start).days)
+    future_dates = pd.date_range(
+        event_df["trade_date"].max() + pd.Timedelta(days=1),
+        event_start + pd.Timedelta(days=FORECAST_END_DAY),
+        freq="D",
+    )
+    future_rows = pd.DataFrame(
+        {
+            "trade_date": future_dates,
+            "close_price": np.nan,
+            "pre_close": np.nan,
+        }
+    )
+    frame = pd.concat([event_df[["trade_date", "close_price", "pre_close"]], future_rows], ignore_index=True)
+    frame = frame.sort_values("trade_date").reset_index(drop=True)
+    frame["阶段"] = np.where(
+        frame["trade_date"] <= event_df["trade_date"].max(),
+        "附件观测期",
+        "情景外推期",
+    )
+    frame["day_index"] = (frame["trade_date"] - event_start).dt.days.astype(int)
+    frame.loc[frame.index[0], "pre_close"] = float(event_df.iloc[0]["pre_close"])
+    if int(frame["day_index"].max()) != FORECAST_END_DAY:
+        raise RuntimeError("Forecast frame did not reach the configured end day.")
+    if last_day_index >= FORECAST_END_DAY:
+        raise RuntimeError("Observed event window already exceeds forecast horizon.")
+    return frame
+
+
+def load_calibrated_prefix() -> pd.DataFrame:
+    if not CALIBRATED_PATH.exists():
+        raise FileNotFoundError(f"Missing Stage 4 calibrated path: {CALIBRATED_PATH}")
+    prefix = pd.read_csv(CALIBRATED_PATH, parse_dates=["trade_date"]).sort_values("trade_date").reset_index(drop=True)
+    prefix["阶段"] = "附件观测期"
+    prefix["is_observed_price"] = True
+    prefix["forecast_price"] = prefix["simulated_price"]
+    return prefix
+
+
+def infer_gap_closure_day(prefix: pd.DataFrame, assumptions: dynamic.PhysicalAssumptions) -> int | None:
+    closed = prefix[prefix["supply_gap"] <= assumptions.base_demand * 0.005]
+    if closed.empty:
+        return None
+    return int(closed.iloc[0]["day_index"])
+
+
+def simulate_future_from_prefix(
+    prefix: pd.DataFrame,
+    future_frame: pd.DataFrame,
+    assumptions: dynamic.PhysicalAssumptions,
+    behavior: dynamic.BehavioralParameters,
+    base_price: float,
+) -> pd.DataFrame:
+    previous_price = float(prefix.iloc[-1]["simulated_price"])
+    previous_day = int(prefix.iloc[-1]["day_index"])
+    previous_fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * previous_day)
+    inventory_remaining = float(prefix.iloc[-1]["inventory_remaining"])
+    gap_closure_day = infer_gap_closure_day(prefix, assumptions)
+    rows: list[dict[str, Any]] = []
+
+    for _, row in future_frame.iterrows():
+        trade_date = row["trade_date"]
+        day_index = int(row["day_index"])
+        elasticity = dynamic.interpolate_elasticity(day_index, assumptions)
+        price_ratio = max(previous_price / base_price, 0.1)
+
+        price_adjusted_demand = assumptions.base_demand * (price_ratio**elasticity)
+        demand_decline = dynamic.ramp(
+            day_index,
+            0,
+            assumptions.demand_decline_ramp_days,
+            assumptions.observed_demand_decline,
+        )
+        effective_demand = max(price_adjusted_demand - demand_decline, assumptions.base_demand * 0.70)
+
+        spr_release = dynamic.ramp(
+            day_index,
+            assumptions.spr_delay_days,
+            assumptions.spr_ramp_days,
+            assumptions.spr_max_release,
+        )
+        route_supply = dynamic.ramp(
+            day_index,
+            assumptions.route_start_day,
+            assumptions.route_ramp_days,
+            assumptions.route_max_capacity,
+        )
+        supply_without_inventory = assumptions.base_supply - assumptions.supply_interruption + spr_release + route_supply
+        raw_gap = max(effective_demand - supply_without_inventory, 0.0)
+
+        inventory_buffer = min(
+            raw_gap * behavior.inventory_response,
+            assumptions.inventory_daily_cap,
+            inventory_remaining,
+        )
+        inventory_remaining -= inventory_buffer
+        effective_supply = supply_without_inventory + inventory_buffer
+        residual_gap = max(effective_demand - effective_supply, 0.0)
+        if gap_closure_day is None and residual_gap <= assumptions.base_demand * 0.005:
+            gap_closure_day = day_index
+
+        fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * day_index)
+        shortage_pressure = (
+            base_price
+            * behavior.pressure_scale
+            * (residual_gap / assumptions.base_demand)
+            / max(abs(elasticity), 0.01)
+        )
+        blockade_risk_premium = (
+            base_price
+            * behavior.risk_weight
+            * (assumptions.supply_interruption / assumptions.base_demand)
+            * (1 - np.exp(-day_index / 7))
+            * np.exp(-0.004 * day_index)
+        )
+        uncertainty_premium = base_price * behavior.uncertainty_floor * (1 - np.exp(-day_index / 18))
+        panic_premium = base_price * 0.45 * fear_excess
+        buffer_discount = dynamic.buffer_confirmation_discount(day_index, gap_closure_day, base_price, behavior)
+        relief_discount = dynamic.expectation_relief_discount(day_index, base_price, behavior)
+        target_price = (
+            base_price
+            + shortage_pressure
+            + blockade_risk_premium
+            + uncertainty_premium
+            + panic_premium
+            - buffer_discount
+            - relief_discount
+        )
+
+        simulated_price = previous_price + behavior.adjustment_speed * (target_price - previous_price)
+        simulated_price += 2.5 * (fear_excess - previous_fear_excess)
+        simulated_price = float(np.clip(simulated_price, base_price * 0.75, 180.0))
+
+        rows.append(
+            {
+                "day_index": day_index,
+                "trade_date": trade_date,
+                "actual_price": np.nan,
+                "simulated_price": simulated_price,
+                "effective_supply": effective_supply,
+                "effective_demand": effective_demand,
+                "supply_gap": residual_gap,
+                "spr_release": spr_release,
+                "route_supply": route_supply,
+                "inventory_buffer": inventory_buffer,
+                "inventory_remaining": inventory_remaining,
+                "demand_decline": demand_decline,
+                "demand_elasticity": elasticity,
+                "fear_factor": 1 + fear_excess,
+                "shortage_pressure": shortage_pressure,
+                "blockade_risk_premium": blockade_risk_premium,
+                "uncertainty_premium": uncertainty_premium,
+                "panic_premium": panic_premium,
+                "buffer_confirmation_discount": buffer_discount,
+                "expectation_relief_discount": relief_discount,
+                "阶段": "情景外推期",
+                "is_observed_price": False,
+                "forecast_price": simulated_price,
+            }
+        )
+        previous_price = simulated_price
+        previous_fear_excess = fear_excess
+
+    return pd.DataFrame(rows)
+
+
+def run_scenario(
+    scenario_key: str,
+    assumptions: dynamic.PhysicalAssumptions,
+    behavior: dynamic.BehavioralParameters,
+    forecast_frame: pd.DataFrame,
+    prefix: pd.DataFrame,
+) -> pd.DataFrame:
+    future_frame = forecast_frame[forecast_frame["阶段"] == "情景外推期"].copy()
+    base_price = float(forecast_frame.iloc[0]["pre_close"])
+    future = simulate_future_from_prefix(prefix, future_frame, assumptions, behavior, base_price)
+    simulation = pd.concat([prefix, future], ignore_index=True)
+    simulation["scenario"] = scenario_key
+    simulation["情景"] = SCENARIO_NAMES[scenario_key]
+    return simulation
+
+
+def summarize_scenario(simulation: pd.DataFrame) -> dict[str, Any]:
+    scenario_key = str(simulation.iloc[0]["scenario"])
+    forecast_period = simulation[simulation["阶段"] == "情景外推期"]
+    all_period = simulation.copy()
+    marker_prices = {
+        f"第{day}天价格": float(all_period.loc[all_period["day_index"] == day, "forecast_price"].iloc[0])
+        for day in MARKER_DAYS
+    }
+    post_observed_peak = float(forecast_period["forecast_price"].max())
+    post_observed_min = float(forecast_period["forecast_price"].min())
+    final_price = float(all_period.loc[all_period["day_index"] == FORECAST_END_DAY, "forecast_price"].iloc[0])
+    final_inventory = float(all_period.loc[all_period["day_index"] == FORECAST_END_DAY, "inventory_remaining"].iloc[0])
+    final_gap = float(all_period.loc[all_period["day_index"] == FORECAST_END_DAY, "supply_gap"].iloc[0])
+    max_gap = float(forecast_period["supply_gap"].max())
+    cutoff_price = float(all_period[all_period["阶段"] == "附件观测期"]["forecast_price"].iloc[-1])
+    second_jump = max(post_observed_peak - cutoff_price, 0.0)
+    risk_level = "低"
+    if final_gap > 500 or second_jump > 15:
+        risk_level = "高"
+    elif final_gap > 150 or second_jump > 8:
+        risk_level = "中"
+
+    return {
+        "scenario": scenario_key,
+        "情景": SCENARIO_NAMES[scenario_key],
+        **marker_prices,
+        "外推期最高价": post_observed_peak,
+        "外推期最低价": post_observed_min,
+        "第180天价格": final_price,
+        "外推期均价": float(forecast_period["forecast_price"].mean()),
+        "第180天剩余商业库存": final_inventory,
+        "第180天剩余供需缺口": final_gap,
+        "外推期最大供需缺口": max_gap,
+        "二次跳涨幅度": float(second_jump),
+        "二次跳涨风险": risk_level,
+    }

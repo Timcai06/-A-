@@ -132,8 +132,13 @@ flowchart TB
 
 阶段 8 已生成：
 
-- `docs/12_综合主模型与因素覆盖矩阵.md`
-- `docs/13_代码结构治理说明.md`
+- `docs/00_项目总览.md`
+- `docs/01_建模方案.md`
+- `docs/02_执行计划与分工.md`
+- `docs/03_工程架构与复现.md`
+- `docs/04_交付物与论文材料.md`
+- `docs/05_决策记录.md`
+- `docs/archive/`
 - `src/common/paths.py`
 - `src/common/metrics.py`
 - `src/common/plotting.py`
@@ -142,6 +147,10 @@ flowchart TB
 - `src/calibration/parameter_space.py`
 - `src/calibration/search.py`
 - `src/calibration/reporting.py`
+- `src/scenarios/settings.py`
+- `src/scenarios/parameters.py`
+- `src/scenarios/simulation.py`
+- `src/scenarios/reporting.py`
 - `src/analysis/factor_selection_stage8.py`
 - `output/reports/综合主模型因素覆盖矩阵.csv`
 - `output/reports/综合主模型因素覆盖矩阵.md`
@@ -314,7 +323,7 @@ streamlit run dashboard/streamlit_app.py
 - [output/reports/短期模型质量复盘与提升方向.md](output/reports/短期模型质量复盘与提升方向.md)
 - [data/metadata/stage1_data_dictionary.md](data/metadata/stage1_data_dictionary.md)
 - [data/metadata/参数来源与可信度说明.md](data/metadata/参数来源与可信度说明.md)
-- [docs/10_阶段2到阶段3交接说明.md](docs/10_阶段2到阶段3交接说明.md)
+- [docs/01_建模方案.md](docs/01_建模方案.md)
 - [paper/figures_mapping.md](paper/figures_mapping.md)
 - [paper/参考文献与证据库.md](paper/参考文献与证据库.md)
 - [paper/短期动态模型论文.tex](paper/短期动态模型论文.tex)
@@ -327,7 +336,7 @@ streamlit run dashboard/streamlit_app.py
 - [output/reports/短期模型预测步长说明.md](output/reports/短期模型预测步长说明.md)
 - [dashboard/README.md](dashboard/README.md)
 
-PostgreSQL 当前只完成设计，不立即建库写入。数据库方案见 [docs/09_环境与数据库方案.md](docs/09_环境与数据库方案.md)。
+PostgreSQL 当前只完成设计，不立即建库写入。数据库边界见 [docs/03_工程架构与复现.md](docs/03_工程架构与复现.md) 和 [docs/05_决策记录.md](docs/05_决策记录.md)。
 
 ## 数据真相源
 
@@ -341,4 +350,4 @@ data/raw/布伦特原油期货主力合约价格数据.csv
 
 ## 文档入口
 
-从 [docs/00_文档导航.md](docs/00_文档导航.md) 开始阅读。
+从 [docs/00_项目总览.md](docs/00_项目总览.md) 开始阅读。
