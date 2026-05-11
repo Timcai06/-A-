@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-阶段 7：总论文初稿已完成。短期模型、三情景预测、敏感性分析和评委质疑防御已经整合进一份可编译的总论文，并导出 PDF 与 DOCX。
+阶段 8：综合最优主模型优化已开始。短期模型、三情景预测、敏感性分析和评委质疑防御已经整合进一份可编译的总论文，并导出 PDF 与 DOCX；当前正在用因素覆盖矩阵约束后续优化，避免无边界加参数。
 
 ```mermaid
 flowchart LR
@@ -17,6 +17,7 @@ flowchart LR
     D0 --> S5["阶段5<br/>三情景预测"]
     S5 --> S6["阶段6<br/>敏感性分析"]
     S6 --> S7["阶段7<br/>总论文初稿"]
+    S7 --> S8["阶段8<br/>综合主模型优化"]
 
     S0:::done
     S1:::done
@@ -28,6 +29,7 @@ flowchart LR
     S5:::done
     S6:::done
     S7:::done
+    S8:::next
 
     classDef done fill:#dcfce7,stroke:#16a34a,color:#14532d
     classDef next fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
@@ -76,7 +78,8 @@ flowchart LR
 - 阶段 6 已实现并运行 `src/analysis/sensitivity_stage6.py`，围绕 10 个关键参数做单因素敏感性分析。
 - 阶段 6 结论：综合敏感度前三为不确定性平台、地缘风险权重、供应中断量；SPR 释放上限主要影响外推期峰值和削峰能力，对中性路径第 180 天终点价影响较小。
 - 阶段 7 已新增 `paper/总论文.tex` 和 `scripts/build_final_paper.sh`，将阶段 1-6 的数据、模型、校准、防御检验、三情景预测和敏感性分析整合成总论文。
-- 总论文 PDF 当前正文预览为 25 页，输出到 `output/final/总论文.pdf`；总论文 DOCX 已输出到 `output/final/总论文.docx`，并通过 LibreOffice 转 PDF 做基础版式抽查。25 页不是硬性目标，后续加入代码附录和复现说明后页数会继续增加。
+- 总论文 PDF 当前正文预览为 26 页，输出到 `output/final/总论文.pdf`；总论文 DOCX 已输出到 `output/final/总论文.docx`，并通过 LibreOffice 转 PDF 做基础版式抽查。26 页不是硬性目标，后续加入代码附录和复现说明后页数会继续增加。
+- 阶段 8 已新增 `docs/12_综合主模型与因素覆盖矩阵.md` 和 `src/analysis/factor_selection_stage8.py`，生成 `output/reports/综合主模型因素覆盖矩阵.csv` 与 `.md`。当前结论是：赛题明确因素和已通过检验证明有效的价格形成因素进入综合机制递推主模型；OPEC+ 剩余产能、非 OPEC 供给响应和冲突升级概率进入长期/悲观情景；缺少真实外生数据的油轮保险费、美元指数、期货期限结构和投机资金暂不单独参数化。
 
 ## 当前可直接引用的成果
 
@@ -111,20 +114,22 @@ flowchart LR
 | 敏感性排序 | `output/sensitivity/阶段6_参数重要性排序.csv` | 关键参数综合敏感度排序 |
 | 敏感性报告 | `output/reports/stage6_sensitivity_analysis_report.md` | 可直接改写进论文敏感性分析小节 |
 | 敏感性图 | `figures/sensitivity_tornado_180day.png` | 关键参数综合敏感度排序图 |
+| 因素覆盖矩阵 | `output/reports/综合主模型因素覆盖矩阵.md` | 说明哪些因素进主模型、长期情景、悲观情景或改进方向 |
 | 总论文源码 | `paper/总论文.tex` | 整合阶段 1-6 的 LaTeX 总论文初稿 |
-| 总论文 PDF | `output/final/总论文.pdf` | 已编译并抽查的 25 页总论文 PDF |
+| 总论文 PDF | `output/final/总论文.pdf` | 已编译并抽查的 26 页总论文 PDF |
 | 总论文 DOCX | `output/final/总论文.docx` | 可编辑 Word 版本，已做基础预览检查 |
 
 ## 下一步
 
-进入总论文精修与提交准备。
+进入综合主模型优化与总论文精修并行阶段。
 
 下一轮建议重点：
 
-- 压缩摘要，让它更接近正式数模论文摘要。
+- 把综合机制递推模型在论文中明确写成最终主模型，而不是多个模型并列。
+- 把因素覆盖矩阵压缩成论文中的“因素纳入说明”表。
+- 评估是否需要把 OPEC+ 剩余产能、非 OPEC 供给响应和冲突升级概率进一步量化进长期情景。
 - 统一“美元/桶”“USD/barrel”等单位表述。
 - 检查图表是否还需要降噪或替换为更适合论文版式的高分辨率图。
-- 让队友按章节批注，再集中合并修改。
 - 准备答辩或展示用的一页核心结论图。
 
 短期模型论文 PDF/DOCX 复现命令：
