@@ -14,10 +14,10 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from src.common.paths import PROJECT_ROOT
 from src.pipeline import clean_data
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = PROJECT_ROOT / "config" / "base.yml"
 
 

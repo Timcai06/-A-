@@ -8,17 +8,16 @@ scenario extrapolations, not fabricated observations.
 from __future__ import annotations
 
 from dataclasses import asdict, replace
-from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from src.common.paths import PROJECT_ROOT, ensure_parent
 from src.models import dynamic_short_term as dynamic
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BEST_PARAMETERS_PATH = PROJECT_ROOT / "output" / "calibration" / "动态模型最优参数.csv"
 CALIBRATED_PATH = PROJECT_ROOT / "output" / "calibration" / "动态模型校准后路径.csv"
 SCENARIO_RESULT_CSV = PROJECT_ROOT / "output" / "scenarios" / "三情景预测结果.csv"
@@ -417,7 +416,7 @@ def build_parameter_table(
 
 def save_figures(result: pd.DataFrame) -> None:
     dynamic.configure_plot_style()
-    SCENARIO_PRICE_FIGURE.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(SCENARIO_PRICE_FIGURE)
 
     colors = {
         "optimistic": "#059669",
@@ -554,8 +553,10 @@ def main() -> None:
     metrics = pd.DataFrame(summarize_scenario(sim) for sim in simulations)
     params = build_parameter_table(scenarios)
 
-    SCENARIO_RESULT_CSV.parent.mkdir(parents=True, exist_ok=True)
-    SCENARIO_METRICS_CSV.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(SCENARIO_RESULT_CSV)
+    ensure_parent(SCENARIO_METRICS_CSV)
+    ensure_parent(SCENARIO_PARAMS_CSV)
+    ensure_parent(REPORT_PATH)
     result.to_csv(SCENARIO_RESULT_CSV, index=False)
     metrics.to_csv(SCENARIO_METRICS_CSV, index=False)
     params.to_csv(SCENARIO_PARAMS_CSV, index=False)

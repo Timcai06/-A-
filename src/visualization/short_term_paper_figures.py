@@ -2,32 +2,19 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from src.common.paths import PROJECT_ROOT
+from src.common.plotting import configure_plot_style as apply_plot_style
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PAPER_FIGURES_DIR = PROJECT_ROOT / "paper" / "figures"
 
 
 def configure_plot_style() -> None:
-    plt.style.use("seaborn-v0_8-whitegrid")
-    plt.rcParams.update(
-        {
-            "font.family": ["Arial Unicode MS", "Hiragino Sans GB", "Songti SC", "Heiti TC", "DejaVu Sans"],
-            "axes.unicode_minus": False,
-            "figure.dpi": 150,
-            "savefig.dpi": 260,
-            "axes.titlesize": 14,
-            "axes.labelsize": 11,
-            "legend.fontsize": 9,
-            "xtick.labelsize": 9,
-            "ytick.labelsize": 9,
-        }
-    )
+    apply_plot_style(savefig_dpi=260, figure_dpi=150, title_size=14)
+    plt.rcParams.update({"axes.labelsize": 11, "xtick.labelsize": 9, "ytick.labelsize": 9})
 
 
 def load_frames() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:

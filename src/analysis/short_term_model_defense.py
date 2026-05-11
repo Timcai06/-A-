@@ -10,7 +10,6 @@ This module answers four likely reviewer challenges:
 from __future__ import annotations
 
 from dataclasses import asdict
-from pathlib import Path
 from typing import Any
 from warnings import catch_warnings, simplefilter
 
@@ -20,10 +19,11 @@ import pandas as pd
 from statsmodels.tsa.arima.model import ARIMA
 
 from src.calibration import calibrate_dynamic_model as calibration
+from src.common.metrics import direction_hit_rate, mae, mape, rmse
+from src.common.paths import PROJECT_ROOT, ensure_parents
 from src.models import dynamic_short_term as dynamic
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FULL_DATA_CSV = PROJECT_ROOT / "data" / "processed" / "布伦特原油期货主力合约价格数据_清洗后.csv"
 CALIBRATED_PATH_CSV = PROJECT_ROOT / "output" / "calibration" / "动态模型校准后路径.csv"
 TOP_CANDIDATES_CSV = PROJECT_ROOT / "output" / "calibration" / "动态模型候选参数前10.csv"
@@ -42,18 +42,19 @@ class DefensePaths:
 
 
 def ensure_dirs() -> None:
-    for path in [
-        DefensePaths.baseline_csv,
-        DefensePaths.lag_csv,
-        DefensePaths.turning_points_csv,
-        DefensePaths.placebo_windows_csv,
-        DefensePaths.horizon_note,
-        DefensePaths.defense_report,
-        DefensePaths.baseline_figure,
-        DefensePaths.lag_figure,
-        DefensePaths.turn_figure,
-    ]:
-        path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parents(
+        [
+            DefensePaths.baseline_csv,
+            DefensePaths.lag_csv,
+            DefensePaths.turning_points_csv,
+            DefensePaths.placebo_windows_csv,
+            DefensePaths.horizon_note,
+            DefensePaths.defense_report,
+            DefensePaths.baseline_figure,
+            DefensePaths.lag_figure,
+            DefensePaths.turn_figure,
+        ]
+    )
 
 
 def load_calibrated_path() -> pd.DataFrame:
@@ -62,28 +63,6 @@ def load_calibrated_path() -> pd.DataFrame:
     df = pd.read_csv(CALIBRATED_PATH_CSV, parse_dates=["trade_date"])
     df["model_error"] = df["simulated_price"] - df["actual_price"]
     return df.sort_values("trade_date").reset_index(drop=True)
-
-
-def rmse(error: pd.Series | np.ndarray) -> float:
-    arr = np.asarray(error, dtype=float)
-    return float(np.sqrt(np.mean(arr**2)))
-
-
-def mae(error: pd.Series | np.ndarray) -> float:
-    arr = np.asarray(error, dtype=float)
-    return float(np.mean(np.abs(arr)))
-
-
-def mape(actual: pd.Series | np.ndarray, predicted: pd.Series | np.ndarray) -> float:
-    actual_arr = np.asarray(actual, dtype=float)
-    pred_arr = np.asarray(predicted, dtype=float)
-    return float(np.mean(np.abs(pred_arr - actual_arr) / np.abs(actual_arr)) * 100)
-
-
-def direction_hit_rate(actual: pd.Series, predicted: pd.Series) -> float:
-    actual_diff = actual.diff().iloc[1:]
-    pred_diff = predicted.diff().iloc[1:]
-    return float((np.sign(actual_diff) == np.sign(pred_diff)).mean() * 100)
 
 
 def expanding_arima_forecast(actual: pd.Series, first_pre_close: float) -> pd.Series:

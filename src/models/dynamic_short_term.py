@@ -18,8 +18,11 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from src.common.metrics import mae as calc_mae
+from src.common.metrics import rmse as calc_rmse
+from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import configure_plot_style as apply_plot_style
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BASE_CONFIG_PATH = PROJECT_ROOT / "config" / "base.yml"
 SCENARIO_CONFIG_PATH = PROJECT_ROOT / "config" / "scenarios.yml"
 PROBLEM_PARAMETERS_PATH = PROJECT_ROOT / "data" / "metadata" / "题面参数表.csv"
@@ -289,8 +292,8 @@ def simulate_dynamic_model(
 
 def compute_metrics(simulated: pd.DataFrame, behavior: BehavioralParameters) -> dict[str, float]:
     error = simulated["simulated_price"] - simulated["actual_price"]
-    rmse = float(np.sqrt(np.mean(error**2)))
-    mae = float(np.mean(np.abs(error)))
+    rmse = calc_rmse(error)
+    mae = calc_mae(error)
     peak_price_error = float(simulated["simulated_price"].max() - simulated["actual_price"].max())
     final_price_error = float(simulated["simulated_price"].iloc[-1] - simulated["actual_price"].iloc[-1])
     metrics = {
@@ -365,29 +368,18 @@ def select_initial_behavior(
 
 
 def configure_plot_style() -> None:
-    plt.style.use("seaborn-v0_8-whitegrid")
-    plt.rcParams.update(
-        {
-            "font.family": ["Arial Unicode MS", "Hiragino Sans GB", "Heiti TC", "DejaVu Sans"],
-            "axes.unicode_minus": False,
-            "figure.dpi": 150,
-            "savefig.dpi": 180,
-            "axes.titlesize": 13,
-            "axes.labelsize": 10,
-            "legend.fontsize": 9,
-        }
-    )
+    apply_plot_style(savefig_dpi=180, figure_dpi=150, title_size=13)
 
 
 def save_outputs(simulation: pd.DataFrame, metrics_df: pd.DataFrame, paths: DynamicPaths) -> None:
-    paths.result_csv.parent.mkdir(parents=True, exist_ok=True)
-    paths.metrics_csv.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(paths.result_csv)
+    ensure_parent(paths.metrics_csv)
     simulation.to_csv(paths.result_csv, index=False)
     metrics_df.head(20).to_csv(paths.metrics_csv, index=False)
 
 
 def save_figure(simulation: pd.DataFrame, paths: DynamicPaths) -> None:
-    paths.figure_path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(paths.figure_path)
     configure_plot_style()
 
     fig, ax = plt.subplots(figsize=(11, 6))
@@ -529,7 +521,7 @@ def write_report(
     behavior: BehavioralParameters,
     paths: DynamicPaths,
 ) -> None:
-    paths.report_path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(paths.report_path)
     report = build_report(event_df, simulation, metrics_df, assumptions, behavior, paths)
     paths.report_path.write_text(report, encoding="utf-8")
 

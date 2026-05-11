@@ -17,8 +17,9 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import configure_plot_style as apply_plot_style
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = PROJECT_ROOT / "config" / "base.yml"
 
 
@@ -122,8 +123,8 @@ def clean_brent_data(raw_csv: Path, event_window: EventWindow) -> pd.DataFrame:
 
 
 def export_datasets(df: pd.DataFrame, paths: Stage1Paths) -> pd.DataFrame:
-    paths.processed_daily_csv.parent.mkdir(parents=True, exist_ok=True)
-    paths.processed_event_window_csv.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(paths.processed_daily_csv)
+    ensure_parent(paths.processed_event_window_csv)
 
     event_df = df[df["is_event_window"]].copy()
     df.to_csv(paths.processed_daily_csv, index=False)
@@ -132,16 +133,7 @@ def export_datasets(df: pd.DataFrame, paths: Stage1Paths) -> pd.DataFrame:
 
 
 def configure_plot_style() -> None:
-    plt.style.use("seaborn-v0_8-whitegrid")
-    plt.rcParams.update(
-        {
-            "figure.dpi": 150,
-            "savefig.dpi": 180,
-            "axes.titlesize": 13,
-            "axes.labelsize": 10,
-            "legend.fontsize": 9,
-        }
-    )
+    apply_plot_style(savefig_dpi=180, figure_dpi=150, title_size=13)
 
 
 def save_price_trend(df: pd.DataFrame, figures_dir: Path) -> Path:

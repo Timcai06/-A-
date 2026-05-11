@@ -8,17 +8,16 @@ so the output can be read as a clean marginal influence ranking.
 from __future__ import annotations
 
 from dataclasses import replace
-from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from src.common.paths import PROJECT_ROOT, ensure_parent
 from src.scenarios import forecast_stage5 as stage5
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = PROJECT_ROOT / "output" / "sensitivity"
 RESULT_CSV = OUTPUT_DIR / "阶段6_敏感性分析结果.csv"
 RANKING_CSV = OUTPUT_DIR / "阶段6_参数重要性排序.csv"
@@ -308,7 +307,7 @@ def risk_order_label(values: pd.Series) -> str:
 
 def save_figures(result: pd.DataFrame, ranking: pd.DataFrame) -> None:
     stage5.dynamic.configure_plot_style()
-    TORNADO_FIGURE.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(TORNADO_FIGURE)
 
     top = ranking.sort_values("综合敏感度得分", ascending=True)
     colors = ["#dc2626" if controllability == "低" else "#2563eb" for controllability in top["可控性"]]
@@ -409,8 +408,9 @@ def build_report(result: pd.DataFrame, ranking: pd.DataFrame) -> str:
 def main() -> None:
     result, ranking = run_sensitivity()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    RESULT_CSV.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(RESULT_CSV)
+    ensure_parent(RANKING_CSV)
+    ensure_parent(REPORT_PATH)
     result.to_csv(RESULT_CSV, index=False)
     ranking.to_csv(RANKING_CSV, index=False)
     save_figures(result, ranking)

@@ -11,7 +11,6 @@ paper:
 from __future__ import annotations
 
 from dataclasses import asdict
-from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -20,11 +19,9 @@ import pandas as pd
 
 from src.analysis.short_term_model_defense import reconstruct_best_parameters
 from src.calibration import calibrate_dynamic_model as calibration
+from src.common.paths import PROJECT_ROOT, ensure_parents
 from src.models import baseline_supply_demand as baseline
 from src.models import dynamic_short_term as dynamic
-
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class FatalChallengePaths:
@@ -50,14 +47,15 @@ PHYSICAL_CALIBRATED_PARAMETERS = {
 
 
 def ensure_dirs() -> None:
-    for path in [
-        FatalChallengePaths.overfit_stress_csv,
-        FatalChallengePaths.baseline_elasticity_csv,
-        FatalChallengePaths.hardcode_audit_csv,
-        FatalChallengePaths.report_path,
-        FatalChallengePaths.stress_figure,
-    ]:
-        path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parents(
+        [
+            FatalChallengePaths.overfit_stress_csv,
+            FatalChallengePaths.baseline_elasticity_csv,
+            FatalChallengePaths.hardcode_audit_csv,
+            FatalChallengePaths.report_path,
+            FatalChallengePaths.stress_figure,
+        ]
+    )
 
 
 def event_window() -> pd.DataFrame:

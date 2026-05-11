@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pandas as pd
 
+from src.common.paths import PROJECT_ROOT
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = PROJECT_ROOT / "output" / "reports"
 FACTOR_CSV = OUTPUT_DIR / "综合主模型因素覆盖矩阵.csv"
 FACTOR_REPORT = OUTPUT_DIR / "综合主模型因素覆盖矩阵.md"

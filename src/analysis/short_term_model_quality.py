@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import asdict, fields
-from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -11,10 +10,11 @@ import numpy as np
 import pandas as pd
 
 from src.calibration import calibrate_dynamic_model as calibration
+from src.common.metrics import mae, rmse
+from src.common.paths import PROJECT_ROOT, ensure_parents
 from src.models import dynamic_short_term as dynamic
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RANDOM_SEED = 20260509
 PERTURBATION_SAMPLES = 800
 
@@ -30,16 +30,17 @@ class QualityPaths:
 
 
 def ensure_output_dirs() -> None:
-    for path in [
-        QualityPaths.quality_metrics_csv,
-        QualityPaths.rolling_errors_csv,
-        QualityPaths.stability_samples_csv,
-        QualityPaths.stability_band_csv,
-        QualityPaths.quality_report,
-        QualityPaths.robustness_figure,
-        QualityPaths.residual_figure,
-    ]:
-        path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parents(
+        [
+            QualityPaths.quality_metrics_csv,
+            QualityPaths.rolling_errors_csv,
+            QualityPaths.stability_samples_csv,
+            QualityPaths.stability_band_csv,
+            QualityPaths.quality_report,
+            QualityPaths.robustness_figure,
+            QualityPaths.residual_figure,
+        ]
+    )
 
 
 def load_best_path() -> pd.DataFrame:
@@ -57,16 +58,6 @@ def load_best_candidate() -> pd.Series:
     if not path.exists():
         raise FileNotFoundError(f"Missing top candidates: {path}")
     return pd.read_csv(path).iloc[0]
-
-
-def rmse(values: pd.Series | np.ndarray) -> float:
-    arr = np.asarray(values, dtype=float)
-    return float(np.sqrt(np.mean(arr**2)))
-
-
-def mae(values: pd.Series | np.ndarray) -> float:
-    arr = np.asarray(values, dtype=float)
-    return float(np.mean(np.abs(arr)))
 
 
 def compute_quality_metrics(best_path: pd.DataFrame) -> pd.DataFrame:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -8,8 +7,8 @@ import plotly.graph_objects as go
 import streamlit as st
 import yaml
 
+from src.common.paths import PROJECT_ROOT
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = PROJECT_ROOT / "config" / "dashboard.yml"
 
 

@@ -9,7 +9,6 @@ price-formation mechanisms auditable.
 from __future__ import annotations
 
 from dataclasses import replace
-from pathlib import Path
 from typing import Callable
 
 import matplotlib.pyplot as plt
@@ -17,10 +16,8 @@ import pandas as pd
 
 from src.analysis.short_term_model_defense import reconstruct_best_parameters
 from src.calibration import calibrate_dynamic_model as calibration
+from src.common.paths import PROJECT_ROOT, ensure_parents
 from src.models import dynamic_short_term as dynamic
-
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class AblationPaths:
@@ -36,8 +33,7 @@ VariantFn = Callable[
 
 
 def ensure_dirs() -> None:
-    for path in [AblationPaths.metrics_csv, AblationPaths.report_path, AblationPaths.figure_path]:
-        path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parents([AblationPaths.metrics_csv, AblationPaths.report_path, AblationPaths.figure_path])
 
 
 def load_event_window() -> pd.DataFrame:

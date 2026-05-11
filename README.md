@@ -133,6 +133,10 @@ flowchart TB
 阶段 8 已生成：
 
 - `docs/12_综合主模型与因素覆盖矩阵.md`
+- `docs/13_代码结构治理说明.md`
+- `src/common/paths.py`
+- `src/common/metrics.py`
+- `src/common/plotting.py`
 - `src/analysis/factor_selection_stage8.py`
 - `output/reports/综合主模型因素覆盖矩阵.csv`
 - `output/reports/综合主模型因素覆盖矩阵.md`

@@ -17,8 +17,9 @@ import numpy as np
 import pandas as pd
 import yaml
 
+from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import configure_plot_style as apply_plot_style
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = PROJECT_ROOT / "config" / "base.yml"
 PROBLEM_PARAMETERS_PATH = PROJECT_ROOT / "data" / "metadata" / "题面参数表.csv"
 
@@ -130,27 +131,16 @@ def run_baseline_model(event_df: pd.DataFrame, cfg: BaselineConfig) -> pd.DataFr
 
 
 def save_results(results: pd.DataFrame, cfg: BaselineConfig) -> None:
-    cfg.output_csv.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(cfg.output_csv)
     results.to_csv(cfg.output_csv, index=False)
 
 
 def configure_plot_style() -> None:
-    plt.style.use("seaborn-v0_8-whitegrid")
-    plt.rcParams.update(
-        {
-            "font.family": ["Arial Unicode MS", "Hiragino Sans GB", "Heiti TC", "DejaVu Sans"],
-            "axes.unicode_minus": False,
-            "figure.dpi": 150,
-            "savefig.dpi": 180,
-            "axes.titlesize": 13,
-            "axes.labelsize": 10,
-            "legend.fontsize": 9,
-        }
-    )
+    apply_plot_style(savefig_dpi=180, figure_dpi=150, title_size=13)
 
 
 def save_figure(event_df: pd.DataFrame, results: pd.DataFrame, cfg: BaselineConfig) -> None:
-    cfg.figure_path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(cfg.figure_path)
     configure_plot_style()
 
     fig, ax = plt.subplots(figsize=(11, 6))
@@ -245,7 +235,7 @@ price = base_price * (1 + supply_shortage_ratio / abs(elasticity))
 
 
 def write_report(event_df: pd.DataFrame, results: pd.DataFrame, cfg: BaselineConfig) -> None:
-    cfg.report_path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(cfg.report_path)
     cfg.report_path.write_text(build_report(event_df, results, cfg), encoding="utf-8")
 
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import asdict, replace
-from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -11,10 +10,11 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import differential_evolution
 
+from src.common.metrics import mae, rmse
+from src.common.paths import PROJECT_ROOT, ensure_parent
 from src.models import dynamic_short_term as dynamic
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RANDOM_SEED = 20260509
 SAMPLE_SIZE = 36000
 LOCAL_REFINEMENT_MAXITER = 35
@@ -30,18 +30,6 @@ class Stage4Paths:
     segment_errors_csv = PROJECT_ROOT / "output" / "calibration" / "动态模型分段误差.csv"
     report_path = PROJECT_ROOT / "output" / "reports" / "stage4_calibration_report.md"
     figure_path = PROJECT_ROOT / "figures" / "fitted_vs_actual.png"
-
-
-def rmse(values: pd.Series) -> float:
-    if values.empty:
-        return float("nan")
-    return float(np.sqrt(np.mean(values**2)))
-
-
-def mae(values: pd.Series) -> float:
-    if values.empty:
-        return float("nan")
-    return float(np.mean(np.abs(values)))
 
 
 def segment_error_rows(simulation: pd.DataFrame) -> list[dict[str, Any]]:
@@ -531,7 +519,7 @@ def calibrate(event_df: pd.DataFrame, base_assumptions: dynamic.PhysicalAssumpti
 
 
 def save_figure(simulation: pd.DataFrame) -> None:
-    Stage4Paths.figure_path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(Stage4Paths.figure_path)
     dynamic.configure_plot_style()
     fig, ax = plt.subplots(figsize=(11, 6))
     ax.plot(
@@ -564,8 +552,8 @@ def save_figure(simulation: pd.DataFrame) -> None:
 
 
 def write_outputs(best_simulation: pd.DataFrame, top_candidates: pd.DataFrame, representative: pd.DataFrame) -> pd.DataFrame:
-    Stage4Paths.calibrated_path_csv.parent.mkdir(parents=True, exist_ok=True)
-    Stage4Paths.report_path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent(Stage4Paths.calibrated_path_csv)
+    ensure_parent(Stage4Paths.report_path)
     segment_errors = pd.DataFrame(segment_error_rows(best_simulation))
 
     best_simulation.to_csv(Stage4Paths.calibrated_path_csv, index=False)
