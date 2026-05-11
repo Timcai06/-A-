@@ -6,6 +6,7 @@ from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 import pandas as pd
 
 
@@ -128,11 +129,93 @@ def save_integrated_forecast_figure(short_term: pd.DataFrame, scenarios: pd.Data
     return path
 
 
+def save_method_route_figure() -> Path:
+    path = PAPER_FIGURES_DIR / "论文总体技术路线图.png"
+    fig, ax = plt.subplots(figsize=(12, 6.8))
+    ax.set_xlim(0, 12)
+    ax.set_ylim(0, 7)
+    ax.axis("off")
+
+    nodes = [
+        ("附件数据清洗", "统一日期、价格口径\n截取冲突窗口", 0.65, 4.65, "#eff6ff", "#2563eb"),
+        ("传统供需基准", "低短期弹性\n估计反事实上界", 3.10, 4.65, "#f8fafc", "#475569"),
+        ("短期动态递推", "SPR、库存、绕道\n恐慌与预期修复", 5.55, 4.65, "#ecfdf5", "#059669"),
+        ("模型检验防御", "基准对比、滞后检验\n消融与压力测试", 8.00, 4.65, "#fff7ed", "#ea580c"),
+        ("长期情景预测", "60-180 天\n乐观/中性/悲观", 3.10, 1.55, "#fef2f2", "#dc2626"),
+        ("敏感性分析", "识别关键参数\n解释政策含义", 5.55, 1.55, "#f5f3ff", "#7c3aed"),
+        ("最终结论", "短期平台机制\n长期尾部风险", 8.00, 1.55, "#fefce8", "#ca8a04"),
+    ]
+
+    for title, subtitle, x, y, fill, edge in nodes:
+        box = FancyBboxPatch(
+            (x, y),
+            1.9,
+            1.05,
+            boxstyle="round,pad=0.12,rounding_size=0.08",
+            linewidth=1.6,
+            edgecolor=edge,
+            facecolor=fill,
+        )
+        ax.add_patch(box)
+        ax.text(x + 0.95, y + 0.70, title, ha="center", va="center", fontsize=13, weight="bold", color="#111827")
+        ax.text(x + 0.95, y + 0.34, subtitle, ha="center", va="center", fontsize=10.5, color="#374151", linespacing=1.35)
+
+    arrows = [
+        ((2.55, 5.18), (3.05, 5.18)),
+        ((5.00, 5.18), (5.50, 5.18)),
+        ((7.45, 5.18), (7.95, 5.18)),
+        ((6.50, 4.60), (4.35, 2.68)),
+        ((7.00, 4.60), (6.55, 2.68)),
+        ((9.00, 4.60), (9.00, 2.68)),
+        ((5.00, 2.08), (5.50, 2.08)),
+        ((7.45, 2.08), (7.95, 2.08)),
+    ]
+    for start, end in arrows:
+        ax.add_patch(
+            FancyArrowPatch(
+                start,
+                end,
+                arrowstyle="-|>",
+                mutation_scale=16,
+                linewidth=1.5,
+                color="#6b7280",
+                connectionstyle="arc3,rad=0.0",
+            )
+        )
+
+    ax.text(
+        6,
+        6.35,
+        "从附件真实数据出发，先解释短期价格平台，再外推长期情景风险",
+        ha="center",
+        va="center",
+        fontsize=15,
+        weight="bold",
+        color="#111827",
+    )
+    ax.text(
+        6,
+        0.72,
+        "检验逻辑贯穿全流程：不编造数据、不把未来当拟合、不把价格平台写成硬编码上限",
+        ha="center",
+        va="center",
+        fontsize=11.5,
+        color="#4b5563",
+    )
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     PAPER_FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     configure_plot_style()
     short_term, scenarios = load_frames()
-    outputs = [save_integrated_forecast_figure(short_term, scenarios)]
+    outputs = [
+        save_method_route_figure(),
+        save_integrated_forecast_figure(short_term, scenarios),
+    ]
     print("Generated final paper figures:")
     for path in outputs:
         print(path.relative_to(PROJECT_ROOT))

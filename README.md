@@ -60,7 +60,7 @@ flowchart TB
 | 阶段 5 情景结论 | 中性情景第 180 天约 104.49 USD/barrel，悲观情景第 180 天约 119.53 USD/barrel 且存在高二次跳涨风险 |
 | 阶段 6 敏感性结论 | 综合敏感度前三为不确定性平台、地缘风险权重、供应中断量；SPR 主要影响外推期峰值和削峰能力 |
 | 短期论文素材 | `paper/短期动态模型论文.tex` 仅作为素材稿保留，最终交付不再使用短期论文 PDF/DOCX |
-| 最终主论文 | 已生成 `output/final/总论文.pdf` 与 `output/final/总论文.docx`，PDF 为 26 页并已渲染抽查 |
+| 最终主论文 | 已生成 `output/final/总论文.pdf` 与 `output/final/总论文.docx`，PDF 为 27 页并已渲染抽查 |
 
 ## 队友快速理解
 
