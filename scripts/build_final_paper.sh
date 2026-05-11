@@ -16,6 +16,7 @@ if [ -x /opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 ]; 
 fi
 
 "${PYTHON_BIN}" -m src.visualization.final_paper_figures
+"${PYTHON_BIN}" -m src.visualization.short_term_paper_figures
 
 if ! command -v xelatex >/dev/null 2>&1; then
   if [ -x /Library/TeX/texbin/xelatex ]; then

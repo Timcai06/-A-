@@ -73,7 +73,7 @@ def save_fit_figure(model: pd.DataFrame) -> Path:
         marker="o",
         markersize=3.8,
         linewidth=2.1,
-        color="#2563eb",
+        color="#111827",
         label="实际收盘价",
     )
     ax.plot(
@@ -82,7 +82,7 @@ def save_fit_figure(model: pd.DataFrame) -> Path:
         marker="s",
         markersize=3.2,
         linewidth=2.0,
-        color="#dc2626",
+        color="#2563eb",
         label="短期动态模型",
     )
     ax.axhspan(110, 120, color="#10b981", alpha=0.12, label="题面 110-120 美元区间")

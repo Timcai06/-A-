@@ -76,7 +76,7 @@ flowchart LR
 - 阶段 6 已实现并运行 `src/analysis/sensitivity_stage6.py`，围绕 10 个关键参数做单因素敏感性分析。
 - 阶段 6 结论：综合敏感度前三为不确定性平台、地缘风险权重、供应中断量；SPR 释放上限主要影响外推期峰值和削峰能力，对中性路径第 180 天终点价影响较小。
 - 阶段 7 已新增 `paper/总论文.tex` 和 `scripts/build_final_paper.sh`，将阶段 1-6 的数据、模型、校准、防御检验、三情景预测和敏感性分析整合成总论文。
-- 总论文 PDF 已扩充并编译为 27 页，输出到 `output/final/总论文.pdf`；总论文 DOCX 已输出到 `output/final/总论文.docx`，并通过 LibreOffice 转 PDF 做基础版式抽查。
+- 总论文 PDF 当前正文预览为 25 页，输出到 `output/final/总论文.pdf`；总论文 DOCX 已输出到 `output/final/总论文.docx`，并通过 LibreOffice 转 PDF 做基础版式抽查。25 页不是硬性目标，后续加入代码附录和复现说明后页数会继续增加。
 
 ## 当前可直接引用的成果
 
@@ -112,7 +112,7 @@ flowchart LR
 | 敏感性报告 | `output/reports/stage6_sensitivity_analysis_report.md` | 可直接改写进论文敏感性分析小节 |
 | 敏感性图 | `figures/sensitivity_tornado_180day.png` | 关键参数综合敏感度排序图 |
 | 总论文源码 | `paper/总论文.tex` | 整合阶段 1-6 的 LaTeX 总论文初稿 |
-| 总论文 PDF | `output/final/总论文.pdf` | 已编译并抽查的 27 页总论文 PDF |
+| 总论文 PDF | `output/final/总论文.pdf` | 已编译并抽查的 25 页总论文 PDF |
 | 总论文 DOCX | `output/final/总论文.docx` | 可编辑 Word 版本，已做基础预览检查 |
 
 ## 下一步
