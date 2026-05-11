@@ -10,6 +10,13 @@ FINAL_DIR="output/final"
 
 mkdir -p "${BUILD_DIR}" "${FINAL_DIR}"
 
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+if [ -x /opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 ]; then
+  PYTHON_BIN="/opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3"
+fi
+
+"${PYTHON_BIN}" -m src.visualization.final_paper_figures
+
 if ! command -v xelatex >/dev/null 2>&1; then
   if [ -x /Library/TeX/texbin/xelatex ]; then
     export PATH="/Library/TeX/texbin:${PATH}"

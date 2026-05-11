@@ -90,6 +90,19 @@
   \item 外推层：构建 60--180 天三情景预测，并通过敏感性分析识别关键变量。
 \end{enumerate}
 
+\begin{table}[H]
+\centering
+\caption{赛题任务与本文模型回应}
+\begin{tabularx}{\linewidth}{lX X}
+\toprule
+赛题要求 & 题面重点 & 本文回应 \\
+\midrule
+任务 1 & 建立 0--60 天日度供需平衡模型，使用附件布伦特原油价格数据，并考虑供应中断、SPR、库存、绕道、恐慌需求和短期弹性。 & 阶段 1--4 完成附件数据清洗、传统供需基准、短期动态递推、参数校准和防御性检验，给出 RMSE、MAE、MAPE、基准对比、滞后检验、机制消融和过拟合压力测试。 \\
+任务 2 & 若封锁持续到 60--180 天，预测油价变化和价格平衡点，考虑增产、长期弹性、阿联酋增产约束和库存耗尽跳变风险。 & 阶段 5--6 构建乐观、中性、悲观三情景路径，给出第 60/90/120/180 天价格、外推期峰值、库存风险、二次跳涨风险和关键参数敏感性排序。 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \section{数据处理与描述性分析}
 
 \subsection{数据来源与清洗口径}
@@ -517,6 +530,44 @@ RMSE & 4.96 & 4.74 & 6.33 & 10.27 \\
 
 阶段 5 在阶段 4 综合最优参数基础上构建乐观、中性和悲观三种情景。附件真实价格只覆盖到 2026 年 5 月 5 日，之后全部为条件情景外推，不作为真实观测数据。
 
+需要特别说明，长期部分不能称为“拟合”。原因是赛题附件只提供到 2026 年 5 月初的真实价格，60--180 天区间没有可用于事后对照的真实观测值。因此本文对长期部分采用“情景预测”和“平衡点分析”的表述：短期窗口负责校准机制，长期窗口负责在不同政策和市场条件下外推价格路径。
+
+长期模型从短期动态递推模型延伸而来，但在四个方面做了时间尺度调整：
+
+\begin{enumerate}
+  \item 供应侧：保持封锁造成的基础缺口，同时允许非海湾产油国和 OPEC 剩余产能缓慢响应。
+  \item 缓冲侧：SPR、商业库存和绕道运输继续发挥作用，但其边际能力随时间下降或受运输瓶颈约束。
+  \item 需求侧：长期需求价格弹性高于短期弹性，反映高油价持续后消费、生产和替代能源调整更充分。
+  \item 风险侧：恐慌溢价逐步衰减，但地缘风险与不确定性平台可能在悲观情景下维持高位。
+\end{enumerate}
+
+记长期外推期第 $t$ 日有效供应为 $S_t^{(L)}$，有效需求为 $D_t^{(L)}$。在短期模型的基础上，长期供需缺口可写为
+
+\begin{equation}
+G_t^{(L)}
+=
+D_t^{(L)}
+-
+\left[
+S_0-I+R_t+Q_t+B_t+A_t
+\right],
+\end{equation}
+
+其中 $I$ 为供应中断量，$R_t$ 为 SPR 释放量，$Q_t$ 为绕道运输恢复量，$B_t$ 为商业库存缓冲量，$A_t$ 为其他产油国增产或替代供应增量。长期价格递推采用
+
+\begin{equation}
+\hat P_{t+1}
+=
+(1-v_L)\hat P_t
++v_L
+\left[
+P_0+\Pi(G_t^{(L)},\varepsilon_L)
+\right]
++\Phi_t-\Omega_t+J_t ,
+\end{equation}
+
+其中 $\Pi(\cdot)$ 表示由剩余供需缺口和长期需求弹性 $\varepsilon_L$ 共同决定的供需压力，$\Phi_t$ 为地缘风险与不确定性溢价，$\Omega_t$ 为政策缓冲确认和预期修复带来的折价，$J_t$ 为库存接近耗尽时的跳变风险项。该形式对应赛题要求中的增产、长期弹性变化、运输瓶颈和库存耗尽风险。
+
 \begin{table}[H]
 \centering
 \caption{三情景关键参数}
@@ -549,11 +600,19 @@ RMSE & 4.96 & 4.74 & 6.33 & 10.27 \\
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.94\linewidth]{短期拟合与长期预测总览.png}
+\caption{短期机制拟合与 60--180 天三情景预测总览。竖线左侧为附件真实数据与短期模型拟合，竖线右侧为情景外推，不作为真实观测。}
+\end{figure}
+
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.92\linewidth]{scenario_price_paths.png}
 \caption{阶段 5：60--180 天三情景原油价格路径。}
 \end{figure}
 
 结果显示，中性情景下价格在 180 天附近回落至约 104.49 美元/桶；悲观情景下，若供应中断偏大、SPR 释放弱、绕道恢复慢且风险溢价维持高位，价格可能再次升至 120 美元/桶附近，并在外推期达到约 130.18 美元/桶的高点。
+
+从价格平衡点看，乐观情景最终回落至约 95.99 美元/桶，说明若 SPR 释放及时、绕道运输恢复充分且长期需求弹性发挥作用，油价可以逐步脱离 110--120 美元平台。中性情景第 180 天约为 104.49 美元/桶，更接近政策缓冲与市场风险重新平衡后的中心水平。悲观情景第 180 天仍为 119.53 美元/桶，说明若供应中断规模接近上界、SPR 释放不足且风险溢价持续，市场可能长期停留在高位平台，并保留二次跳涨尾部风险。
 
 \begin{figure}[H]
 \centering
@@ -647,30 +706,32 @@ RMSE & 4.96 & 4.74 & 6.33 & 10.27 \\
 
 因此，霍尔木兹封锁对国际油价的影响不应被理解为简单的“供应缺口乘以低弹性”问题，而应被理解为物理缺口、政策缓冲、库存约束、替代运输和市场风险预期共同作用下的动态系统。
 
-\begin{thebibliography}{99}
-\bibitem{kilian2009}
+\section*{参考文献}
+
+\begin{enumerate}[label={[\arabic*]},leftmargin=2.2em]
+\item
 Kilian, L. (2009). Not All Oil Price Shocks Are Alike: Disentangling Demand and Supply Shocks in the Crude Oil Market. \textit{American Economic Review}, 99(3), 1053--1069.
 
-\bibitem{hamilton2009}
+\item
 Hamilton, J. D. (2009). Causes and Consequences of the Oil Shock of 2007--08. \textit{Brookings Papers on Economic Activity}, Spring 2009, 215--261.
 
-\bibitem{kilianmurphy2014}
+\item
 Kilian, L., \& Murphy, D. P. (2014). The Role of Inventories and Speculative Trading in the Global Market for Crude Oil. \textit{Journal of Applied Econometrics}, 29(3), 454--478.
 
-\bibitem{baumeister2016}
+\item
 Baumeister, C., \& Kilian, L. (2016). Understanding the Decline in the Price of Oil since June 2014. \textit{Journal of the Association of Environmental and Resource Economists}, 3(1), 131--158.
 
-\bibitem{caldara2022}
+\item
 Caldara, D., \& Iacoviello, M. (2022). Measuring Geopolitical Risk. \textit{American Economic Review}, 112(4), 1194--1225.
 
-\bibitem{cooper2003}
+\item
 Cooper, J. C. B. (2003). Price elasticity of demand for crude oil: estimates for 23 countries. \textit{OPEC Review}, 27(1), 1--8.
 
-\bibitem{stevens2021}
+\item
 Stevens, P., \& Zhang, D. (2021). The asymmetric impact of strategic petroleum reserve releases on crude oil prices. \textit{Energy Economics}, 102, 105474.
 
-\bibitem{eia}
-U.S. Energy Information Administration. World Oil Transit Chokepoints. \url{https://www.eia.gov/international/analysis/special-topics/World_Oil_Transit_Chokepoints}
-\end{thebibliography}
+\item
+U.S. Energy Information Administration. World Oil Transit Chokepoints. \href{https://www.eia.gov/international/analysis/special-topics/World_Oil_Transit_Chokepoints}{EIA special topic page}.
+\end{enumerate}
 
 \end{document}
