@@ -12,7 +12,7 @@
 
 | 状态 | 数量 | 图号 |
 |---|---:|---|
-| 阶段图 | 11 | 数据、基准、三情景、敏感性分析、蒙特卡洛、GPR审计 |
+| 阶段图 | 14 | 数据、基准、三情景、敏感性分析、蒙特卡洛、GPR审计、历史稳健性 |
 | 短期模型素材图 | 13 | 精选迁移进总论文，其余保留备用 |
 
 ## 图表清单
@@ -32,6 +32,9 @@
 | 图11 | `figures/monte_carlo_tail_risk.png` | 阶段 6.5 | 蒙特卡洛情景树 | 量化突破 120/130 美元和高二次跳涨风险概率 | `output/monte_carlo/蒙特卡洛尾部风险摘要.csv` | 已生成 |
 | 图12 | `figures/gpr_event_window_audit.png` | 2025-01 至 2026-05 | 滞后风险审计 | 对比同步 GPR 与滞后可用 GPR，说明不能用同月新闻解释同月油价 | `data/external/risk/地缘政治风险与油价_滞后审计样本.csv` | 已生成 |
 | 图13 | `figures/lagged_gpr_brent_return.png` | 2017-10 至 2026-04 | 滞后风险审计 | 检查滞后 1 月 GPR 与布伦特月度收益关系 | `output/risk/滞后风险指数审计指标.csv` | 已生成 |
+| 图14 | `figures/historical_event_extremeness.png` | 2017-2026 | 历史稳健性 | 证明 2026 冲突窗口在同长度历史窗口中的极端位置 | `output/history/冲突窗口历史分位数.csv` | 已生成 |
+| 图15 | `figures/historical_baseline_error_distribution.png` | 2017-2026 | 历史稳健性 | 展示冲突窗口随机游走基准误差处于历史高分位，本文机制模型仍优于该基准 | `output/history/历史基准误差分布.csv` | 已生成 |
+| 图16 | `figures/historical_high_vol_windows.png` | 2017-2026 | 历史稳健性 | 列出历史高波动非重叠窗口，说明 2026 冲突窗口与 2020、2022 等极端事件同属高压样本 | `output/history/历史高波动窗口排名.csv` | 已生成 |
 
 ## 短期模型论文专用图
 
