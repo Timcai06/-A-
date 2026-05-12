@@ -1,0 +1,8 @@
+item,value
+short_model_rmse,3.4685110256705434
+naive_rmse,4.515869794402845
+rmse_improvement_pct,23.192846924648748
+state_day180_p05,85.43275433647408
+state_day180_p50,88.5867503812936
+state_day180_p95,93.987935805306
+history_naive_event_percentile,0.9846225535880708

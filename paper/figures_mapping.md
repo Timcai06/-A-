@@ -2,7 +2,14 @@
 
 本文档用于记录每张图如何进入论文正文，避免最后阶段重新整理材料。
 
-当前 `figures/` 与 `paper/figures/` 中的核心图表已经进入或作为备用素材服务于 `paper/总论文.tex`，总论文是唯一主稿。
+当前总论文只从 `paper/figures/` 引用正式图表。`figures/` 是脚本生成区和备用图区域，不能作为论文最终图片来源。
+
+正式论文图表治理规则：
+
+- 文件名使用中文。
+- 图内标题、坐标轴、图例和注释尽量中文化。
+- RMSE、MAPE、P05-P95、GPR、LOESS 等必要统计缩写可以保留。
+- 若脚本先生成到 `figures/`，构建脚本会把正式使用版本同步复制到 `paper/figures/`。
 
 需要注意：图 1 和图 3 使用 2017-2026 全历史数据；图 2、图 4、图 5 聚焦 2026 冲突窗口，因此横轴只显示 2026 年附近的日期。
 
@@ -12,29 +19,33 @@
 
 | 状态 | 数量 | 图号 |
 |---|---:|---|
-| 阶段图 | 14 | 数据、基准、三情景、敏感性分析、蒙特卡洛、GPR审计、历史稳健性 |
+| 阶段图 | 18 | 数据、基准、三情景、敏感性分析、蒙特卡洛、状态转移、GPR审计、历史稳健性、R学术增强图 |
 | 短期模型素材图 | 13 | 精选迁移进总论文，其余保留备用 |
 
 ## 图表清单
 
 | 图号 | 图表文件 | 时间范围 | 对应论文位置 | 支撑结论 | 数据或结果来源 | 状态 |
 |---|---|---|---|---|---|---|
-| 图1 | `figures/price_trend.png` | 2017-09-01 至 2026-05-05 | 数据说明 | 布伦特油价长期走势提供历史背景 | `data/processed/布伦特原油期货主力合约价格数据_清洗后.csv` | 已生成 |
-| 图2 | `figures/event_window_price.png` | 2026-03-02 至 2026-05-05 | 数据说明 | 冲突窗口价格出现峰值和平台区间 | `data/processed/布伦特原油期货主力合约价格数据_冲突窗口.csv` | 已生成 |
-| 图3 | `figures/return_volatility.png` | 2017-09-01 至 2026-05-05 | 数据说明 | 冲突窗口前后可结合收益率和波动率观察市场冲击 | `data/processed/布伦特原油期货主力合约价格数据_清洗后.csv` | 已生成 |
-| 图4 | `figures/baseline_vs_actual.png` | 2026-03-02 至 2026-05-05 | 模型一结果 | 传统供需模型高估现实价格 | `output/baseline/传统供需基准模型结果.csv` | 已生成 |
-| 图5 | `figures/fitted_vs_actual.png` | 2026-03-02 至 2026-05-05 | 模型二结果 | 校准后的动态模型能解释 110-120 美元平台 | `output/calibration/动态模型校准后路径.csv` | 已生成 |
-| 图6 | `figures/scenario_price_paths.png` | 2026-05-06 至外推第180天 | 模型三结果 | 三情景下长期均衡价格不同 | `output/scenarios/三情景预测结果.csv` | 已生成 |
-| 图7 | `figures/inventory_depletion_risk.png` | 2026-05-06 至外推第180天 | 模型三结果 | 库存耗尽可能触发二次跳涨风险 | `output/scenarios/三情景预测结果.csv` | 已生成 |
-| 图8 | `figures/sensitivity_tornado_180day.png` | 阶段 6 | 敏感性分析 | 不确定性与制度风险强度、地缘风险权重、供应中断量最敏感 | `output/sensitivity/参数重要性排序.csv` | 已生成 |
-| 图9 | `figures/sensitivity_parameter_response.png` | 阶段 6 | 敏感性分析 | 前三高敏感参数的响应曲线 | `output/sensitivity/敏感性分析结果.csv` | 已生成 |
-| 图10 | `figures/monte_carlo_price_fan.png` | 阶段 6.5 | 蒙特卡洛情景树 | 2000 条联合扰动路径形成价格概率区间 | `output/monte_carlo/蒙特卡洛路径分位数.csv` | 已生成 |
-| 图11 | `figures/monte_carlo_tail_risk.png` | 阶段 6.5 | 蒙特卡洛情景树 | 量化突破 120/130 美元和高二次跳涨风险概率 | `output/monte_carlo/蒙特卡洛尾部风险摘要.csv` | 已生成 |
-| 图12 | `figures/gpr_event_window_audit.png` | 2025-01 至 2026-05 | 滞后风险审计 | 对比同步 GPR 与滞后可用 GPR，说明不能用同月新闻解释同月油价 | `data/external/risk/地缘政治风险与油价_滞后审计样本.csv` | 已生成 |
-| 图13 | `figures/lagged_gpr_brent_return.png` | 2017-10 至 2026-04 | 滞后风险审计 | 检查滞后 1 月 GPR 与布伦特月度收益关系 | `output/risk/滞后风险指数审计指标.csv` | 已生成 |
-| 图14 | `figures/historical_event_extremeness.png` | 2017-2026 | 历史稳健性 | 证明 2026 冲突窗口在同长度历史窗口中的极端位置 | `output/history/冲突窗口历史分位数.csv` | 已生成 |
-| 图15 | `figures/historical_baseline_error_distribution.png` | 2017-2026 | 历史稳健性 | 展示冲突窗口随机游走基准误差处于历史高分位，本文机制模型仍优于该基准 | `output/history/历史基准误差分布.csv` | 已生成 |
-| 图16 | `figures/historical_high_vol_windows.png` | 2017-2026 | 历史稳健性 | 列出历史高波动非重叠窗口，说明 2026 冲突窗口与 2020、2022 等极端事件同属高压样本 | `output/history/历史高波动窗口排名.csv` | 已生成 |
+| 图1 | `paper/figures/布伦特原油长期价格走势.png` | 2017-09-01 至 2026-05-05 | 数据说明 | 布伦特油价长期走势提供历史背景 | `data/processed/布伦特原油期货主力合约价格数据_清洗后.csv` | 正式使用 |
+| 图2 | `paper/figures/冲突窗口价格走势.png` | 2026-03-02 至 2026-05-05 | 数据说明 | 冲突窗口价格出现峰值和平台区间 | `data/processed/布伦特原油期货主力合约价格数据_冲突窗口.csv` | 正式使用 |
+| 图3 | `paper/figures/布伦特收益率与波动率.png` | 2017-09-01 至 2026-05-05 | 数据说明 | 冲突窗口前后可结合收益率和波动率观察市场冲击 | `data/processed/布伦特原油期货主力合约价格数据_清洗后.csv` | 正式使用 |
+| 图4 | `paper/figures/传统供需基准与真实价格对比.png` | 2026-03-02 至 2026-05-05 | 模型一结果 | 传统供需模型高估现实价格 | `output/baseline/传统供需基准模型结果.csv` | 正式使用 |
+| 图5 | `paper/figures/短期模型拟合效果.png` | 2026-03-02 至 2026-05-05 | 模型二结果 | 校准后的动态模型能解释 110-120 美元平台 | `output/calibration/动态模型校准后路径.csv` | 正式使用 |
+| 图6 | `paper/figures/短期拟合与长期预测总览.png` | 2026-03-02 至 2026-08-29 | 模型三结果 | 三情景中心路径与短期拟合结果衔接 | `output/scenarios/三情景预测结果.csv` | 正式使用 |
+| 图7 | `paper/figures/库存与供需缺口风险.png` | 2026-05-06 至外推第180天 | 模型三结果 | 库存耗尽可能触发二次跳涨风险 | `output/scenarios/三情景预测结果.csv` | 正式使用 |
+| 图8 | `paper/figures/参数敏感性龙卷风图.png` | 敏感性分析 | 敏感性分析 | 不确定性与制度风险强度、地缘风险权重、供应中断量最敏感 | `output/sensitivity/参数重要性排序.csv` | 正式使用 |
+| 图9 | `figures/sensitivity_parameter_response.png` | 敏感性分析 | 备用图 | 前三高敏感参数的响应曲线，当前不进入总论文正文 | `output/sensitivity/敏感性分析结果.csv` | 备用 |
+| 图10 | `paper/figures/蒙特卡洛价格扇形区间.png` | 60--180 天外推期 | 蒙特卡洛情景树 | 2000 条联合扰动路径形成价格概率区间 | `output/monte_carlo/蒙特卡洛路径分位数.csv` | 正式使用 |
+| 图11 | `paper/figures/蒙特卡洛尾部风险概率.png` | 60--180 天外推期 | 蒙特卡洛情景树 | 量化突破 120/130 美元和高二次跳涨风险概率 | `output/monte_carlo/蒙特卡洛尾部风险摘要.csv` | 正式使用 |
+| 图12 | `paper/figures/长期状态转移情景树.png` | 2026-05-06 至外推第180天 | 状态转移情景树 | 回应长期中性线过平问题，展示缓和/维持/升级状态切换下的价格区间 | `output/scenarios/长期状态转移路径分位数.csv`、`output/scenarios/长期状态转移状态占比.csv` | 正式使用 |
+| 图13 | `paper/figures/地缘风险指数滞后审计.png` | 2025-01 至 2026-05 | 滞后风险审计 | 对比同步 GPR 与滞后可用 GPR，说明不能用同月新闻解释同月油价 | `data/external/risk/地缘政治风险与油价_滞后审计样本.csv` | 正式使用 |
+| 图14 | `paper/figures/滞后GPR与布伦特收益关系.png` | 2017-10 至 2026-04 | 滞后风险审计 | 检查滞后 1 月 GPR 与布伦特月度收益关系 | `output/risk/滞后风险指数审计指标.csv` | 正式使用 |
+| 图15 | `paper/figures/历史窗口极端性检验.png` | 2017-2026 | 历史稳健性 | 证明 2026 冲突窗口在同长度历史窗口中的极端位置 | `output/history/冲突窗口历史分位数.csv` | 正式使用 |
+| 图16 | `paper/figures/R历史基准误差分布图.png` | 2017-2026 | 历史稳健性 | 展示冲突窗口随机游走基准误差处于历史高分位，本文机制模型仍优于该基准 | `output/history/历史基准误差分布.csv` | 正式使用 |
+| 图17 | `figures/historical_high_vol_windows.png` | 2017-2026 | 备用图 | 列出历史高波动非重叠窗口，当前不进入总论文正文 | `output/history/历史高波动窗口排名.csv` | 备用 |
+| R增强图1 | `paper/figures/R短期误差学术诊断.png` | 2026-03-02 至 2026-05-05 | R图表增强 | 用 ggplot2 展示短期残差时间结构和系统偏差检查 | `output/calibration/动态模型校准后路径.csv` | 正式使用 |
+| R增强图2 | `paper/figures/R长期状态转移扇形图.png` | 2026-05-06 至外推第180天 | R图表增强 | 用 ggplot2 展示长期状态转移条件区间，提升长期预测图的论文质感 | `output/scenarios/长期状态转移路径分位数.csv` | 正式使用 |
+| R增强图3 | `paper/figures/R历史基准误差分布图.png` | 2017-2026 | R图表增强 | 用分位带展示冲突窗口相对历史同长度窗口的预测难度 | `output/history/历史基准误差分布.csv` | 正式使用 |
 
 ## 短期模型论文专用图
 

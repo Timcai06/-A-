@@ -1,7 +1,8 @@
-"""Stage 5 scenario forecast simulation utilities."""
+"""Long-horizon scenario forecast simulation utilities."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -11,9 +12,13 @@ from src.models import dynamic_short_term as dynamic
 from src.scenarios.settings import CALIBRATED_PATH, FORECAST_END_DAY, MARKER_DAYS, SCENARIO_NAMES
 
 
-# Long-horizon mechanism coefficients. They are intentionally kept at module
-# level so Stage 6 can run sensitivity checks without changing the calibrated
-# short-term parameter dataclasses.
+# Long-horizon mechanism coefficients.
+#
+# These are not physical constants. They translate the short-term calibrated
+# mechanism into the 60-180 day scenario horizon, where SPR releases taper,
+# early shock uncertainty decays, and unresolved blockade risk persists. They
+# stay at module level because the sensitivity module deliberately perturbs
+# them one at a time without changing the calibrated short-term dataclasses.
 GAP_CLOSURE_SHARE = 0.005
 SPR_PRICE_STRESS_START_RATIO = 1.03
 SPR_PRICE_STRESS_WIDTH = 0.25
@@ -37,6 +42,54 @@ REGIME_CONFIDENCE_DECAY_DAYS = 120
 PANIC_PRICE_MULTIPLIER = 0.45
 FEAR_CHANGE_MOMENTUM = 2.5
 OVERSUPPLY_REVERSION_SCALE = 1.35
+
+
+@dataclass(frozen=True)
+class MechanismConstantNote:
+    name: str
+    value: float
+    role: str
+    basis: str
+    audit_status: str
+
+
+MECHANISM_CONSTANT_NOTES: tuple[MechanismConstantNote, ...] = (
+    MechanismConstantNote(
+        "SPR_TAPER_START_DAY",
+        SPR_TAPER_START_DAY,
+        "SPR 由计划释放转向缺口驱动收缩的起点",
+        "60 天后进入长期外推，75 天表示政策释放开始从应急高强度转向库存保护；不是题面物理常数。",
+        "已纳入敏感性分析",
+    ),
+    MechanismConstantNote(
+        "SPR_TAPER_FLOOR",
+        SPR_TAPER_FLOOR,
+        "长期仍保留的最低政策释放比例",
+        "用于避免 SPR 在制度风险仍存在时立即归零，表示保守释放底座。",
+        "暂作为机制设定",
+    ),
+    MechanismConstantNote(
+        "REGIME_CONFIDENCE_DECAY_FLOOR",
+        REGIME_CONFIDENCE_DECAY_FLOOR,
+        "市场信心恢复后仍保留的制度风险比例",
+        "表示封锁未彻底解除时，航运保险、安全和再升级风险仍有残余溢价。",
+        "已纳入敏感性分析",
+    ),
+    MechanismConstantNote(
+        "OVERSUPPLY_REVERSION_SCALE",
+        OVERSUPPLY_REVERSION_SCALE,
+        "供给过剩对目标价格的向下回归强度",
+        "刻画长期轻微过剩对价格的保守下拉，不作为供需弹性替代。",
+        "已纳入敏感性分析",
+    ),
+    MechanismConstantNote(
+        "FEAR_CHANGE_MOMENTUM",
+        FEAR_CHANGE_MOMENTUM,
+        "恐慌变化对日度价格的短期动量修正",
+        "作为事件冲击吸收速度项，只影响恐慌变化率；论文中应表述为辅助动量审计点。",
+        "保留但需审慎解释",
+    ),
+)
 
 
 def build_forecast_frame(event_df: pd.DataFrame) -> pd.DataFrame:

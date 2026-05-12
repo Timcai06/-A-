@@ -221,29 +221,35 @@ write_csv(summary, file.path(output_dir, "R计量审计摘要.csv"))
 write_csv(diagnostics, file.path(output_dir, "R残差计量诊断.csv"))
 write_csv(historical_tests, file.path(output_dir, "R历史序列平稳性检验.csv"))
 
-png(figure_path, width = 1800, height = 900, res = 180)
+png(figure_path, width = 1800, height = 900, res = 180, type = "cairo")
 plot_df <- model_df %>%
   mutate(loss_diff = model_squared_error - naive_squared_error)
-op <- par(mfrow = c(1, 3), mar = c(4, 4, 3, 1), family = "sans")
+date_vec <- as.Date(plot_df$trade_date)
+date_ticks <- pretty(date_vec, n = 5)
+op <- par(mfrow = c(1, 3), mar = c(4, 4, 3, 1), family = "STHeiti")
 plot(
-  as.Date(plot_df$trade_date), plot_df$model_error,
+  date_vec, plot_df$model_error,
   type = "l", col = "#2563eb", lwd = 2,
-  xlab = "", ylab = "USD/barrel", main = "Model residuals"
+  xlab = "", ylab = "美元/桶", main = "模型残差序列",
+  xaxt = "n"
 )
+axis(1, at = date_ticks, labels = format(date_ticks, "%m月%d日"))
 abline(h = 0, col = "#1f2937", lwd = 1)
 grid(col = "#e5e7eb")
 hist(
   plot_df$model_error, breaks = 12,
   col = "#2563eb", border = "white",
-  xlab = "USD/barrel", main = "Residual distribution"
+  xlab = "美元/桶", ylab = "频数", main = "残差分布"
 )
 abline(v = 0, col = "#1f2937", lwd = 1)
 plot(
-  as.Date(plot_df$trade_date), plot_df$loss_diff,
+  date_vec, plot_df$loss_diff,
   type = "l", col = "#dc2626", lwd = 2,
-  xlab = "", ylab = "Negative favors model",
-  main = "Squared loss difference vs naive"
+  xlab = "", ylab = "小于0表示模型优于朴素基准",
+  main = "相对朴素基准的平方损失差",
+  xaxt = "n"
 )
+axis(1, at = date_ticks, labels = format(date_ticks, "%m月%d日"))
 abline(h = 0, col = "#1f2937", lwd = 1)
 grid(col = "#e5e7eb")
 par(op)
