@@ -15,7 +15,7 @@
 | `monte_carlo/` | 蒙特卡洛情景树结果 |
 | `risk/` | GPR 滞后风险指数审计结果 |
 | `history/` | 2017--2026 历史窗口稳健性检验 |
-| `statistics/` | 短期模型统计审计、残差诊断和 DM 检验 |
+| `statistics/` | 短期模型统计审计、R 计量审计、残差诊断和 DM 检验 |
 | `qa/` | 小型 CSV 审计证据；渲染截图和临时检查图不进入 Git |
 | `build/` | LaTeX/Pandoc 构建临时目录，不进入 Git |
 

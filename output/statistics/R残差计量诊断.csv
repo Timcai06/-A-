@@ -1,0 +1,7 @@
+test,statistic,p_value,note
+Ljung-Box residual lag5,7.237271126580465,0.2035837319289694,短期模型残差线性自相关检验
+Ljung-Box residual lag10,10.91506157337258,0.36417371012475896,短期模型残差线性自相关检验
+Ljung-Box squared residual lag5,6.956131362519374,0.22392337370686255,平方残差波动聚集检验
+Ljung-Box squared residual lag10,22.219440193432852,0.014024896424784439,平方残差波动聚集检验
+ARCH-LM lag5,5.22359759821618,0.389206059967333,条件异方差检验
+"GARCH(1,1)",NA,NA,ok

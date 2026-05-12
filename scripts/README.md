@@ -1,14 +1,21 @@
 # scripts 目录说明
 
-这里放置项目级命令脚本。脚本职责是“复现、构建、轻量后处理”，不承载核心模型逻辑。
+这里放置项目级命令脚本。脚本职责是“复现、构建、统计审计、轻量后处理”，不承载核心模型逻辑。
 
-## 已有脚本
+## 目录分类
 
-- `project_env.sh`：运行建模脚本前 source，用于设置 Matplotlib/fontconfig 的项目本地缓存目录。
-- `build_final_paper.sh`：最终论文 PDF/DOCX 构建入口，会生成论文图、蒙特卡洛结果和最终交付文件。
-- `build_short_term_paper.sh`：历史短期模型素材稿构建入口，当前不是最终交付主线。
-- `fix_docx_toc_title.py`：DOCX 后处理脚本，将 Pandoc 默认英文目录标题改为中文“目录”。
-- `statistical_audit.R`：可选 R 统计审计入口，用于在安装 R 后复核短期模型相对朴素基准的统计表现。
+| 目录 | 用途 | 代表脚本 |
+|---|---|---|
+| `build/` | 论文和交付物构建 | `build_final_paper.sh`、`build_short_term_paper.sh` |
+| `env/` | 本地运行环境初始化 | `project_env.sh` |
+| `audit/` | R 统计和计量审计 | `statistical_audit.R`、`r_econometric_audit.R` |
+| `postprocess/` | 文档轻量后处理 | `fix_docx_toc_title.py` |
+
+根目录保留兼容入口：
+
+- `project_env.sh`：转发到 `env/project_env.sh`，用于 `source scripts/project_env.sh`。
+- `build_final_paper.sh`：转发到 `build/build_final_paper.sh`。
+- `build_short_term_paper.sh`：转发到 `build/build_short_term_paper.sh`，当前不是最终交付主线。
 
 ## 使用方式
 
@@ -22,5 +29,6 @@ source scripts/project_env.sh
 当前机器已经接通 `Rscript`。论文主线统计审计由 `src.analysis.statistical_audit` 的 Python 版本完成；R 版用于独立复核，运行方式为：
 
 ```bash
-Rscript scripts/statistical_audit.R
+Rscript scripts/audit/statistical_audit.R
+Rscript scripts/audit/r_econometric_audit.R
 ```

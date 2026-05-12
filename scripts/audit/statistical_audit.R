@@ -1,13 +1,12 @@
 #!/usr/bin/env Rscript
 
 # Optional R-side statistical audit for the short-term model.
-# This mirrors Stage 13's core checks and is kept as a reproducible R entry
-# point once R is installed on the machine.
+# It is kept as a reproducible R entry point once R is installed.
 
 args <- commandArgs(trailingOnly = FALSE)
 file_arg <- grep("^--file=", args, value = TRUE)
-script_path <- if (length(file_arg) > 0) sub("^--file=", "", file_arg[[1]]) else "scripts/statistical_audit.R"
-root <- normalizePath(file.path(dirname(script_path), ".."))
+script_path <- if (length(file_arg) > 0) sub("^--file=", "", file_arg[[1]]) else "scripts/audit/statistical_audit.R"
+root <- normalizePath(file.path(dirname(script_path), "../.."))
 input_path <- file.path(root, "output", "calibration", "动态模型校准后路径.csv")
 output_dir <- file.path(root, "output", "statistics")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
