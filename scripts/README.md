@@ -8,6 +8,7 @@
 - `build_final_paper.sh`：最终论文 PDF/DOCX 构建入口，会生成论文图、蒙特卡洛结果和最终交付文件。
 - `build_short_term_paper.sh`：历史短期模型素材稿构建入口，当前不是最终交付主线。
 - `fix_docx_toc_title.py`：DOCX 后处理脚本，将 Pandoc 默认英文目录标题改为中文“目录”。
+- `statistical_audit.R`：可选 R 统计审计入口，用于在安装 R 后复核短期模型相对朴素基准的统计表现。
 
 ## 使用方式
 
@@ -17,3 +18,9 @@ source scripts/project_env.sh
 ```
 
 数据库相关脚本当前不是主线；PostgreSQL 方案保留在 `sql/` 和文档中，用于后续扩展。
+
+当前机器已经接通 `Rscript`。论文主线统计审计由 `src.analysis.statistical_audit` 的 Python 版本完成；R 版用于独立复核，运行方式为：
+
+```bash
+Rscript scripts/statistical_audit.R
+```

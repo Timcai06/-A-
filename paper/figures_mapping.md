@@ -26,8 +26,8 @@
 | 图5 | `figures/fitted_vs_actual.png` | 2026-03-02 至 2026-05-05 | 模型二结果 | 校准后的动态模型能解释 110-120 美元平台 | `output/calibration/动态模型校准后路径.csv` | 已生成 |
 | 图6 | `figures/scenario_price_paths.png` | 2026-05-06 至外推第180天 | 模型三结果 | 三情景下长期均衡价格不同 | `output/scenarios/三情景预测结果.csv` | 已生成 |
 | 图7 | `figures/inventory_depletion_risk.png` | 2026-05-06 至外推第180天 | 模型三结果 | 库存耗尽可能触发二次跳涨风险 | `output/scenarios/三情景预测结果.csv` | 已生成 |
-| 图8 | `figures/sensitivity_tornado_180day.png` | 阶段 6 | 敏感性分析 | 不确定性与制度风险强度、地缘风险权重、供应中断量最敏感 | `output/sensitivity/阶段6_参数重要性排序.csv` | 已生成 |
-| 图9 | `figures/sensitivity_parameter_response.png` | 阶段 6 | 敏感性分析 | 前三高敏感参数的响应曲线 | `output/sensitivity/阶段6_敏感性分析结果.csv` | 已生成 |
+| 图8 | `figures/sensitivity_tornado_180day.png` | 阶段 6 | 敏感性分析 | 不确定性与制度风险强度、地缘风险权重、供应中断量最敏感 | `output/sensitivity/参数重要性排序.csv` | 已生成 |
+| 图9 | `figures/sensitivity_parameter_response.png` | 阶段 6 | 敏感性分析 | 前三高敏感参数的响应曲线 | `output/sensitivity/敏感性分析结果.csv` | 已生成 |
 | 图10 | `figures/monte_carlo_price_fan.png` | 阶段 6.5 | 蒙特卡洛情景树 | 2000 条联合扰动路径形成价格概率区间 | `output/monte_carlo/蒙特卡洛路径分位数.csv` | 已生成 |
 | 图11 | `figures/monte_carlo_tail_risk.png` | 阶段 6.5 | 蒙特卡洛情景树 | 量化突破 120/130 美元和高二次跳涨风险概率 | `output/monte_carlo/蒙特卡洛尾部风险摘要.csv` | 已生成 |
 | 图12 | `figures/gpr_event_window_audit.png` | 2025-01 至 2026-05 | 滞后风险审计 | 对比同步 GPR 与滞后可用 GPR，说明不能用同月新闻解释同月油价 | `data/external/risk/地缘政治风险与油价_滞后审计样本.csv` | 已生成 |
