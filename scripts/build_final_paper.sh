@@ -40,9 +40,12 @@ if command -v pandoc >/dev/null 2>&1; then
   pandoc \
     --from=latex \
     --to=docx \
+    --toc \
+    --toc-depth=2 \
     --resource-path=".:paper/figures:figures" \
     --output="${FINAL_DIR}/总论文.docx" \
     paper/总论文.tex
+  "${PYTHON_BIN}" scripts/fix_docx_toc_title.py "${FINAL_DIR}/总论文.docx"
   echo "Built ${FINAL_DIR}/总论文.docx"
 else
   echo "pandoc not found; skipped DOCX export." >&2
