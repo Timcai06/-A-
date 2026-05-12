@@ -186,7 +186,7 @@ def capture_hashes(config: dict[str, Any]) -> dict[str, str]:
     files = [
         PROJECT_ROOT / paths["processed_daily_csv"],
         PROJECT_ROOT / paths["processed_event_window_csv"],
-        PROJECT_ROOT / paths["reports_dir"] / "阶段1_OHLC异常记录.csv",
+        PROJECT_ROOT / paths["reports_dir"] / "OHLC异常记录.csv",
     ]
     return {rel(path): sha256_16(path) for path in files if path.exists()}
 
@@ -215,7 +215,7 @@ def write_outputs(
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     result_rows = [result.__dict__ for result in results]
-    results_csv = reports_dir / "阶段1_自动验收结果.csv"
+    results_csv = reports_dir / "数据清洗自动验收结果.csv"
     pd.DataFrame(result_rows).to_csv(results_csv, index=False)
 
     manifest = {
@@ -226,7 +226,7 @@ def write_outputs(
         "file_hashes": capture_hashes(config),
         "reproducibility": reproducibility,
     }
-    manifest_path = reports_dir / "stage1_manifest.json"
+    manifest_path = reports_dir / "数据清洗清单.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
     pass_count = sum(1 for result in results if result.status == "PASS")
@@ -236,7 +236,7 @@ def write_outputs(
         f"- `{item['path']}`: shape={item['shape']}, std={item['pixel_std']:.6f}, sha256={item['sha256_16']}"
         for item in figure_metadata
     )
-    report = f"""# 阶段 1 自动验收报告
+    report = f"""# 数据清洗自动验收报告
 
 ## 结论
 
@@ -268,7 +268,7 @@ def write_outputs(
 - `{rel(results_csv)}`
 - `{rel(manifest_path)}`
 """
-    (reports_dir / "stage1_validation_report.md").write_text(report, encoding="utf-8")
+    (reports_dir / "数据清洗验收报告.md").write_text(report, encoding="utf-8")
 
 
 def main() -> None:
@@ -285,7 +285,7 @@ def main() -> None:
 
     failed = [result for result in results if result.status == "FAIL"]
     print(f"Stage 1 validation complete: {len(results) - len(failed)} passed, {len(failed)} failed")
-    print("Report: output/reports/stage1_validation_report.md")
+    print("Report: output/reports/数据清洗验收报告.md")
     if failed:
         raise SystemExit(1)
 

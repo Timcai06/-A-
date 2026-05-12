@@ -232,7 +232,7 @@ def build_report(df: pd.DataFrame, event_df: pd.DataFrame, figures: list[Path], 
     figure_lines = "\n".join(f"- `{figure.relative_to(PROJECT_ROOT)}`" for figure in figures)
     missing_lines = "\n".join(f"- `{column}`: {count}" for column, count in missing_counts.items())
 
-    report = f"""# 阶段 1 数据清洗与探索报告
+    report = f"""# 数据清洗与探索报告
 
 ## 运行结论
 
@@ -319,11 +319,11 @@ def find_ohlc_anomalies(df: pd.DataFrame) -> pd.DataFrame:
 
 def write_report(df: pd.DataFrame, event_df: pd.DataFrame, figures: list[Path], paths: Stage1Paths) -> Path:
     paths.reports_dir.mkdir(parents=True, exist_ok=True)
-    anomaly_path = paths.reports_dir / "阶段1_OHLC异常记录.csv"
+    anomaly_path = paths.reports_dir / "OHLC异常记录.csv"
     ohlc_anomalies = find_ohlc_anomalies(df)
     ohlc_anomalies.to_csv(anomaly_path, index=False)
 
-    report_path = paths.reports_dir / "stage1_data_cleaning_report.md"
+    report_path = paths.reports_dir / "数据清洗报告.md"
     report_path.write_text(build_report(df, event_df, figures, paths), encoding="utf-8")
     return report_path
 

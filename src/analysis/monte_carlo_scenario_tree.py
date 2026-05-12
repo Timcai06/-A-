@@ -1,4 +1,4 @@
-"""Stage 6.5 Monte Carlo scenario tree for long-horizon tail-risk analysis."""
+"""Monte Carlo scenario tree for long-horizon tail-risk analysis."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
-from src.scenarios import forecast_stage5 as stage5
+from src.scenarios import scenario_forecast as scenario
 
 
 RANDOM_SEED = 20260511
@@ -19,7 +19,7 @@ OUTPUT_DIR = PROJECT_ROOT / "output" / "monte_carlo"
 SAMPLE_METRICS_CSV = OUTPUT_DIR / "蒙特卡洛样本指标.csv"
 QUANTILE_CSV = OUTPUT_DIR / "蒙特卡洛路径分位数.csv"
 TAIL_RISK_CSV = OUTPUT_DIR / "蒙特卡洛尾部风险摘要.csv"
-REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "stage7_monte_carlo_report.md"
+REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "蒙特卡洛情景树报告.md"
 FAN_FIGURE = PROJECT_ROOT / "figures" / "monte_carlo_price_fan.png"
 TAIL_FIGURE = PROJECT_ROOT / "figures" / "monte_carlo_tail_risk.png"
 MARKER_DAYS = [90, 120, 150, 180]
@@ -29,25 +29,25 @@ def load_baseline() -> tuple[
     pd.DataFrame,
     pd.DataFrame,
     pd.DataFrame,
-    stage5.dynamic.PhysicalAssumptions,
-    stage5.dynamic.BehavioralParameters,
+    scenario.dynamic.PhysicalAssumptions,
+    scenario.dynamic.BehavioralParameters,
 ]:
-    base_config = stage5.dynamic.load_yaml(stage5.dynamic.BASE_CONFIG_PATH)
-    paths = stage5.dynamic.resolve_paths(base_config)
-    event_df = stage5.dynamic.load_event_window(paths.event_csv)
-    best = stage5.load_best_row()
-    assumptions, behavior = stage5.calibrated_assumptions_and_behavior(best)
-    forecast_frame = stage5.build_forecast_frame(event_df)
-    prefix = stage5.load_calibrated_prefix()
+    base_config = scenario.dynamic.load_yaml(scenario.dynamic.BASE_CONFIG_PATH)
+    paths = scenario.dynamic.resolve_paths(base_config)
+    event_df = scenario.dynamic.load_event_window(paths.event_csv)
+    best = scenario.load_best_row()
+    assumptions, behavior = scenario.calibrated_assumptions_and_behavior(best)
+    forecast_frame = scenario.build_forecast_frame(event_df)
+    prefix = scenario.load_calibrated_prefix()
     return event_df, forecast_frame, prefix, assumptions, behavior
 
 
 def sample_parameters(
     rng: np.random.Generator,
     sample_id: int,
-    base_assumptions: stage5.dynamic.PhysicalAssumptions,
-    base_behavior: stage5.dynamic.BehavioralParameters,
-) -> tuple[stage5.dynamic.PhysicalAssumptions, stage5.dynamic.BehavioralParameters, dict[str, Any]]:
+    base_assumptions: scenario.dynamic.PhysicalAssumptions,
+    base_behavior: scenario.dynamic.BehavioralParameters,
+) -> tuple[scenario.dynamic.PhysicalAssumptions, scenario.dynamic.BehavioralParameters, dict[str, Any]]:
     stress = float(rng.beta(2.1, 2.3))
     supply_interruption = float(np.clip(1400 + 400 * stress + rng.normal(0, 35), 1400, 1800))
     spr_max_release = float(np.clip(700 - 500 * (stress**1.08) + rng.normal(0, 30), 200, 700))
@@ -112,12 +112,12 @@ def sample_parameters(
 def simulate_one_sample(
     forecast_frame: pd.DataFrame,
     prefix: pd.DataFrame,
-    assumptions: stage5.dynamic.PhysicalAssumptions,
-    behavior: stage5.dynamic.BehavioralParameters,
+    assumptions: scenario.dynamic.PhysicalAssumptions,
+    behavior: scenario.dynamic.BehavioralParameters,
 ) -> pd.DataFrame:
     future_frame = forecast_frame[forecast_frame["阶段"] == "情景外推期"].copy()
     base_price = float(forecast_frame.iloc[0]["pre_close"])
-    return stage5.simulate_future_from_prefix(prefix, future_frame, assumptions, behavior, base_price)
+    return scenario.simulate_future_from_prefix(prefix, future_frame, assumptions, behavior, base_price)
 
 
 def risk_label(final_gap: float, second_jump: float) -> str:
@@ -219,7 +219,7 @@ def run_monte_carlo(n_samples: int = N_SAMPLES) -> tuple[pd.DataFrame, pd.DataFr
 
 
 def save_figures(metrics: pd.DataFrame, quantiles: pd.DataFrame) -> None:
-    stage5.dynamic.configure_plot_style()
+    scenario.dynamic.configure_plot_style()
     ensure_parent(FAN_FIGURE)
 
     fig, ax = plt.subplots(figsize=(11.5, 6.4))
@@ -278,13 +278,13 @@ def build_report(metrics: pd.DataFrame, tail_risk: pd.DataFrame) -> str:
             .to_dict("records")
         )
     )
-    return f"""# 阶段6.5 蒙特卡洛情景树报告
+    return f"""# 蒙特卡洛情景树报告
 
 ## 运行结论
 
-本阶段在阶段5三情景模型基础上进行 {len(metrics)} 次联合扰动模拟。扰动变量包括供应中断量、SPR释放上限、SPR启动延迟、绕道运输能力、长期需求弹性、恐慌衰减速度、地缘风险权重、不确定性与制度风险强度、预期修复强度等。
+蒙特卡洛情景树在三情景模型基础上进行 {len(metrics)} 次联合扰动模拟。扰动变量包括供应中断量、SPR释放上限、SPR启动延迟、绕道运输能力、长期需求弹性、恐慌衰减速度、地缘风险权重、不确定性与制度风险强度、预期修复强度等。
 
-所有扰动均限定在赛题边界或阶段6敏感性分析使用过的合理区间内；本阶段没有引入爬虫数据，也没有生成任何未来真实价格。输出结果只用于刻画条件情景下的概率区间和尾部风险。
+扰动均限定在赛题边界或敏感性分析使用过的合理区间内；本阶段没有引入爬虫数据，也没有生成任何未来真实价格。输出结果只用于刻画条件情景下的概率区间和尾部风险。
 
 ## 核心概率结果
 

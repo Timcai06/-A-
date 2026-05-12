@@ -71,7 +71,7 @@ def write_report(df: pd.DataFrame) -> None:
     report_lines = [
         "# 综合主模型因素覆盖矩阵",
         "",
-        "本报告由 `src/analysis/factor_selection_stage8.py` 生成，用于约束后续模型优化：不是把所有现实因素都塞进主模型，而是按解释重要性、附件数据可得性、边际贡献预期和过拟合风险进行分层。",
+        "本报告由 `src/analysis/factor_selection.py` 生成，用于约束后续模型优化：不是把所有现实因素都塞进主模型，而是按解释重要性、附件数据可得性、边际贡献预期和过拟合风险进行分层。",
         "",
         "## 因素评分表",
         "",

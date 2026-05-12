@@ -1,8 +1,8 @@
-"""Stage 5 scenario forecast for 60-180 day oil-price paths.
+"""Scenario forecast for 60-180 day oil-price paths.
 
 This module remains the public command entry point:
 
-    python -m src.scenarios.forecast_stage5
+    python -m src.scenarios.scenario_forecast
 
 The implementation is split into smaller modules for settings, parameters,
 simulation, and reporting. Names used by downstream analysis scripts are

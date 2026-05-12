@@ -21,7 +21,7 @@ OUTPUT_DIR = PROJECT_ROOT / "data" / "external" / "eia"
 SOURCE_TABLE = PROJECT_ROOT / "data" / "external" / "官方外生数据来源表.csv"
 COMBINED_CSV = OUTPUT_DIR / "美国官方外生约束_合并周度.csv"
 SUMMARY_CSV = OUTPUT_DIR / "美国官方外生约束_关键摘要.csv"
-REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "stage8_external_official_data_report.md"
+REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "官方外生数据审计报告.md"
 
 
 @dataclass(frozen=True)
@@ -179,7 +179,7 @@ def build_report(summary: pd.DataFrame) -> str:
     spr = summary[summary["series_id"] == "WCSSTUS1"].iloc[0]
     commercial = summary[summary["series_id"] == "WCESTUS1"].iloc[0]
     production = summary[summary["series_id"] == "WCRFPUS2"].iloc[0]
-    return f"""# 阶段8 官方外生数据补充报告
+    return f"""# 官方外生数据补充报告
 
 ## 运行结论
 

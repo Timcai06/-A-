@@ -11,6 +11,34 @@ from src.models import dynamic_short_term as dynamic
 from src.scenarios.settings import CALIBRATED_PATH, FORECAST_END_DAY, MARKER_DAYS, SCENARIO_NAMES
 
 
+# Long-horizon mechanism coefficients. They are intentionally kept at module
+# level so Stage 6 can run sensitivity checks without changing the calibrated
+# short-term parameter dataclasses.
+GAP_CLOSURE_SHARE = 0.005
+SPR_PRICE_STRESS_START_RATIO = 1.03
+SPR_PRICE_STRESS_WIDTH = 0.25
+SPR_MIN_POLICY_SHARE = 0.08
+SPR_PRICE_POLICY_SHARE = 0.16
+SPR_TAPER_START_DAY = 75
+SPR_TAPER_FLOOR = 0.25
+SPR_TAPER_DECAY_DAYS = 45
+
+UNCERTAINTY_BUILDUP_DAYS = 18
+SHOCK_UNCERTAINTY_SHARE = 0.45
+SHOCK_DECAY_START_DAY = 45
+SHOCK_DECAY_DAYS = 70
+REGIME_RISK_SHARE = 0.90
+REGIME_BASE_SHARE = 0.20
+REGIME_STRESS_SHARE = 0.80
+REGIME_CONFIDENCE_DECAY_START_DAY = 60
+REGIME_CONFIDENCE_DECAY_FLOOR = 0.40
+REGIME_CONFIDENCE_DECAY_DAYS = 120
+
+PANIC_PRICE_MULTIPLIER = 0.45
+FEAR_CHANGE_MOMENTUM = 2.5
+OVERSUPPLY_REVERSION_SCALE = 1.35
+
+
 def build_forecast_frame(event_df: pd.DataFrame) -> pd.DataFrame:
     event_start = event_df["trade_date"].min()
     last_day_index = int((event_df["trade_date"].max() - event_start).days)
@@ -53,7 +81,7 @@ def load_calibrated_prefix() -> pd.DataFrame:
 
 
 def infer_gap_closure_day(prefix: pd.DataFrame, assumptions: dynamic.PhysicalAssumptions) -> int | None:
-    closed = prefix[prefix["supply_gap"] <= assumptions.base_demand * 0.005]
+    closed = prefix[prefix["supply_gap"] <= assumptions.base_demand * GAP_CLOSURE_SHARE]
     if closed.empty:
         return None
     return int(closed.iloc[0]["day_index"])
@@ -75,18 +103,24 @@ def adaptive_spr_release(
     if scheduled_spr <= 0:
         return 0.0, 0.0
 
-    reserve_buffer = assumptions.base_demand * 0.005
+    reserve_buffer = assumptions.base_demand * GAP_CLOSURE_SHARE
     coverage_need = max(gross_gap_before_spr + reserve_buffer, 0.0)
     demand_based_release = min(scheduled_spr, coverage_need)
 
     stress_ratio = np.clip(gross_gap_before_spr / max(assumptions.supply_interruption, 1.0), 0.0, 1.0)
-    price_stress = np.clip((previous_price / base_price - 1.03) / 0.25, 0.0, 1.0)
-    minimum_policy_share = 0.08 + 0.16 * price_stress
+    price_stress = np.clip(
+        (previous_price / base_price - SPR_PRICE_STRESS_START_RATIO) / SPR_PRICE_STRESS_WIDTH,
+        0.0,
+        1.0,
+    )
+    minimum_policy_share = SPR_MIN_POLICY_SHARE + SPR_PRICE_POLICY_SHARE * price_stress
     stress_share = max(minimum_policy_share, stress_ratio)
 
     time_taper = 1.0
-    if day_index > 75:
-        time_taper = 0.25 + 0.75 * np.exp(-(day_index - 75) / 45)
+    if day_index > SPR_TAPER_START_DAY:
+        time_taper = SPR_TAPER_FLOOR + (1 - SPR_TAPER_FLOOR) * np.exp(
+            -(day_index - SPR_TAPER_START_DAY) / SPR_TAPER_DECAY_DAYS
+        )
 
     tapered_release = scheduled_spr * stress_share * time_taper
     actual_release = float(max(demand_based_release, tapered_release))
@@ -110,9 +144,9 @@ def uncertainty_components(
     physical stress and fades as the market observes buffers working. This
     avoids a constant long-run uncertainty floor after the shortage is covered.
     """
-    buildup = 1 - np.exp(-day_index / 18)
-    shock_decay = np.exp(-max(day_index - 45, 0) / 70)
-    shock_uncertainty = base_price * behavior.uncertainty_floor * 0.45 * buildup * shock_decay
+    buildup = 1 - np.exp(-day_index / UNCERTAINTY_BUILDUP_DAYS)
+    shock_decay = np.exp(-max(day_index - SHOCK_DECAY_START_DAY, 0) / SHOCK_DECAY_DAYS)
+    shock_uncertainty = base_price * behavior.uncertainty_floor * SHOCK_UNCERTAINTY_SHARE * buildup * shock_decay
 
     unresolved_stress = (
         assumptions.supply_interruption
@@ -120,11 +154,13 @@ def uncertainty_components(
         - route_supply
         - demand_decline
     ) / max(assumptions.supply_interruption, 1.0)
-    regime_share = 0.20 + 0.80 * np.clip(unresolved_stress, 0.0, 1.0)
+    regime_share = REGIME_BASE_SHARE + REGIME_STRESS_SHARE * np.clip(unresolved_stress, 0.0, 1.0)
     confidence_decay = 1.0
-    if day_index > 60:
-        confidence_decay = 0.40 + 0.60 * np.exp(-(day_index - 60) / 120)
-    regime_risk = base_price * behavior.uncertainty_floor * 0.90 * regime_share * confidence_decay
+    if day_index > REGIME_CONFIDENCE_DECAY_START_DAY:
+        confidence_decay = REGIME_CONFIDENCE_DECAY_FLOOR + (1 - REGIME_CONFIDENCE_DECAY_FLOOR) * np.exp(
+            -(day_index - REGIME_CONFIDENCE_DECAY_START_DAY) / REGIME_CONFIDENCE_DECAY_DAYS
+        )
+    regime_risk = base_price * behavior.uncertainty_floor * REGIME_RISK_SHARE * regime_share * confidence_decay
 
     return float(shock_uncertainty + regime_risk), float(shock_uncertainty), float(regime_risk)
 
@@ -142,7 +178,7 @@ def oversupply_discount(
     return float(
         base_price
         * behavior.pressure_scale
-        * 1.35
+        * OVERSUPPLY_REVERSION_SCALE
         * (oversupply / assumptions.base_demand)
         / max(abs(elasticity), 0.01)
     )
@@ -213,7 +249,7 @@ def simulate_future_from_prefix(
         supply_balance = effective_supply - effective_demand
         residual_gap = max(-supply_balance, 0.0)
         oversupply = max(supply_balance, 0.0)
-        if gap_closure_day is None and residual_gap <= assumptions.base_demand * 0.005:
+        if gap_closure_day is None and residual_gap <= assumptions.base_demand * GAP_CLOSURE_SHARE:
             gap_closure_day = day_index
 
         fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * day_index)
@@ -239,7 +275,7 @@ def simulate_future_from_prefix(
             route_supply,
             demand_decline,
         )
-        panic_premium = base_price * 0.45 * fear_excess
+        panic_premium = base_price * PANIC_PRICE_MULTIPLIER * fear_excess
         buffer_discount = dynamic.buffer_confirmation_discount(day_index, gap_closure_day, base_price, behavior)
         relief_discount = dynamic.expectation_relief_discount(day_index, base_price, behavior)
         excess_supply_discount = oversupply_discount(oversupply, base_price, elasticity, assumptions, behavior)
@@ -255,7 +291,7 @@ def simulate_future_from_prefix(
         )
 
         simulated_price = previous_price + behavior.adjustment_speed * (target_price - previous_price)
-        simulated_price += 2.5 * (fear_excess - previous_fear_excess)
+        simulated_price += FEAR_CHANGE_MOMENTUM * (fear_excess - previous_fear_excess)
         simulated_price = float(np.clip(simulated_price, base_price * 0.75, 180.0))
 
         rows.append(

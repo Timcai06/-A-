@@ -101,7 +101,7 @@ def resolve_paths(base_config: dict[str, Any]) -> DynamicPaths:
         result_csv=PROJECT_ROOT / "output" / "calibration" / "短期动态递推模型结果.csv",
         metrics_csv=PROJECT_ROOT / "output" / "calibration" / "短期动态递推模型误差指标.csv",
         figure_path=PROJECT_ROOT / "figures" / "fitted_vs_actual.png",
-        report_path=PROJECT_ROOT / "output" / "reports" / "stage3_dynamic_model_report.md",
+        report_path=PROJECT_ROOT / "output" / "reports" / "短期动态递推模型报告.md",
     )
 
 
@@ -428,7 +428,7 @@ def build_report(
         ["spr_release", "route_supply", "inventory_buffer", "demand_decline", "supply_gap", "fear_factor"]
     ].mean()
 
-    return f"""# 阶段 3 短期动态递推模型报告
+    return f"""# 短期动态递推模型报告
 
 ## 运行结论
 

@@ -1,27 +1,29 @@
-"""Stage 6 one-at-a-time sensitivity analysis for the 60-180 day forecast.
+"""One-at-a-time sensitivity analysis for the 60-180 day forecast.
 
-The analysis reuses the Stage 5 neutral path as the central baseline. Each run
+The analysis reuses the neutral scenario path as the central baseline. Each run
 changes one parameter at a time and keeps all other calibrated mechanisms fixed,
 so the output can be read as a clean marginal influence ranking.
 """
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import replace
-from typing import Any
+from typing import Any, Iterator
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
-from src.scenarios import forecast_stage5 as stage5
+from src.scenarios import scenario_forecast as scenario
+from src.scenarios import simulation as scenario_sim
 
 
 OUTPUT_DIR = PROJECT_ROOT / "output" / "sensitivity"
-RESULT_CSV = OUTPUT_DIR / "阶段6_敏感性分析结果.csv"
-RANKING_CSV = OUTPUT_DIR / "阶段6_参数重要性排序.csv"
-REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "stage6_sensitivity_analysis_report.md"
+RESULT_CSV = OUTPUT_DIR / "敏感性分析结果.csv"
+RANKING_CSV = OUTPUT_DIR / "参数重要性排序.csv"
+REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "敏感性分析报告.md"
 TORNADO_FIGURE = PROJECT_ROOT / "figures" / "sensitivity_tornado_180day.png"
 RESPONSE_FIGURE = PROJECT_ROOT / "figures" / "sensitivity_parameter_response.png"
 
@@ -117,28 +119,64 @@ SENSITIVITY_SPECS: list[dict[str, Any]] = [
         "可控性": "中",
         "解释": "市场确认运输、库存和政策缓冲后给出的再定价折价。",
     },
+    {
+        "key": "SHOCK_UNCERTAINTY_SHARE",
+        "参数": "冲击不确定性占比",
+        "层级": "长期机制透明层",
+        "单位": "无量纲",
+        "扰动": [0.25, 0.35, 0.45, 0.55, 0.65],
+        "可控性": "中",
+        "解释": "长期不确定性中由前期冲击再定价贡献的比例，用于检验冲击溢价强弱。",
+    },
+    {
+        "key": "REGIME_RISK_SHARE",
+        "参数": "制度风险占比",
+        "层级": "长期机制透明层",
+        "单位": "无量纲",
+        "扰动": [0.50, 0.70, 0.90, 1.10, 1.30],
+        "可控性": "中",
+        "解释": "持续封锁制度风险对长期风险溢价的贡献强度。",
+    },
+    {
+        "key": "REGIME_CONFIDENCE_DECAY_FLOOR",
+        "参数": "信心恢复后风险底座",
+        "层级": "长期机制透明层",
+        "单位": "无量纲",
+        "扰动": [0.20, 0.30, 0.40, 0.50, 0.60],
+        "可控性": "中",
+        "解释": "市场逐步确认缓冲有效后，持续封锁风险仍保留的最低比例。",
+    },
+    {
+        "key": "OVERSUPPLY_REVERSION_SCALE",
+        "参数": "过剩供给回归强度",
+        "层级": "长期机制透明层",
+        "单位": "无量纲",
+        "扰动": [0.80, 1.10, 1.35, 1.70, 2.20],
+        "可控性": "中",
+        "解释": "供给超过需求时向下修正目标价格的机制强度。",
+    },
 ]
 
 
-def load_stage5_baseline() -> tuple[
+def load_scenario_baseline() -> tuple[
     pd.DataFrame,
     pd.DataFrame,
-    stage5.dynamic.PhysicalAssumptions,
-    stage5.dynamic.BehavioralParameters,
+    scenario.dynamic.PhysicalAssumptions,
+    scenario.dynamic.BehavioralParameters,
 ]:
-    base_config = stage5.dynamic.load_yaml(stage5.dynamic.BASE_CONFIG_PATH)
-    paths = stage5.dynamic.resolve_paths(base_config)
-    event_df = stage5.dynamic.load_event_window(paths.event_csv)
-    best = stage5.load_best_row()
-    base_assumptions, base_behavior = stage5.calibrated_assumptions_and_behavior(best)
-    forecast_frame = stage5.build_forecast_frame(event_df)
+    base_config = scenario.dynamic.load_yaml(scenario.dynamic.BASE_CONFIG_PATH)
+    paths = scenario.dynamic.resolve_paths(base_config)
+    event_df = scenario.dynamic.load_event_window(paths.event_csv)
+    best = scenario.load_best_row()
+    base_assumptions, base_behavior = scenario.calibrated_assumptions_and_behavior(best)
+    forecast_frame = scenario.build_forecast_frame(event_df)
     return event_df, forecast_frame, base_assumptions, base_behavior
 
 
 def build_counterfactual_prefix(
     event_df: pd.DataFrame,
-    assumptions: stage5.dynamic.PhysicalAssumptions,
-    behavior: stage5.dynamic.BehavioralParameters,
+    assumptions: scenario.dynamic.PhysicalAssumptions,
+    behavior: scenario.dynamic.BehavioralParameters,
 ) -> pd.DataFrame:
     """Re-simulate the observed event window under the perturbed assumption.
 
@@ -146,7 +184,7 @@ def build_counterfactual_prefix(
     needs counterfactual sensitivity, so each perturbation must be propagated
     from day 0 instead of being attached only after the observed window.
     """
-    prefix = stage5.dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+    prefix = scenario.dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
     prefix["阶段"] = "附件观测期"
     prefix["is_observed_price"] = True
     prefix["forecast_price"] = prefix["simulated_price"]
@@ -156,9 +194,9 @@ def build_counterfactual_prefix(
 def apply_perturbation(
     key: str,
     value: float,
-    assumptions: stage5.dynamic.PhysicalAssumptions,
-    behavior: stage5.dynamic.BehavioralParameters,
-) -> tuple[stage5.dynamic.PhysicalAssumptions, stage5.dynamic.BehavioralParameters]:
+    assumptions: scenario.dynamic.PhysicalAssumptions,
+    behavior: scenario.dynamic.BehavioralParameters,
+) -> tuple[scenario.dynamic.PhysicalAssumptions, scenario.dynamic.BehavioralParameters]:
     if key in {
         "supply_interruption",
         "spr_max_release",
@@ -172,18 +210,42 @@ def apply_perturbation(
         return replace(assumptions, **{key: cast_value}), behavior
     if key in {"risk_weight", "uncertainty_floor", "relief_discount_strength"}:
         return assumptions, replace(behavior, **{key: float(value)})
+    if hasattr(scenario_sim, key):
+        return assumptions, behavior
     raise KeyError(f"Unsupported sensitivity key: {key}")
+
+
+@contextmanager
+def temporary_simulation_constant(key: str, value: float) -> Iterator[None]:
+    if not hasattr(scenario_sim, key):
+        yield
+        return
+
+    original_value = getattr(scenario_sim, key)
+    setattr(scenario_sim, key, float(value))
+    try:
+        yield
+    finally:
+        setattr(scenario_sim, key, original_value)
 
 
 def run_single_path(
     event_df: pd.DataFrame,
     forecast_frame: pd.DataFrame,
-    assumptions: stage5.dynamic.PhysicalAssumptions,
-    behavior: stage5.dynamic.BehavioralParameters,
+    assumptions: scenario.dynamic.PhysicalAssumptions,
+    behavior: scenario.dynamic.BehavioralParameters,
+    mechanism_key: str | None = None,
+    mechanism_value: float | None = None,
 ) -> dict[str, Any]:
-    prefix = build_counterfactual_prefix(event_df, assumptions, behavior)
-    simulation = stage5.run_scenario("neutral", assumptions, behavior, forecast_frame, prefix)
-    metrics = stage5.summarize_scenario(simulation)
+    context = (
+        temporary_simulation_constant(mechanism_key, mechanism_value)
+        if mechanism_key and mechanism_value is not None
+        else temporary_simulation_constant("", 0.0)
+    )
+    with context:
+        prefix = build_counterfactual_prefix(event_df, assumptions, behavior)
+        simulation = scenario.run_scenario("neutral", assumptions, behavior, forecast_frame, prefix)
+    metrics = scenario.summarize_scenario(simulation)
     return {
         "第60天价格": metrics["第60天价格"],
         "第90天价格": metrics["第90天价格"],
@@ -199,7 +261,7 @@ def run_single_path(
 
 
 def run_sensitivity() -> tuple[pd.DataFrame, pd.DataFrame]:
-    event_df, forecast_frame, base_assumptions, base_behavior = load_stage5_baseline()
+    event_df, forecast_frame, base_assumptions, base_behavior = load_scenario_baseline()
     base_metrics = run_single_path(event_df, forecast_frame, base_assumptions, base_behavior)
     base_180 = float(base_metrics["第180天价格"])
     rows: list[dict[str, Any]] = []
@@ -214,7 +276,7 @@ def run_sensitivity() -> tuple[pd.DataFrame, pd.DataFrame]:
             "扰动标签": "中性基准",
             "相对基准变化": 0.0,
             "可控性": "",
-            "解释": "阶段5中性情景，即阶段4综合最优参数外推路径。",
+            "解释": "中性情景，即综合最优参数外推路径。",
             **base_metrics,
             "第180天价格相对基准变化": 0.0,
         }
@@ -224,8 +286,18 @@ def run_sensitivity() -> tuple[pd.DataFrame, pd.DataFrame]:
         key = str(spec["key"])
         for value in spec["扰动"]:
             new_assumptions, new_behavior = apply_perturbation(key, float(value), base_assumptions, base_behavior)
-            metrics = run_single_path(event_df, forecast_frame, new_assumptions, new_behavior)
+            mechanism_key = key if hasattr(scenario_sim, key) else None
+            metrics = run_single_path(
+                event_df,
+                forecast_frame,
+                new_assumptions,
+                new_behavior,
+                mechanism_key=mechanism_key,
+                mechanism_value=float(value),
+            )
             base_value = getattr(base_assumptions, key, getattr(base_behavior, key, np.nan))
+            if mechanism_key is not None:
+                base_value = getattr(scenario_sim, mechanism_key)
             change = np.nan if base_value == 0 else (float(value) - float(base_value)) / abs(float(base_value))
             rows.append(
                 {
@@ -306,14 +378,14 @@ def risk_order_label(values: pd.Series) -> str:
 
 
 def save_figures(result: pd.DataFrame, ranking: pd.DataFrame) -> None:
-    stage5.dynamic.configure_plot_style()
+    scenario.dynamic.configure_plot_style()
     ensure_parent(TORNADO_FIGURE)
 
     top = ranking.sort_values("综合敏感度得分", ascending=True)
     colors = ["#dc2626" if controllability == "低" else "#2563eb" for controllability in top["可控性"]]
     fig, ax = plt.subplots(figsize=(10.8, 6.6))
     ax.barh(top["参数"], top["综合敏感度得分"], color=colors, alpha=0.86)
-    ax.set_title("阶段6：关键参数综合敏感度排序")
+    ax.set_title("关键参数综合敏感度排序")
     ax.set_xlabel("综合敏感度得分（终点价波动 + 峰值波动加权）")
     ax.set_ylabel("")
     for i, value in enumerate(top["综合敏感度得分"]):
@@ -340,7 +412,7 @@ def save_figures(result: pd.DataFrame, ranking: pd.DataFrame) -> None:
         ax.set_ylabel("第180天价格")
         ax.tick_params(axis="x", labelrotation=20)
         ax.ticklabel_format(useOffset=False, style="plain", axis="y")
-    fig.suptitle("阶段6：前三个高敏感参数响应曲线", y=0.98)
+    fig.suptitle("前三个高敏感参数响应曲线", y=0.98)
     fig.tight_layout(rect=[0, 0, 1, 0.93])
     fig.savefig(RESPONSE_FIGURE, dpi=190)
     plt.close(fig)
@@ -362,7 +434,7 @@ def build_report(result: pd.DataFrame, ranking: pd.DataFrame) -> str:
     )
     high_risk = result[(result["参数键"] != "baseline") & (result["二次跳涨风险"] == "高")].copy()
     if high_risk.empty:
-        high_risk_text = "本轮单因素扰动没有产生新的高二次跳涨风险；高风险主要仍来自阶段5悲观组合情景。"
+        high_risk_text = "本轮单因素扰动没有产生新的高二次跳涨风险；高风险主要仍来自悲观组合情景。"
     else:
         high_risk_text = "\n".join(
             f"- {row['参数']}={row['扰动标签']}：第180天价格 {row['第180天价格']:.2f}，"
@@ -370,13 +442,13 @@ def build_report(result: pd.DataFrame, ranking: pd.DataFrame) -> str:
             for _, row in high_risk.sort_values("第180天价格", ascending=False).head(8).iterrows()
         )
 
-    return f"""# 阶段6 敏感性分析报告
+    return f"""# 敏感性分析报告
 
 ## 运行结论
 
-阶段6以阶段5中性情景为基准，逐个扰动关键参数，观察第180天价格、外推期最高价、剩余供需缺口和二次跳涨风险的变化。基准路径第180天价格为 {base["第180天价格"]:.2f} 美元/桶，外推期最高价为 {base["外推期最高价"]:.2f} 美元/桶，二次跳涨风险为{base["二次跳涨风险"]}。
+敏感性分析以中性情景为基准，逐个扰动关键参数，观察第180天价格、外推期最高价、剩余供需缺口和二次跳涨风险的变化。基准路径第180天价格为 {base["第180天价格"]:.2f} 美元/桶，外推期最高价为 {base["外推期最高价"]:.2f} 美元/桶，二次跳涨风险为{base["二次跳涨风险"]}。
 
-本阶段没有引入新数据，也没有编造未来真实价格。所有结果都是在阶段4综合最优参数和阶段5外推逻辑基础上的“单因素假设实验”，用途是判断模型结论对关键变量是否敏感。
+本分析没有引入新数据，也没有编造未来真实价格。所有结果都是在综合最优参数和长期外推逻辑基础上的“单因素假设实验”，用途是判断模型结论对关键变量是否敏感。
 
 ## 参数重要性排序
 
@@ -415,7 +487,7 @@ def main() -> None:
     ranking.to_csv(RANKING_CSV, index=False)
     save_figures(result, ranking)
     REPORT_PATH.write_text(build_report(result, ranking), encoding="utf-8")
-    print("Stage 6 sensitivity analysis complete")
+    print("Sensitivity analysis complete")
     print(f"Result: {RESULT_CSV.relative_to(PROJECT_ROOT)}")
     print(f"Ranking: {RANKING_CSV.relative_to(PROJECT_ROOT)}")
     print(f"Tornado figure: {TORNADO_FIGURE.relative_to(PROJECT_ROOT)}")

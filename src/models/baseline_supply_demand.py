@@ -48,7 +48,7 @@ def resolve_config(config: dict[str, Any]) -> BaselineConfig:
         event_csv=PROJECT_ROOT / paths["processed_event_window_csv"],
         output_csv=PROJECT_ROOT / "output" / "baseline" / "传统供需基准模型结果.csv",
         figure_path=PROJECT_ROOT / "figures" / "baseline_vs_actual.png",
-        report_path=PROJECT_ROOT / "output" / "reports" / "stage2_baseline_model_report.md",
+        report_path=PROJECT_ROOT / "output" / "reports" / "传统供需基准模型报告.md",
         pre_war_supply=float(assumptions["pre_war_supply"]),
         pre_war_demand=float(assumptions["pre_war_demand"]),
         elasticity=float(assumptions["short_term_price_elasticity"]),
@@ -190,7 +190,7 @@ def build_report(event_df: pd.DataFrame, results: pd.DataFrame, cfg: BaselineCon
         for row in results.to_dict("records")
     )
 
-    return f"""# 阶段 2 传统供需基准模型报告
+    return f"""# 传统供需基准模型报告
 
 ## 运行结论
 

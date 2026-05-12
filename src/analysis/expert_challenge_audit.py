@@ -1,4 +1,4 @@
-"""Stage 11 audit for independent expert challenges.
+"""Expert challenge audit for independent expert challenges.
 
 This script does not replace the main model.  It turns the external critique
 into reproducible checks: which claims are stale after recent model changes,
@@ -16,19 +16,19 @@ import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
 from src.models import dynamic_short_term as dynamic
-from src.scenarios import forecast_stage5 as stage5
+from src.scenarios import scenario_forecast as scenario
 from src.scenarios import simulation as scenario_sim
 
 
 QA_DIR = PROJECT_ROOT / "output" / "qa"
-REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "stage11_expert_challenge_audit_report.md"
+REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "专家质疑一致性审计报告.md"
 CONSISTENCY_CSV = QA_DIR / "长期模型一致性审计.csv"
 COUNTERFACTUAL_CSV = QA_DIR / "专家质疑反驳性检验.csv"
 PRESSURE_CSV = QA_DIR / "短期pressure_scale敏感性.csv"
 MARKER_DAYS = [60, 90, 120, 180]
 
 
-def load_stage5_context() -> tuple[
+def load_scenario_context() -> tuple[
     pd.DataFrame,
     pd.DataFrame,
     pd.DataFrame,
@@ -38,11 +38,11 @@ def load_stage5_context() -> tuple[
     scenario_config = dynamic.load_yaml(dynamic.SCENARIO_CONFIG_PATH)
     paths = dynamic.resolve_paths(base_config)
     event_df = dynamic.load_event_window(paths.event_csv)
-    best = stage5.load_best_row()
-    base_assumptions, base_behavior = stage5.calibrated_assumptions_and_behavior(best)
-    scenarios = stage5.build_scenario_parameters(base_assumptions, base_behavior, scenario_config)
-    forecast_frame = stage5.build_forecast_frame(event_df)
-    prefix = stage5.load_calibrated_prefix()
+    best = scenario.load_best_row()
+    base_assumptions, base_behavior = scenario.calibrated_assumptions_and_behavior(best)
+    scenarios = scenario.build_scenario_parameters(base_assumptions, base_behavior, scenario_config)
+    forecast_frame = scenario.build_forecast_frame(event_df)
+    prefix = scenario.load_calibrated_prefix()
     return event_df, forecast_frame, prefix, scenarios
 
 
@@ -277,7 +277,7 @@ def markdown_table(df: pd.DataFrame, columns: list[str], digits: int = 2) -> str
 
 def build_report(consistency: pd.DataFrame, counterfactuals: pd.DataFrame, pressure: pd.DataFrame) -> str:
     neutral_180 = consistency[(consistency["情景"] == "中性") & (consistency["day_index"] == 180)].iloc[0]
-    report = f"""# 阶段 11：专家质疑回应与模型一致性审计报告
+    report = f"""# 专家质疑回应与模型一致性审计报告
 
 ## 1. 审计目的
 
@@ -328,8 +328,8 @@ def build_report(consistency: pd.DataFrame, counterfactuals: pd.DataFrame, press
 
 
 def main() -> None:
-    event_df, forecast_frame, prefix, scenarios = load_stage5_context()
-    current_result = pd.read_csv(stage5.SCENARIO_RESULT_CSV)
+    event_df, forecast_frame, prefix, scenarios = load_scenario_context()
+    current_result = pd.read_csv(scenario.SCENARIO_RESULT_CSV)
     consistency = build_consistency_audit(current_result)
     counterfactuals = run_counterfactuals(forecast_frame, prefix, scenarios)
     base_assumptions, base_behavior = scenarios["neutral"]

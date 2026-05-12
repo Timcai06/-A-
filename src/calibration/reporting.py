@@ -31,10 +31,10 @@ def save_figure(simulation: pd.DataFrame) -> None:
         marker="s",
         markersize=2.4,
         linewidth=1.7,
-        label="阶段4精修后动态模型",
+        label="精修后动态模型",
     )
     ax.axhspan(110, 120, color="#10b981", alpha=0.10, label="题面110-120区间")
-    ax.set_title("阶段4精修后动态模型与实际价格对比")
+    ax.set_title("精修后动态模型与实际价格对比")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
     ax.legend(loc="upper left")
@@ -81,7 +81,7 @@ def build_report(top_candidates: pd.DataFrame, representative: pd.DataFrame, seg
         for row in segment_errors.to_dict("records")
     )
 
-    return f"""# 阶段 4 参数校准报告
+    return f"""# 短期模型参数校准报告
 
 ## 运行结论
 

@@ -18,5 +18,5 @@ class Stage4Paths:
     best_parameters_csv = PROJECT_ROOT / "output" / "calibration" / "动态模型最优参数.csv"
     top_candidates_csv = PROJECT_ROOT / "output" / "calibration" / "动态模型候选参数前10.csv"
     segment_errors_csv = PROJECT_ROOT / "output" / "calibration" / "动态模型分段误差.csv"
-    report_path = PROJECT_ROOT / "output" / "reports" / "stage4_calibration_report.md"
+    report_path = PROJECT_ROOT / "output" / "reports" / "短期模型参数校准报告.md"
     figure_path = PROJECT_ROOT / "figures" / "fitted_vs_actual.png"

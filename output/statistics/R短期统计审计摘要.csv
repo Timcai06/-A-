@@ -1,0 +1,13 @@
+"metric","value"
+"model_rmse",3.46851102567054
+"naive_rmse",4.51586979440285
+"model_mae",2.88042062990799
+"naive_mae",3.64933333333333
+"model_mape",2.87341847607923
+"naive_mape",3.61927198254417
+"dm_squared_loss_mean_diff",-8.36251126480187
+"dm_squared_loss_p_value",0.0227697800223462
+"dm_absolute_loss_mean_diff",-0.768912703425339
+"dm_absolute_loss_p_value",0.0503562648700955
+"direction_hit_rate",63.6363636363636
+"direction_p_value",0.0480708772103072

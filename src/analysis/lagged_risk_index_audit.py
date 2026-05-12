@@ -31,7 +31,7 @@ SOURCE_TABLE_CSV = RISK_DIR / "地缘风险数据来源表.csv"
 
 OUTPUT_DIR = PROJECT_ROOT / "output" / "risk"
 AUDIT_METRICS_CSV = OUTPUT_DIR / "滞后风险指数审计指标.csv"
-REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "stage9_lagged_risk_index_report.md"
+REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "滞后地缘风险指数审计报告.md"
 
 EVENT_FIGURE = PROJECT_ROOT / "figures" / "gpr_event_window_audit.png"
 SCATTER_FIGURE = PROJECT_ROOT / "figures" / "lagged_gpr_brent_return.png"
@@ -279,11 +279,11 @@ def build_report(sample: pd.DataFrame, metrics: pd.DataFrame) -> str:
         f"| {row['指标']} | {float(row['数值']):.4f} | {row['解释']} |" for row in metrics.to_dict("records")
     )
 
-    return f"""# 阶段9 滞后地缘风险指数审计报告
+    return f"""# 滞后地缘风险指数审计报告
 
 ## 运行结论
 
-本阶段接入 Caldara-Iacoviello 官方 GPR 月度指数，用来审计模型中的地缘风险溢价是否有外部事实支撑。这里没有抓取新闻原文，也没有把同月新闻指数直接塞进短期模型拟合；核心处理是使用 \(t-1\) 月 GPR 解释 \(t\) 月油价收益和波动，从机制上降低“油价上涨导致新闻恐慌、新闻恐慌再解释油价”的内生性风险。
+本审计接入 Caldara-Iacoviello 官方 GPR 月度指数，用来审计模型中的地缘风险溢价是否有外部事实支撑。这里没有抓取新闻原文，也没有把同月新闻指数直接塞进短期模型拟合；核心处理是使用 \(t-1\) 月 GPR 解释 \(t\) 月油价收益和波动，从机制上降低“油价上涨导致新闻恐慌、新闻恐慌再解释油价”的内生性风险。
 
 从结果看，同步 GPR 与冲突爆发月油价冲击高度同向，但这只能作为事后事实审计。真正可用于预测或解释下一期的变量是滞后 GPR：2026 年 3 月的模型不能使用 3 月 GPR，只能使用 2 月 GPR；2026 年 4 月才可以使用 3 月已经实现的 GPR 去解释风险延续。
 

@@ -52,7 +52,7 @@ def save_figures(result: pd.DataFrame) -> None:
         )
     ax.axvline(observed_end, color="#6b7280", linestyle="--", linewidth=1.0, label="附件数据截止")
     ax.axhspan(110, 120, color="#f59e0b", alpha=0.10, label="110-120美元/桶参考区间")
-    ax.set_title("阶段5：60-180天三情景原油价格路径")
+    ax.set_title("60-180天三情景原油价格路径")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
     ax.legend(loc="upper left", ncol=2)
@@ -99,7 +99,7 @@ def build_report(metrics: pd.DataFrame, params: pd.DataFrame, event_df: pd.DataF
         for row in params.to_dict("records")
     )
 
-    return f"""# 阶段 5 三情景预测报告
+    return f"""# 三情景预测报告
 
 ## 运行结论
 

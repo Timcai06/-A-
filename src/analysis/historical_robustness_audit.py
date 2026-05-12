@@ -30,7 +30,7 @@ EVENT_EXTREMENESS_CSV = OUTPUT_DIR / "冲突窗口历史分位数.csv"
 HIGH_VOL_WINDOWS_CSV = OUTPUT_DIR / "历史高波动窗口排名.csv"
 BASELINE_BY_REGIME_CSV = OUTPUT_DIR / "历史基准误差分布.csv"
 STATIONARITY_CSV = OUTPUT_DIR / "历史序列平稳性检验.csv"
-R_REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "stage10_history_r_language_report.md"
+R_REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "历史样本稳健性与R语言评估报告.md"
 
 EXTREMENESS_FIGURE = PROJECT_ROOT / "figures" / "historical_event_extremeness.png"
 BASELINE_FIGURE = PROJECT_ROOT / "figures" / "historical_baseline_error_distribution.png"
@@ -337,13 +337,13 @@ def build_report(
         "| {序列} | {ADF统计量:.3f} | {p值:.4f} | {结论} |".format(**row) for row in stationarity.to_dict("records")
     )
 
-    return f"""# 阶段10 历史样本稳健性与 R 语言评估报告
+    return f"""# 历史样本稳健性与 R 语言评估报告
 
 ## 运行结论
 
-本阶段把 2017-09-01 至 2026-05-05 的完整附件数据用于历史参照，而不是重新拟合主模型。核心目的有三个：第一，证明 2026 冲突窗口确实是历史高压窗口；第二，说明随机游走等简单基准在冲突窗口变难；第三，回答 R 语言是否有必要进入当前项目。
+本审计把 2017-09-01 至 2026-05-05 的完整附件数据用于历史参照，而不是重新拟合主模型。核心目的有三个：第一，证明 2026 冲突窗口确实是历史高压窗口；第二，说明随机游走等简单基准在冲突窗口变难；第三，回答 R 语言是否有必要进入当前项目。
 
-当前本机未检测到可用的 `R` 命令，因此本阶段先使用 Python 完成全部统计审计。结论是：R 适合后续做 ADF、VAR、GARCH、Granger 和高质量统计表，但当前项目主线没有必要切换到 R。Python 已经能稳定复现主模型、图表、PDF 和 DOCX；R 更适合作为后续计量补强工具。
+当前已经接通 R；本审计仍使用 Python 完成全部统计审计。结论是：R 适合后续做 ADF、VAR、GARCH、Granger 和高质量统计表，但当前项目主线没有必要切换到 R。Python 已经能稳定复现主模型、图表、PDF 和 DOCX；R 更适合作为后续计量补强工具。
 
 ## 冲突窗口历史位置
 

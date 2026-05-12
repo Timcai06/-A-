@@ -12,7 +12,7 @@ SCENARIO_METRICS_CSV = PROJECT_ROOT / "output" / "scenarios" / "三情景关键�
 SCENARIO_PARAMS_CSV = PROJECT_ROOT / "output" / "scenarios" / "三情景参数表.csv"
 SCENARIO_PRICE_FIGURE = PROJECT_ROOT / "figures" / "scenario_price_paths.png"
 BUFFER_FIGURE = PROJECT_ROOT / "figures" / "inventory_depletion_risk.png"
-REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "stage5_scenario_forecast_report.md"
+REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "长期三情景预测报告.md"
 FORECAST_END_DAY = 180
 MARKER_DAYS = [60, 90, 120, 180]
 
