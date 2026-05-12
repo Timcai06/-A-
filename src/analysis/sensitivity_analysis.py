@@ -183,10 +183,16 @@ def load_scenario_baseline() -> tuple[
     scenario.dynamic.BehavioralParameters,
 ]:
     base_config = scenario.dynamic.load_yaml(scenario.dynamic.BASE_CONFIG_PATH)
+    scenario_config = scenario.dynamic.load_yaml(scenario.dynamic.SCENARIO_CONFIG_PATH)
     paths = scenario.dynamic.resolve_paths(base_config)
     event_df = scenario.dynamic.load_event_window(paths.event_csv)
     best = scenario.load_best_row()
     base_assumptions, base_behavior = scenario.calibrated_assumptions_and_behavior(best)
+    base_assumptions, base_behavior = scenario.build_scenario_parameters(
+        base_assumptions,
+        base_behavior,
+        scenario_config,
+    )["neutral"]
     forecast_frame = scenario.build_forecast_frame(event_df)
     return event_df, forecast_frame, base_assumptions, base_behavior
 

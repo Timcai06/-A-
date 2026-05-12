@@ -22,6 +22,7 @@ if [ -x /opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 ]; 
 fi
 
 "${PYTHON_BIN}" -m src.pipeline.clean_data
+"${PYTHON_BIN}" -m src.scenarios.scenario_forecast
 "${PYTHON_BIN}" -m src.visualization.final_paper_figures
 "${PYTHON_BIN}" -m src.visualization.short_term_paper_figures
 "${PYTHON_BIN}" -m src.analysis.sensitivity_analysis

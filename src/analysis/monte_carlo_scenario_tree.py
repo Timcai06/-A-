@@ -11,6 +11,11 @@ import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
 from src.scenarios import scenario_forecast as scenario
+from src.scenarios.external_constraints import (
+    ExternalConstraintFactors,
+    apply_external_constraints,
+    load_external_constraint_factors,
+)
 
 
 RANDOM_SEED = 20260511
@@ -33,10 +38,12 @@ def load_baseline() -> tuple[
     scenario.dynamic.BehavioralParameters,
 ]:
     base_config = scenario.dynamic.load_yaml(scenario.dynamic.BASE_CONFIG_PATH)
+    scenario_config = scenario.dynamic.load_yaml(scenario.dynamic.SCENARIO_CONFIG_PATH)
     paths = scenario.dynamic.resolve_paths(base_config)
     event_df = scenario.dynamic.load_event_window(paths.event_csv)
     best = scenario.load_best_row()
     assumptions, behavior = scenario.calibrated_assumptions_and_behavior(best)
+    assumptions, behavior = scenario.build_scenario_parameters(assumptions, behavior, scenario_config)["neutral"]
     forecast_frame = scenario.build_forecast_frame(event_df)
     prefix = scenario.load_calibrated_prefix()
     return event_df, forecast_frame, prefix, assumptions, behavior
@@ -47,6 +54,7 @@ def sample_parameters(
     sample_id: int,
     base_assumptions: scenario.dynamic.PhysicalAssumptions,
     base_behavior: scenario.dynamic.BehavioralParameters,
+    external_factors: ExternalConstraintFactors,
 ) -> tuple[scenario.dynamic.PhysicalAssumptions, scenario.dynamic.BehavioralParameters, dict[str, Any]]:
     stress = float(rng.beta(2.1, 2.3))
     supply_interruption = float(np.clip(1400 + 400 * stress + rng.normal(0, 35), 1400, 1800))
@@ -91,6 +99,13 @@ def sample_parameters(
         relief_decay_days=int(np.clip(round(20 + 28 * stress), 16, 55)),
     )
     label = "缓和路径" if stress < 0.33 else "中性附近" if stress < 0.66 else "高压尾部"
+    constraint_key = "optimistic" if stress < 0.33 else "neutral" if stress < 0.66 else "pessimistic"
+    assumptions, behavior = apply_external_constraints(
+        constraint_key,
+        assumptions,
+        behavior,
+        external_factors,
+    )
     meta = {
         "sample_id": sample_id,
         "stress_index": stress,
@@ -202,12 +217,19 @@ def build_tail_risk(metrics: pd.DataFrame) -> pd.DataFrame:
 
 def run_monte_carlo(n_samples: int = N_SAMPLES) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     _, forecast_frame, prefix, base_assumptions, base_behavior = load_baseline()
+    external_factors = load_external_constraint_factors(write_output=False)
     rng = np.random.default_rng(RANDOM_SEED)
     paths: list[pd.DataFrame] = []
     metric_rows: list[dict[str, Any]] = []
 
     for sample_id in range(1, n_samples + 1):
-        assumptions, behavior, meta = sample_parameters(rng, sample_id, base_assumptions, base_behavior)
+        assumptions, behavior, meta = sample_parameters(
+            rng,
+            sample_id,
+            base_assumptions,
+            base_behavior,
+            external_factors,
+        )
         path = simulate_one_sample(forecast_frame, prefix, assumptions, behavior)
         paths.append(path)
         metric_rows.append(summarize_sample(path, prefix, meta))

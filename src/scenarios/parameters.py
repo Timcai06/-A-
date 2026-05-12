@@ -8,6 +8,11 @@ from typing import Any
 import pandas as pd
 
 from src.models import dynamic_short_term as dynamic
+from src.scenarios.external_constraints import (
+    ExternalConstraintFactors,
+    apply_external_constraints,
+    load_external_constraint_factors,
+)
 from src.scenarios.settings import BEST_PARAMETERS_PATH, SCENARIO_NAMES
 
 
@@ -61,8 +66,10 @@ def build_scenario_parameters(
     base_assumptions: dynamic.PhysicalAssumptions,
     base_behavior: dynamic.BehavioralParameters,
     scenario_config: dict[str, Any],
+    external_factors: ExternalConstraintFactors | None = None,
 ) -> dict[str, tuple[dynamic.PhysicalAssumptions, dynamic.BehavioralParameters]]:
     scenarios = scenario_config["scenarios"]
+    factors = external_factors or load_external_constraint_factors()
 
     optimistic_cfg = scenarios["optimistic"]
     pessimistic_cfg = scenarios["pessimistic"]
@@ -141,10 +148,14 @@ def build_scenario_parameters(
         ),
     )
 
-    return {
+    raw_scenarios = {
         "optimistic": optimistic,
         "neutral": neutral,
         "pessimistic": pessimistic,
+    }
+    return {
+        key: apply_external_constraints(key, assumptions, behavior, factors)
+        for key, (assumptions, behavior) in raw_scenarios.items()
     }
 
 

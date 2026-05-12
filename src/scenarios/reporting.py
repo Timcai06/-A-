@@ -9,6 +9,7 @@ from src.common.paths import PROJECT_ROOT, ensure_parent
 from src.models import dynamic_short_term as dynamic
 from src.scenarios.settings import (
     BUFFER_FIGURE,
+    EXTERNAL_CONSTRAINTS_CSV,
     FORECAST_END_DAY,
     REPORT_PATH,
     SCENARIO_METRICS_CSV,
@@ -98,6 +99,22 @@ def build_report(metrics: pd.DataFrame, params: pd.DataFrame, event_df: pd.DataF
         )
         for row in params.to_dict("records")
     )
+    constraints_text = ""
+    if EXTERNAL_CONSTRAINTS_CSV.exists():
+        constraints = pd.read_csv(EXTERNAL_CONSTRAINTS_CSV)
+        constraint_rows = "\n".join(
+            "| {中文含义} | {数值:.4f} |".format(**row)
+            for row in constraints.to_dict("records")
+        )
+        constraints_text = f"""
+## 官方外生约束因子
+
+本轮长期预测已把 EIA/JODI 从论文证据层推进到模型参数层。约束因子只调整长期情景参数，不替代附件真实价格，也不把 JODI 多国上报口径包装成完整全球总量。
+
+| 约束项 | 乘数 |
+|---|---:|
+{constraint_rows}
+"""
 
     return f"""# 三情景预测报告
 
@@ -105,7 +122,7 @@ def build_report(metrics: pd.DataFrame, params: pd.DataFrame, event_df: pd.DataF
 
 阶段 5 已基于阶段 4 综合最优短期动态模型，构建乐观、中性、悲观三条 60-180 天价格路径。预测口径为：从冲突窗口起点 {event_start} 推进到第 {FORECAST_END_DAY} 天，即 {forecast_end}；附件真实价格只覆盖到 {observed_end}，之后均为情景外推结果，不作为真实观测数据。
 
-本阶段没有新增爬虫数据，也没有编造未来真实价格。模型继续使用附件 CSV 的历史价格作为校准基础，情景差异来自赛题范围内的供应中断、SPR 释放、绕道恢复、需求弹性、恐慌衰减和市场预期修复强度。
+本阶段没有新增新闻爬虫数据，也没有编造未来真实价格。模型继续使用附件 CSV 的历史价格作为校准基础，情景差异来自赛题范围内的供应中断、SPR 释放、绕道恢复、需求弹性、恐慌衰减和市场预期修复强度。本轮开始引入 EIA/JODI 官方外生数据生成长期参数约束因子，使绕道能力、库存缓冲、需求调整和风险权重受到官方数量级审计。
 
 为回应长期外推中“SPR 是否被机械满额释放”和“不确定性溢价是否形成常数托底”的风险，本阶段对外推逻辑做了两点增强：第一，SPR 释放不再等同于计划上限，而是随剩余物理缺口、价格压力和持续时间自动收缩；第二，不确定性溢价拆分为前期冲击不确定性和持续封锁制度风险，前者随时间衰减，后者由未解决的封锁压力决定。
 
@@ -121,6 +138,8 @@ def build_report(metrics: pd.DataFrame, params: pd.DataFrame, event_df: pd.DataF
 |---|---:|---:|---:|---:|---:|---:|---:|
 {param_rows}
 
+{constraints_text}
+
 ## 解释
 
 - 乐观情景假设 SPR 可用上限更高、绕道运输恢复更快、需求收缩更充分；当缺口被覆盖后，实际 SPR 释放会自动回落，因此外推期价格逐步向低位收敛。
@@ -132,6 +151,7 @@ def build_report(metrics: pd.DataFrame, params: pd.DataFrame, event_df: pd.DataF
 - `{SCENARIO_RESULT_CSV.relative_to(PROJECT_ROOT)}`
 - `{SCENARIO_METRICS_CSV.relative_to(PROJECT_ROOT)}`
 - `{SCENARIO_PARAMS_CSV.relative_to(PROJECT_ROOT)}`
+- `{EXTERNAL_CONSTRAINTS_CSV.relative_to(PROJECT_ROOT)}`
 - `{SCENARIO_PRICE_FIGURE.relative_to(PROJECT_ROOT)}`
 - `{BUFFER_FIGURE.relative_to(PROJECT_ROOT)}`
 

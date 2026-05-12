@@ -21,6 +21,7 @@ from src.scenarios.parameters import (
     calibrated_assumptions_and_behavior,
     load_best_row,
 )
+from src.scenarios.external_constraints import load_external_constraint_factors
 from src.scenarios.reporting import build_report, save_figures, write_outputs
 from src.scenarios.settings import (
     BUFFER_FIGURE,
@@ -82,7 +83,8 @@ def main() -> None:
     event_df = dynamic.load_event_window(paths.event_csv)
     best = load_best_row()
     base_assumptions, base_behavior = calibrated_assumptions_and_behavior(best)
-    scenarios = build_scenario_parameters(base_assumptions, base_behavior, scenario_config)
+    external_factors = load_external_constraint_factors()
+    scenarios = build_scenario_parameters(base_assumptions, base_behavior, scenario_config, external_factors)
     forecast_frame = build_forecast_frame(event_df)
     prefix = load_calibrated_prefix()
 
