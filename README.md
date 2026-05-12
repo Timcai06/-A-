@@ -20,8 +20,8 @@
 
 | 文件 | 说明 |
 |---|---|
-| `output/final/总论文.pdf` | 当前正式 PDF，已编译验证 |
-| `output/final/总论文.docx` | 可编辑 Word 版本 |
+| `output/final/A题_霍尔木兹海峡封锁对国际原油价格影响_论文.pdf` | 当前正式 PDF，已编译验证 |
+| `output/final/A题_霍尔木兹海峡封锁对国际原油价格影响_论文.docx` | 可编辑 Word 版本 |
 | `paper/总论文.tex` | 总论文 LaTeX 源码 |
 | `docs/00_项目总览.md` | 项目状态和关键结论入口 |
 
@@ -51,8 +51,8 @@ source scripts/project_env.sh
 
 输出：
 
-- `output/final/总论文.pdf`
-- `output/final/总论文.docx`
+- `output/final/A题_霍尔木兹海峡封锁对国际原油价格影响_论文.pdf`
+- `output/final/A题_霍尔木兹海峡封锁对国际原油价格影响_论文.docx`
 
 ## 目录边界
 
@@ -72,7 +72,7 @@ source scripts/project_env.sh
 
 ## 目录治理原则
 
-- `paper/总论文.tex` 是唯一最终论文源文件。
+- `paper/总论文.tex` 是最终论文主控源文件，正文拆分在 `paper/sections/`。
 - `output/final/` 只放最终 PDF/DOCX。
 - `output/reports/` 只放阶段报告和模型证据。
 - `docs/` 保持少量关键文档，不再扩散成报告仓库。

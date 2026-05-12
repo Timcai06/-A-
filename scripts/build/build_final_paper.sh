@@ -7,6 +7,9 @@ cd "${ROOT_DIR}"
 
 BUILD_DIR="output/build/latex"
 FINAL_DIR="output/final"
+FINAL_PAPER_BASENAME="A题_霍尔木兹海峡封锁对国际原油价格影响_论文"
+FINAL_PDF="${FINAL_DIR}/${FINAL_PAPER_BASENAME}.pdf"
+FINAL_DOCX="${FINAL_DIR}/${FINAL_PAPER_BASENAME}.docx"
 
 mkdir -p "${BUILD_DIR}" "${FINAL_DIR}"
 mkdir -p "tmp/matplotlib" "tmp/cache"
@@ -37,6 +40,14 @@ else
 fi
 
 mkdir -p paper/figures
+if command -v mmdc >/dev/null 2>&1; then
+  mmdc -p paper/diagrams/puppeteer-config.json -i paper/diagrams/综合机制递推模型结构图.mmd -o paper/figures/综合机制递推模型结构图.png -b white -s 2 \
+    || echo "Mermaid mechanism diagram render failed; using existing rendered figure." >&2
+  mmdc -p paper/diagrams/puppeteer-config.json -i paper/diagrams/评审质疑防御框架图.mmd -o paper/figures/评审质疑防御框架图.png -b white -s 2 \
+    || echo "Mermaid defense diagram render failed; using existing rendered figure." >&2
+else
+  echo "mmdc not found; using existing Mermaid-rendered figures if present." >&2
+fi
 cp figures/price_trend.png paper/figures/布伦特原油长期价格走势.png
 cp figures/event_window_price.png paper/figures/冲突窗口价格走势.png
 cp figures/return_volatility.png paper/figures/布伦特收益率与波动率.png
@@ -66,8 +77,8 @@ fi
 xelatex -interaction=nonstopmode -halt-on-error -output-directory="${BUILD_DIR}" paper/总论文.tex
 xelatex -interaction=nonstopmode -halt-on-error -output-directory="${BUILD_DIR}" paper/总论文.tex
 
-cp "${BUILD_DIR}/总论文.pdf" "${FINAL_DIR}/总论文.pdf"
-echo "Built ${FINAL_DIR}/总论文.pdf"
+cp "${BUILD_DIR}/总论文.pdf" "${FINAL_PDF}"
+echo "Built ${FINAL_PDF}"
 
 if command -v pandoc >/dev/null 2>&1; then
   pandoc \
@@ -76,10 +87,10 @@ if command -v pandoc >/dev/null 2>&1; then
     --toc \
     --toc-depth=2 \
     --resource-path=".:paper/figures:figures" \
-    --output="${FINAL_DIR}/总论文.docx" \
+    --output="${FINAL_DOCX}" \
     paper/总论文.tex
-  "${PYTHON_BIN}" scripts/postprocess/fix_docx_toc_title.py "${FINAL_DIR}/总论文.docx"
-  echo "Built ${FINAL_DIR}/总论文.docx"
+  "${PYTHON_BIN}" scripts/postprocess/fix_docx_toc_title.py "${FINAL_DOCX}"
+  echo "Built ${FINAL_DOCX}"
 else
   echo "pandoc not found; skipped DOCX export." >&2
 fi

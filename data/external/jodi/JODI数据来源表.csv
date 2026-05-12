@@ -1,0 +1,3 @@
+来源,数据集,series_id,URL,单位,当前状态,模型用途
+JODI,JODI Oil World Database Primary,JODI_PRIMARY,https://www.jodidata.org/_resources/files/downloads/oil-data/annual-csv/primary/primaryyear2026.csv,KBD/KBBL,已自动抓取 2025 和 2026 年官方 CSV,审计多国原油及凝析油产量、库存、进出口数量级。
+JODI,JODI Oil World Database Secondary,JODI_SECONDARY,https://www.jodidata.org/_resources/files/downloads/oil-data/annual-csv/secondary/secondaryyear2026.csv,KBD/KBBL,已自动抓取 2025 和 2026 年官方 CSV,审计多国油品需求、炼厂产出和产品库存数量级。

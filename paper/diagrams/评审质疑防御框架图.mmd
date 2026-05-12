@@ -1,0 +1,43 @@
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "STHeiti, Songti SC, Arial", "primaryColor": "#F8FAFC", "primaryBorderColor": "#475569", "primaryTextColor": "#111827", "lineColor": "#64748B", "tertiaryColor": "#EFF6FF"}}}%%
+flowchart LR
+    subgraph Q["评委可能质疑"]
+        Q1["是否打败朴素基准"]
+        Q2["是否滞后复制"]
+        Q3["是否参数过拟合"]
+        Q4["是否硬编码价格平台"]
+        Q5["是否存在内生性"]
+        Q6["长期预测是否可信"]
+    end
+
+    subgraph A["对应防御证据"]
+        A1["上一日基准、ARIMA、DM检验"]
+        A2["平移检验、拐点局部图"]
+        A3["扰动压力测试、权重敏感性"]
+        A4["代码审计、机制消融"]
+        A5["不用新闻爬虫拟合、滞后GPR审计"]
+        A6["三情景、敏感性、蒙特卡洛、状态转移"]
+    end
+
+    R["证据链结论"]
+
+    Q1 --> A1
+    Q2 --> A2
+    Q3 --> A3
+    Q4 --> A4
+    Q5 --> A5
+    Q6 --> A6
+
+    A1 --> R
+    A2 --> R
+    A3 --> R
+    A4 --> R
+    A5 --> R
+    A6 --> R
+
+    classDef question fill:#FEF2F2,stroke:#DC2626,stroke-width:1.5px,color:#111827;
+    classDef answer fill:#EFF6FF,stroke:#2563EB,stroke-width:1.5px,color:#111827;
+    classDef result fill:#ECFDF5,stroke:#059669,stroke-width:1.8px,color:#111827;
+
+    class Q,Q1,Q2,Q3,Q4,Q5,Q6 question;
+    class A1,A2,A3,A4,A5,A6 answer;
+    class R result;

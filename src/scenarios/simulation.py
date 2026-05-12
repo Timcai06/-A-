@@ -42,6 +42,7 @@ REGIME_CONFIDENCE_DECAY_DAYS = 120
 PANIC_PRICE_MULTIPLIER = 0.45
 FEAR_CHANGE_MOMENTUM = 2.5
 OVERSUPPLY_REVERSION_SCALE = 1.35
+BLOCKADE_RISK_DECAY = dynamic.BLOCKADE_RISK_DECAY
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,13 @@ MECHANISM_CONSTANT_NOTES: tuple[MechanismConstantNote, ...] = (
         "恐慌变化对日度价格的短期动量修正",
         "作为事件冲击吸收速度项，只影响恐慌变化率；论文中应表述为辅助动量审计点。",
         "保留但需审慎解释",
+    ),
+    MechanismConstantNote(
+        "BLOCKADE_RISK_DECAY",
+        BLOCKADE_RISK_DECAY,
+        "封锁风险溢价的日度衰减速度",
+        "刻画封锁风险从冲击确认到制度化吸收的衰减速度；不是题面物理常数。",
+        "已纳入敏感性分析",
     ),
 )
 
@@ -317,7 +325,7 @@ def simulate_future_from_prefix(
             * behavior.risk_weight
             * (assumptions.supply_interruption / assumptions.base_demand)
             * (1 - np.exp(-day_index / 7))
-            * np.exp(-0.004 * day_index)
+            * np.exp(-BLOCKADE_RISK_DECAY * day_index)
         )
         uncertainty_premium, shock_uncertainty_premium, regime_risk_premium = uncertainty_components(
             day_index,

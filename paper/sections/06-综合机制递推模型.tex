@@ -1,0 +1,77 @@
+\section{综合机制递推模型}
+
+综合机制递推模型是本文最终主模型。它不是把所有可能因素无差别加入拟合，而是在赛题要求因素的基础上，保留已经通过消融实验和敏感性分析证明有效的价格形成因素。模型目标是在附件冲突窗口内解释真实价格路径，并为后续 60--180 天情景外推提供统一机制基础。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\linewidth]{综合机制递推模型结构图.png}
+\caption{综合机制递推模型结构。物理供需层决定剩余缺口，市场价格形成层完成风险再定价，长期情景层刻画条件区间和尾部风险。}
+\end{figure}
+
+\keypoint{主模型分为两层：物理供需层负责回答“缺口还剩多少”，市场价格形成层负责回答“市场如何给剩余缺口和制度风险定价”。两层分开写，可以避免把价格平台解释成单个调参系数。}
+
+\subsection{物理供需层}
+
+本文首先构造题面物理供需层。第 $t$ 日有效需求为
+
+\begin{equation}
+  D_t
+  =
+  D_0\left(\frac{\hat P_{t-1}}{P_0}\right)^{\varepsilon_t}
+  - C_t,
+\end{equation}
+
+其中 $C_t$ 表示高价下需求收缩量。第 $t$ 日不含库存的有效供给为
+
+\begin{equation}
+  S_t^{(0)}
+  =
+  S_0 - I + R_t + Q_t.
+\end{equation}
+
+商业库存缓冲量 $B_t$ 受剩余缺口、库存日释放上限和剩余库存约束：
+
+\begin{equation}
+  B_t
+  =
+  \min\left\{
+    \lambda \max(D_t-S_t^{(0)},0),\,
+    B_{\max},\,
+    K_{t-1}
+  \right\}.
+\end{equation}
+
+最终剩余缺口为
+
+\begin{equation}
+  G_t = \max(D_t-S_t^{(0)}-B_t,0).
+\end{equation}
+
+\subsection{市场价格形成层}
+
+原油期货价格不仅反映当日物理缺口，也反映市场对冲突持续时间、政策缓冲可信度和运输修复进度的预期。因此本文在物理供需层之上增加市场价格形成层：
+
+\begin{equation}
+\begin{aligned}
+  P_t^\ast
+  ={}& P_0
+  + \phi P_0 \frac{G_t/D_0}{|\varepsilon_t|}
+  + P_0\beta\frac{I}{D_0}
+    \left(1-e^{-t/7}\right)e^{-\kappa_B t} \\
+  & + P_0U\left(1-e^{-t/18}\right)
+  + 0.45P_0F_t
+  - H_t - L_t .
+\end{aligned}
+\end{equation}
+
+其中 $\phi$ 为物理缺口向期货目标价格传导的价格形成系数，不替代题面需求弹性；$\kappa_B=0.004$ 为封锁风险溢价的日度衰减速度，表示市场逐步吸收封锁制度风险的速度；$H_t$ 为缓冲确认折价，$L_t$ 为预期修复折价。这里的 \(\varepsilon_t\) 仍承担题面低弹性约束，\(\phi\) 只刻画期货市场对剩余缺口的折价传导强度。模型递推式为
+
+\begin{equation}
+  \hat P_t
+  =
+  \hat P_{t-1}
+  + v(P_t^\ast-\hat P_{t-1})
+  + \gamma_F(F_t-F_{t-1}),\quad \gamma_F=2.5 .
+\end{equation}
+
+该结构保留了题面中的离散递推思想，同时允许期货市场对风险和预期做非线性再定价。恐慌动量项 \(\gamma_F(F_t-F_{t-1})\) 只刻画恐慌强度快速变化时的一次性日度调整，不替代恐慌溢价本身；若恐慌强度稳定，则该项为零。需要强调，本文不把市场价格形成层视为任意补丁：风险溢价、缓冲确认折价和预期修复折价只有在具有经济含义、方向可解释、消融后误差明显恶化且扰动后结论保持稳定时才保留在主模型中。

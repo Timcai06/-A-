@@ -164,6 +164,15 @@ SENSITIVITY_SPECS: list[dict[str, Any]] = [
         "可控性": "中",
         "解释": "供给超过需求时向下修正目标价格的机制强度。",
     },
+    {
+        "key": "BLOCKADE_RISK_DECAY",
+        "参数": "封锁风险衰减速度",
+        "层级": "长期机制透明层",
+        "单位": "日衰减率",
+        "扰动": [0.002, 0.004, 0.006, 0.008],
+        "可控性": "中",
+        "解释": "封锁风险溢价随时间被市场吸收的速度，用于检验长期路径是否依赖隐藏指数衰减常数。",
+    },
 ]
 
 
@@ -226,16 +235,23 @@ def apply_perturbation(
 
 @contextmanager
 def temporary_simulation_constant(key: str, value: float) -> Iterator[None]:
-    if not hasattr(scenario_sim, key):
+    targets = [
+        module
+        for module in (scenario_sim, scenario.dynamic)
+        if key and hasattr(module, key)
+    ]
+    if not targets:
         yield
         return
 
-    original_value = getattr(scenario_sim, key)
-    setattr(scenario_sim, key, float(value))
+    original_values = [(module, getattr(module, key)) for module in targets]
+    for module, _ in original_values:
+        setattr(module, key, float(value))
     try:
         yield
     finally:
-        setattr(scenario_sim, key, original_value)
+        for module, original_value in original_values:
+            setattr(module, key, original_value)
 
 
 def run_single_path(

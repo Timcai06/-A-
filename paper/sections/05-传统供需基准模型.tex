@@ -1,0 +1,40 @@
+\section{传统供需基准模型}
+
+\subsection{模型建立}
+
+传统供需基准模型用于刻画“没有显著缓冲机制时”的理论价格压力。设基准价格为 $P_0$，供应中断占需求比例为 $I/D_0$，短期需求价格弹性为 $\varepsilon$，线性化价格上界写为
+
+\begin{equation}
+  P_{\mathrm{base}}
+  =
+  P_0
+  \left(
+    1+\frac{I/D_0}{|\varepsilon|}
+  \right).
+\end{equation}
+
+该模型不是最终预测模型，而是用于说明低弹性短期供需框架会产生多高的理论上界。赛题给出的短期弹性约为 $-0.05$，供应中断范围约为 1400--1800 万桶/日。
+
+\subsection{基准模型结果}
+
+\begin{table}[H]
+\centering
+\caption{传统供需基准模型结果}
+\begin{tabular}{lrrr}
+\toprule
+情景 & 供应中断量 & 线性化价格 & 相对实际最高收盘价倍数 \\
+\midrule
+低中断 & 1400 & 278.20 & 2.44 \\
+中中断 & 1600 & 307.48 & 2.70 \\
+高中断 & 1800 & 336.77 & 2.95 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\linewidth]{传统供需基准与真实价格对比.png}
+\caption{传统供需基准模型与附件真实价格对比。低弹性静态模型明显高估现实价格。}
+\end{figure}
+
+结果显示，传统模型给出的 278--337 美元/桶显著高于附件冲突窗口最高收盘价 114.06 美元/桶。这说明单纯依靠供应缺口和低短期弹性无法解释现实价格，必须进一步引入 SPR、库存、绕道运输、需求收缩和市场预期修复。

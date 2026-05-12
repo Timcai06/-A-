@@ -1,0 +1,57 @@
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "STHeiti, Songti SC, Arial", "primaryColor": "#EFF6FF", "primaryBorderColor": "#2563EB", "primaryTextColor": "#111827", "lineColor": "#64748B", "tertiaryColor": "#F8FAFC"}}}%%
+flowchart LR
+    subgraph A["物理供需层"]
+        A1["供应中断"]
+        A2["SPR释放"]
+        A3["商业库存"]
+        A4["绕道运输"]
+        A5["需求收缩"]
+    end
+
+    subgraph B["市场价格形成层"]
+        B1["地缘风险溢价"]
+        B2["冲击不确定性"]
+        B3["恐慌衰减"]
+        B4["缓冲确认折价"]
+        B5["预期修复折价"]
+    end
+
+    subgraph C["长期情景层"]
+        C1["供给恢复"]
+        C2["长期弹性"]
+        C3["封锁风险衰减"]
+        C4["状态转移扰动"]
+    end
+
+    D["剩余供需缺口"]
+    E["短期目标价格"]
+    F["递推价格路径"]
+    G["60-180天条件区间"]
+
+    A1 --> D
+    A2 --> D
+    A3 --> D
+    A4 --> D
+    A5 --> D
+    D --> E
+    B1 --> E
+    B2 --> E
+    B3 --> E
+    B4 --> E
+    B5 --> E
+    E --> F
+    F --> G
+    C1 --> G
+    C2 --> G
+    C3 --> G
+    C4 --> G
+
+    classDef physical fill:#EFF6FF,stroke:#2563EB,stroke-width:1.6px,color:#111827;
+    classDef market fill:#ECFDF5,stroke:#059669,stroke-width:1.6px,color:#111827;
+    classDef longrun fill:#FFF7ED,stroke:#EA580C,stroke-width:1.6px,color:#111827;
+    classDef output fill:#F8FAFC,stroke:#475569,stroke-width:1.8px,color:#111827;
+
+    class A1,A2,A3,A4,A5 physical;
+    class B1,B2,B3,B4,B5 market;
+    class C1,C2,C3,C4 longrun;
+    class D,E,F,G output;

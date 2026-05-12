@@ -27,6 +27,11 @@ BASE_CONFIG_PATH = PROJECT_ROOT / "config" / "base.yml"
 SCENARIO_CONFIG_PATH = PROJECT_ROOT / "config" / "scenarios.yml"
 PROBLEM_PARAMETERS_PATH = PROJECT_ROOT / "data" / "metadata" / "题面参数表.csv"
 
+# Daily decay speed for blockade risk premium. It is separated from the
+# calibrated risk weight so sensitivity analysis can audit whether the long-run
+# price path depends on one hidden exponential constant.
+BLOCKADE_RISK_DECAY = 0.004
+
 
 @dataclass(frozen=True)
 class DynamicPaths:
@@ -240,7 +245,7 @@ def simulate_dynamic_model(
             * behavior.risk_weight
             * (assumptions.supply_interruption / assumptions.base_demand)
             * (1 - np.exp(-day_index / 7))
-            * np.exp(-0.004 * day_index)
+            * np.exp(-BLOCKADE_RISK_DECAY * day_index)
         )
         uncertainty_premium = base_price * behavior.uncertainty_floor * (1 - np.exp(-day_index / 18))
         panic_premium = base_price * 0.45 * fear_excess
