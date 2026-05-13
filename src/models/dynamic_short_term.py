@@ -335,6 +335,7 @@ def compute_metrics(simulated: pd.DataFrame, behavior: BehavioralParameters) -> 
 
 
 def candidate_behaviors() -> list[BehavioralParameters]:
+    """Return coarse candidates for initial screening before final calibration."""
     candidates: list[BehavioralParameters] = []
     for pressure_scale, risk_weight, uncertainty_floor, inventory_response, adjustment_speed in product(
         [0.045, 0.060, 0.075, 0.090],

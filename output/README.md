@@ -23,4 +23,4 @@
 
 - 写论文时优先查 `output/reports/` 和各结果 CSV。
 - 交付时只引用 `output/final/`。
-- 不要把人工说明文档放进 `output/`，应放入 `docs/` 或 `质疑报告/`。
+- 不要把人工说明文档放进 `output/`，应放入 `docs/` 或 `审计报告/`。
