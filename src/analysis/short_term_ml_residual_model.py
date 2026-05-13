@@ -1,9 +1,8 @@
 """Machine-learning baselines for the short-term model.
 
-This module intentionally starts with a low-degree Ridge model implemented with
-NumPy.  It avoids adding a heavy dependency and provides a transparent first
-answer to whether data-driven historical features can improve the event-window
-short-term model.
+The auxiliary Ridge layer is intentionally low-degree and leakage-safe.  It now
+uses a scikit-learn ``StandardScaler + Ridge`` pipeline so that feature scaling,
+regularization and future extensions stay explicit and reproducible.
 """
 
 from __future__ import annotations
@@ -13,6 +12,9 @@ from dataclasses import dataclass
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import Ridge
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 from src.analysis.short_term_ml_features import OUTPUT_CSV as FEATURE_CSV
 from src.analysis.short_term_ml_features import main as build_features
@@ -69,21 +71,13 @@ def clean_training_frame(features: pd.DataFrame) -> pd.DataFrame:
     return features[needed].replace([np.inf, -np.inf], np.nan).dropna().copy()
 
 
-def fit_ridge(X: np.ndarray, y: np.ndarray, alpha: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    mu = X.mean(axis=0)
-    sigma = X.std(axis=0)
-    sigma[sigma == 0] = 1.0
-    Xs = (X - mu) / sigma
-    Xd = np.column_stack([np.ones(len(Xs)), Xs])
-    penalty = np.diag([0.0] + [alpha] * Xs.shape[1])
-    beta = np.linalg.solve(Xd.T @ Xd + penalty, Xd.T @ y)
-    return beta, mu, sigma
-
-
-def predict_ridge(X: np.ndarray, beta: np.ndarray, mu: np.ndarray, sigma: np.ndarray) -> np.ndarray:
-    Xs = (X - mu) / sigma
-    Xd = np.column_stack([np.ones(len(Xs)), Xs])
-    return Xd @ beta
+def make_ridge_pipeline(alpha: float) -> Pipeline:
+    return Pipeline(
+        steps=[
+            ("standardize", StandardScaler()),
+            ("ridge", Ridge(alpha=alpha)),
+        ]
+    )
 
 
 def choose_alpha(train: pd.DataFrame, columns: list[str]) -> tuple[float, pd.DataFrame]:
@@ -96,11 +90,12 @@ def choose_alpha(train: pd.DataFrame, columns: list[str]) -> tuple[float, pd.Dat
 
     rows: list[dict[str, float]] = []
     for alpha in ALPHA_GRID:
-        beta, mu, sigma = fit_ridge(train_part[columns].to_numpy(float), train_part["target_log_return"].to_numpy(float), alpha)
-        pred_return = predict_ridge(valid_part[columns].to_numpy(float), beta, mu, sigma)
+        model = make_ridge_pipeline(alpha)
+        model.fit(train_part[columns].to_numpy(float), train_part["target_log_return"].to_numpy(float))
+        pred_return = model.predict(valid_part[columns].to_numpy(float))
         pred_price = valid_part["pre_close_filled"].to_numpy(float) * np.exp(pred_return)
         error = pred_price - valid_part["target_close_price"].to_numpy(float)
-        rows.append({"alpha": alpha, "验证RMSE": rmse(error), "验证MAE": mae(error)})
+        rows.append({"alpha": alpha, "验证RMSE": rmse(error), "验证MAE": mae(error), "验证样本数": float(len(valid_part))})
 
     score = pd.DataFrame(rows).sort_values(["验证RMSE", "验证MAE"]).reset_index(drop=True)
     return float(score.iloc[0]["alpha"]), score
@@ -132,8 +127,9 @@ def build_predictions(
     event_features = usable[usable["trade_date"].isin(mechanism["trade_date"])].copy()
 
     best_alpha, alpha_scores = choose_alpha(pre_event, columns)
-    beta, mu, sigma = fit_ridge(pre_event[columns].to_numpy(float), pre_event["target_log_return"].to_numpy(float), best_alpha)
-    pred_return = predict_ridge(event_features[columns].to_numpy(float), beta, mu, sigma)
+    ridge_model = make_ridge_pipeline(best_alpha)
+    ridge_model.fit(pre_event[columns].to_numpy(float), pre_event["target_log_return"].to_numpy(float))
+    pred_return = ridge_model.predict(event_features[columns].to_numpy(float))
 
     event_predictions = event_features[["trade_date", "pre_close_filled", "target_close_price"]].copy()
     event_predictions["ridge_predicted_return"] = pred_return
@@ -233,6 +229,7 @@ def build_report(comparison: pd.DataFrame, alpha_scores: pd.DataFrame) -> str:
 ## 训练方式
 
 - 特征来源：`output/calibration/短期机器学习特征样本.csv`
+- 模型管线：scikit-learn `StandardScaler + Ridge`，先标准化特征，再进行 L2 正则线性回归。
 - 训练数据：2026-03-02 之前的历史价格特征。
 - 验证数据：优先使用 2024-01-01 至冲突前样本选择 Ridge 正则强度。
 - 测试数据：2026-03-02 至 2026-05-05 冲突窗口。
