@@ -1,0 +1,4 @@
+数据对象,推荐来源,URL,当前状态,是否入模
+Brent多期限官方结算价,ICE End of Day / ICE Report Center,https://www.ice.com/report/83,作为首选来源；完整历史多期限结算价通常需要网页交互或授权下载,尚未入模，等待可复现CSV
+EIA期限结构公开证据,EIA Today in Energy,https://www.eia.gov/todayinenergy/detail.php?id=67544,记录Dated Brent相对front-month futures的公开描述,仅作论文外部证据，不作为连续数值输入
+Brent/WTI期货价差公开证据,EIA Today in Energy,https://www.eia.gov/todayinenergy/detail.php?id=67424,记录Q1冲突后Brent front-month与WTI价差异常,仅作市场定价背景，不替代Brent曲线

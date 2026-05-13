@@ -1,0 +1,4 @@
+日期,证据类型,公开事实,数据来源,URL,建模含义,使用边界
+2026-04-24,现货-近月期货价差,EIA报道Dated Brent在4月初相对front-month Brent futures出现超过25美元/桶的溢价。,EIA Today in Energy; data source listed as Intercontinental Exchange and Thomson Reuters,https://www.eia.gov/todayinenergy/detail.php?id=67544,说明封锁后近端实货市场极度紧张，期限结构/backwardation可作为长期风险约束的重要候选变量。,这是公开描述性证据，不是逐日连续M1-M3/M1-M6历史数据，不能直接计算模型输入。
+2026-04-07,近月期货冲击,EIA报道Brent front-month futures在2026年一季度末达到约118美元/桶。,EIA Today in Energy; data source listed as CME Group and Bloomberg L.P.,https://www.eia.gov/todayinenergy/detail.php?id=67424,说明冲突窗口近月期货本身已显著重定价，与附件主力合约高位平台一致。,用于外部一致性说明，不补全多期限曲线。
+2026-04-07,Brent-WTI跨市场价差,EIA报道Brent-WTI futures spread在3月31日达到约25美元/桶，3月平均约11美元/桶。,EIA Today in Energy; data source listed as CME Group and Bloomberg L.P.,https://www.eia.gov/todayinenergy/detail.php?id=67424,说明冲突冲击具有区域运输和替代供应含义，支持后续继续寻找期限结构、运费和保险费变量。,Brent-WTI不是Brent内部期限结构，不能替代M1-M3或M1-M6。

@@ -59,6 +59,7 @@ else
 fi
 
 "${PYTHON_BIN}" -m src.data.fetch_opec_balance
+"${PYTHON_BIN}" -m src.data.fetch_futures_term_structure
 "${PYTHON_BIN}" -m src.analysis.market_risk_variables
 "${PYTHON_BIN}" -m src.scenarios.scenario_forecast
 "${PYTHON_BIN}" -m src.visualization.final_paper_figures
