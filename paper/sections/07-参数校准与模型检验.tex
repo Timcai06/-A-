@@ -22,12 +22,20 @@
 
 校准过程包括 36000 组固定种子随机搜索、差分进化连续精修、800 组局部稳健性复核以及 60000 组拟合质量精修。所有精修均在既有模型结构内完成，不新增额外机制项。
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\linewidth]{候选模型权衡气泡图.png}
+\caption{短期候选模型的精度与平台解释权衡。横轴为整体 RMSE，纵轴为高价平台 RMSE，气泡大小表示低价回落段误差；理想候选位于左下角且气泡较小。该图说明本文选择的综合最优模型不是单纯追求某一项误差最低，而是在整体拟合、高价平台解释和低价回落刻画之间取得平衡。}
+\label{fig:candidate-tradeoff-bubble}
+\end{figure}
+
 \begin{table}[htbp]
 \centering
 \caption{综合最优短期动态模型参数}
-\begin{tabular}{lr@{\quad}lr}
+\begin{threeparttable}
+\begin{tabular}{l S[table-format=4.3] l S[table-format=3.3]}
 \toprule
-参数 & 数值 & 参数 & 数值 \\
+参数 & {数值} & 参数 & {数值} \\
 \midrule
 供应中断量 & 1493 & SPR 释放上限 & 670 \\
 SPR 启动延迟 & 3 & 绕道启动日 & 8 \\
@@ -39,6 +47,11 @@ SPR 启动延迟 & 3 & 绕道启动日 & 8 \\
 缓冲确认强度 & 0.220 & 预期修复强度 & 0.240 \\
 \bottomrule
 \end{tabular}
+\begin{tablenotes}
+\footnotesize
+\item 注：供应中断量、SPR 释放上限、绕道能力上限和库存日缓冲上限的单位为万桶/日；其余无量纲参数用于刻画行为强度、调整速度或弹性。
+\end{tablenotes}
+\end{threeparttable}
 \end{table}
 
 表中参数可分为两类理解：供应中断量、SPR 上限、绕道能力、库存缓冲和需求弹性受题面范围约束；风险权重、价格调整速度、缓冲确认和预期修复强度属于行为价格形成参数，必须依赖数据校准和鲁棒性检验。本文后续所有模型评价均围绕这一区分展开，校准参数只在相应机制语境下解释。
@@ -61,9 +74,9 @@ SPR 启动延迟 & 3 & 绕道启动日 & 8 \\
 \begin{table}[htbp]
 \centering
 \caption{短期动态模型分段误差}
-\begin{tabular}{lrrrr}
+\begin{tabular}{l S[table-format=2.0] S[table-format=1.2] S[table-format=1.2] S[table-format=1.2]}
 \toprule
-分段 & 样本数 & RMSE & MAE & 最大绝对误差 \\
+分段 & {样本数} & {RMSE} & {MAE} & {最大绝对误差} \\
 \midrule
 全窗口 & 46 & 3.44 & 2.85 & 7.43 \\
 前期冲击 & 11 & 3.14 & 2.72 & 5.91 \\
@@ -96,17 +109,23 @@ SPR 启动延迟 & 3 & 绕道启动日 & 8 \\
 \begin{table}[htbp]
 \centering
 \caption{短期模型与朴素/时间序列基准对比}
-\begin{tabular}{lrrrr}
+\begin{threeparttable}
+\begin{tabular}{l S[table-format=1.2] S[table-format=1.2] S[table-format=1.2] S[table-format=2.1]}
 \toprule
-模型 & RMSE & MAE & MAPE & 方向命中率 \\
+模型 & {RMSE} & {MAE} & {MAPE(\%)} & {方向命中率(\%)} \\
 \midrule
-本文短期动态模型 & 3.44 & 2.85 & 2.86\% & 64.4\% \\
-朴素上一日基准 & 4.47 & 3.57 & 3.54\% & 46.7\% \\
-三日均值基准 & 5.18 & 4.16 & 4.15\% & 44.4\% \\
-漂移随机游走基准 & 4.84 & 3.94 & 3.91\% & 46.7\% \\
-滚动 ARIMA(1,1,0) 基准 & 4.53 & 3.67 & 3.63\% & 46.7\% \\
+本文短期动态模型 & 3.44 & 2.85 & 2.86 & 64.4 \\
+朴素上一日基准 & 4.47 & 3.57 & 3.54 & 46.7 \\
+三日均值基准 & 5.18 & 4.16 & 4.15 & 44.4 \\
+漂移随机游走基准 & 4.84 & 3.94 & 3.91 & 46.7 \\
+滚动 ARIMA(1,1,0) 基准 & 4.53 & 3.67 & 3.63 & 46.7 \\
 \bottomrule
 \end{tabular}
+\begin{tablenotes}
+\footnotesize
+\item 注：RMSE 与 MAE 单位为美元/桶；MAPE 与方向命中率以百分比计。数字列采用小数点对齐，便于横向比较。
+\end{tablenotes}
+\end{threeparttable}
 \end{table}
 
 \begin{figure}[htbp]

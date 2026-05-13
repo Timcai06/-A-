@@ -48,7 +48,9 @@
 | 图15 | `paper/figures/历史窗口极端性检验.png` | 2017-2026 | 历史稳健性 | 证明 2026 冲突窗口在同长度历史窗口中的极端位置 | `output/history/冲突窗口历史分位数.csv` | 正式使用 |
 | 图15b | `paper/figures/历史波动参数校准.png` | 2017-2025 | 历史波动参数校准 | 用同长度历史窗口校准长期扰动和跳变尺度 | `output/history/历史波动参数校准.csv` | 正式使用 |
 | 图16 | `paper/figures/R历史基准误差分布图.png` | 2017-2026 | 历史稳健性 | 展示冲突窗口随机游走基准误差处于历史高分位，本文机制模型仍优于该基准 | `output/history/历史基准误差分布.csv` | 正式使用 |
-| 图17 | `figures/historical_high_vol_windows.png` | 2017-2026 | 备用图 | 列出历史高波动非重叠窗口，当前不进入总论文正文 | `output/history/历史高波动窗口排名.csv` | 备用 |
+| 图17 | `paper/figures/长期敏感性扰动热力图.png` | 敏感性分析 | 敏感性分析 | 展示关键参数不同扰动档位下第180天价格相对基准的方向和幅度 | `output/sensitivity/敏感性分析结果.csv` | 正式使用 |
+| 图18 | `paper/figures/候选模型权衡气泡图.png` | 候选模型比较 | 模型校准 | 展示前10个候选模型在整体 RMSE、高价平台 RMSE 和低价回落 RMSE 间的权衡 | `output/calibration/动态模型候选参数前10.csv` | 正式使用 |
+| 备用图1 | `figures/historical_high_vol_windows.png` | 2017-2026 | 备用图 | 列出历史高波动非重叠窗口，当前不进入总论文正文 | `output/history/历史高波动窗口排名.csv` | 备用 |
 | R增强图1 | `paper/figures/R短期误差学术诊断.png` | 2026-03-02 至 2026-05-05 | R图表增强 | 用 ggplot2 展示短期残差时间结构和系统偏差检查 | `output/calibration/动态模型校准后路径.csv` | 正式使用 |
 | R增强图2 | `paper/figures/R长期状态转移扇形图.png` | 2026-05-06 至外推第180天 | R图表增强 | 用 ggplot2 展示长期状态转移条件区间，提升长期预测图的论文质感 | `output/scenarios/长期状态转移路径分位数.csv` | 正式使用 |
 | R增强图3 | `paper/figures/R历史基准误差分布图.png` | 2017-2026 | R图表增强 | 用分位带展示冲突窗口相对历史同长度窗口的预测难度 | `output/history/历史基准误差分布.csv` | 正式使用 |
@@ -64,7 +66,7 @@
 | 初稿图5 | `paper/figures/短期模型误差诊断.png` | 2026-03-02 至 2026-05-05 | 误差集中在局部阶段，整体无系统性漂移 | `output/calibration/动态模型校准后路径.csv`、`output/calibration/动态模型分段误差.csv` | 已生成 |
 | 初稿图6 | `paper/figures/短期模型机制贡献.png` | 2026-03-02 至 2026-05-05 | 风险溢价推高价格，缓冲和预期修复压低价格 | `output/calibration/动态模型校准后路径.csv` | 已生成 |
 | 初稿图7 | `paper/figures/短期模型机制消融实验.png` | 2026-03-02 至 2026-05-05 | 逐项关闭题面物理机制和市场价格形成机制，证明扩展项不是任意拟合补丁 | `output/calibration/短期模型机制消融实验.csv` | 已生成 |
-| 初稿图8 | `paper/figures/候选模型误差对比.png` | 阶段 4 候选模型 | 综合最优模型同时控制整体误差与分段误差 | `output/calibration/动态模型候选参数前10.csv` | 已生成 |
+| 候选图1 | `output/candidate_figures/短期候选模型误差对比候选图.png` | 候选模型比较 | 过程候选图 | 旧版候选模型误差结构对比，已由总论文中的 `paper/figures/候选模型权衡气泡图.png` 替代 | `output/calibration/动态模型候选参数前10.csv` | 备用 |
 | 初稿图9 | `paper/figures/短期模型基准对比.png` | 2026-03-02 至 2026-05-05 | 证明短期模型优于 Random Walk、三日均值、漂移随机游走和滚动 ARIMA 基准 | `output/calibration/短期模型基准对比.csv` | 已生成 |
 | 初稿图10 | `paper/figures/短期模型滞后平移检验.png` | 2026-03-02 至 2026-05-05 | 检查预测曲线是否只是滞后复制真实曲线 | `output/calibration/短期模型滞后平移检验.csv` | 已生成 |
 | 初稿图11 | `paper/figures/短期模型拐点局部检验.png` | 2026-03-02 至 2026-03-14；2026-04-22 至 2026-05-05 | 放大暴涨和反转窗口，验证主要拐点不是马后炮跟随 | `output/calibration/短期模型拐点检验.csv` | 已生成 |

@@ -10,6 +10,7 @@ from src.common.paths import PROJECT_ROOT
 from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS, configure_plot_style as apply_plot_style, direct_label
 
 PAPER_FIGURES_DIR = PROJECT_ROOT / "paper" / "figures"
+CANDIDATE_FIGURES_DIR = PROJECT_ROOT / "output" / "candidate_figures"
 
 
 def configure_plot_style() -> None:
@@ -164,7 +165,7 @@ def save_mechanism_figure(model: pd.DataFrame) -> Path:
 
 
 def save_candidate_figure(candidates: pd.DataFrame) -> Path:
-    path = PAPER_FIGURES_DIR / "候选模型误差对比.png"
+    path = CANDIDATE_FIGURES_DIR / "短期候选模型误差对比候选图.png"
     selected = candidates.head(6).copy()
     selected["候选标签"] = selected["candidate_id"].astype(str) + "\n" + selected["candidate_source"].replace(
         {"continuous_refinement": "精修", "seeded_random": "随机"}
@@ -189,6 +190,7 @@ def save_candidate_figure(candidates: pd.DataFrame) -> Path:
 
 def main() -> None:
     PAPER_FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    CANDIDATE_FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     configure_plot_style()
     model, segment, candidates = load_frames()
     outputs = [

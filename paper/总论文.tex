@@ -24,6 +24,12 @@
 \usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage{microtype}
+\usepackage{needspace}
+\usepackage[most]{tcolorbox}
+\usepackage{threeparttable}
+\usepackage{siunitx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,shapes.geometric}
 
 \graphicspath{{paper/figures/}}
 
@@ -35,6 +41,13 @@
 \definecolor{OilGreen}{HTML}{047857}
 \definecolor{OilRed}{HTML}{B91C1C}
 \definecolor{OilBorder}{HTML}{CBD5E1}
+\definecolor{OilAmber}{HTML}{B45309}
+
+\sisetup{
+  detect-all,
+  table-number-alignment=center,
+  group-minimum-digits=4
+}
 
 \hypersetup{
   hidelinks,
@@ -85,12 +98,59 @@
 \AtBeginEnvironment{longtable}{\small}
 \setlength{\emergencystretch}{2em}
 
+\newtcolorbox{paperkeypointbox}{
+  enhanced,
+  breakable,
+  sharp corners,
+  arc=1.2pt,
+  colback=OilTint,
+  colframe=OilBorder,
+  boxrule=0.45pt,
+  leftrule=2.4pt,
+  left=8pt,
+  right=8pt,
+  top=6pt,
+  bottom=6pt,
+  before skip=0.72em,
+  after skip=0.72em,
+  fontupper=\small,
+}
+
+\newtcolorbox{paperalgobox}[1]{
+  enhanced,
+  breakable,
+  sharp corners,
+  arc=1.2pt,
+  colback=white,
+  colframe=OilBorder,
+  boxrule=0.45pt,
+  leftrule=2.4pt,
+  left=8pt,
+  right=8pt,
+  top=6pt,
+  bottom=6pt,
+  before skip=0.8em,
+  after skip=0.8em,
+  title={#1},
+  fonttitle=\small\bfseries\sffamily\color{OilBlue},
+  coltitle=OilBlue,
+  colbacktitle=OilTint,
+  attach boxed title to top left={xshift=0pt,yshift=-1pt},
+  boxed title style={
+    sharp corners,
+    arc=1.2pt,
+    boxrule=0.45pt,
+    colframe=OilBorder,
+    colback=OilTint
+  },
+  fontupper=\small,
+}
+
 \newcommand{\keypoint}[1]{%
-  \par\vspace{0.65em}
-  \noindent\fcolorbox{OilBorder}{OilLight}{%
-    \parbox{0.94\linewidth}{\small\textbf{\sffamily\color{OilBlue}关键结论}\quad #1}%
-  }
-  \par\vspace{0.65em}
+  \Needspace{4\baselineskip}
+  \begin{paperkeypointbox}
+  \textbf{\sffamily\color{OilBlue}关键结论}\quad #1
+  \end{paperkeypointbox}
 }
 
 \title{\sffamily\bfseries 霍尔木兹海峡封锁对国际原油价格影响的动态建模与情景预测}

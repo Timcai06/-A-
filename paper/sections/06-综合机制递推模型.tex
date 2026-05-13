@@ -10,6 +10,39 @@
 
 \keypoint{主模型分为两层：物理供需层负责回答“缺口还剩多少”，市场价格形成层负责回答“市场如何给剩余缺口和制度风险定价”。两层分开写，使价格平台能够被分解为物理缓冲、风险溢价和预期修复的共同结果。}
 
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  node distance=1.05cm and 1.05cm,
+  block/.style={draw=OilBorder, rounded corners=2pt, fill=OilTint, align=center, minimum height=0.78cm, text width=3.0cm, font=\small},
+  driver/.style={draw=OilBlue, rounded corners=2pt, fill=white, align=center, minimum height=0.78cm, text width=3.1cm, font=\small\bfseries\color{OilDark}},
+  damp/.style={draw=OilGreen, rounded corners=2pt, fill=white, align=center, minimum height=0.78cm, text width=3.1cm, font=\small\bfseries\color{OilDark}},
+  arrow/.style={-{Latex[length=2.4mm]}, line width=0.55pt, draw=OilGray},
+  plus/.style={font=\scriptsize\bfseries\color{OilRed}},
+  minus/.style={font=\scriptsize\bfseries\color{OilGreen}}
+]
+\node[driver] (shock) {供应中断\\剩余缺口 \(G_t\)};
+\node[driver, right=of shock] (risk) {制度风险\\风险溢价};
+\node[block, right=of risk] (price) {目标价格\\\(P_t^\ast\)};
+\node[block, below=of price] (actual) {递推价格\\\(\hat P_t\)};
+\node[damp, below=of shock] (buffer) {SPR/库存\\缓冲释放};
+\node[damp, below=of risk] (route) {绕道运输\\需求收缩};
+\node[damp, below=1.05cm of actual] (expect) {缓冲确认\\预期修复};
+
+\draw[arrow] (shock) -- node[above, plus] {推高} (risk);
+\draw[arrow] (risk) -- node[above, plus] {再定价} (price);
+\draw[arrow] (price) -- node[right, plus] {调整} (actual);
+\draw[arrow] (buffer) -- node[left, minus] {削峰} (shock);
+\draw[arrow] (route) -- node[above, minus] {缩小缺口} (buffer);
+\draw[arrow] (actual) -- node[right, plus] {高价反馈} (route);
+\draw[arrow] (expect) -- node[right, minus] {降低溢价} (actual);
+\draw[arrow] (buffer) -- node[below, minus] {可信度形成} (expect);
+\draw[arrow] (route) -- node[left, minus] {修复预期} (expect);
+\end{tikzpicture}
+\caption{短期价格形成反馈回路。红色方向表示冲击和风险溢价推高价格，绿色方向表示政策缓冲、绕道运输、需求收缩和预期修复压低价格。该图强调 110--120 美元/桶平台是多重反馈共同作用的结果，而不是外生价格上限。}
+\label{fig:tikz-feedback-loop}
+\end{figure}
+
 \subsection{物理供需层}
 
 本文首先构造题面物理供需层。第 $t$ 日有效需求为
@@ -94,3 +127,23 @@
 该结构保留了题面中的离散递推思想，同时允许期货市场对风险和预期做再定价。恐慌动量项 \(\gamma_F(F_t-F_{t-1})\) 只刻画恐慌强度快速变化时的一次性日度调整，不替代恐慌溢价本身；若恐慌强度稳定，则该项为零。风险溢价、缓冲确认折价和预期修复折价均需要同时满足经济含义清晰、方向可解释、消融后误差明显恶化以及扰动后结论保持稳定四个条件，才保留在主模型中。
 
 从微观直觉看，式中的物理缺口项对应炼厂和贸易商面对短缺时愿意支付的边际溢价；风险项对应持有库存、安排绕道运输和承担航运保险风险所要求的补偿；折价项对应政策缓冲被观察到后，市场降低预防性持有需求和投机性风险溢价。本文没有直接建立完整的微观效用最大化模型，而是采用与能源冲击文献一致的结构化简形式，并通过基准对比、机制消融和扰动检验约束其自由度。
+
+\begin{paperalgobox}{算法 1\quad 综合机制递推模型的日度更新流程}
+\textbf{输入：}初始价格 \(P_0\)，基准供需 \(D_0,S_0\)，供应中断 \(I\)，SPR、库存、绕道、恐慌与风险参数。\\
+\textbf{输出：}冲突窗口内的日度模拟价格 \(\hat P_t\) 及机制贡献序列。
+
+\begin{enumerate}[leftmargin=2.2em,itemsep=0.25em,topsep=0.45em,label=\arabic*.]
+  \item 初始化 \(\hat P_0=P_0\)，商业库存 \(K_0\)，恐慌强度 \(F_0\)。
+  \item 对 \(t=1,\ldots,T\) 逐日递推：
+  \item 根据上一日模拟价格和短期弹性计算有效需求 \(D_t\)。
+  \item 计算不含库存的有效供给 \(S_t^{(0)}=S_0-I+R_t+Q_t\)。
+  \item 在日释放上限和剩余库存约束下计算商业库存缓冲 \(B_t\)。
+  \item 得到剩余缺口 \(G_t=\max(D_t-S_t^{(0)}-B_t,0)\)。
+  \item 由 \(G_t\)、风险溢价、制度不确定性、恐慌强度、缓冲确认和预期修复计算目标价格 \(P_t^\ast\)。
+  \item 递推更新
+  \[
+    \hat P_t=\hat P_{t-1}+v(P_t^\ast-\hat P_{t-1})+\gamma_F(F_t-F_{t-1}) .
+  \]
+  \item 记录物理缺口、风险溢价、政策缓冲和预期折价的边际贡献。
+\end{enumerate}
+\end{paperalgobox}

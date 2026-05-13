@@ -42,6 +42,7 @@ fi
 "${PYTHON_BIN}" -m src.analysis.short_term_ml_residual_model
 "${PYTHON_BIN}" -m src.analysis.short_term_rolling_validation
 "${PYTHON_BIN}" -m src.analysis.short_term_final_quality_gate
+"${PYTHON_BIN}" -m src.visualization.advanced_candidate_figures
 
 if command -v Rscript >/dev/null 2>&1; then
   Rscript scripts/audit/r_econometric_audit.R || echo "R econometric audit failed; continuing Python-led paper build." >&2
@@ -81,6 +82,8 @@ cp figures/R短期误差学术诊断.png paper/figures/R短期误差学术诊断
 cp figures/R长期状态转移扇形图.png paper/figures/R长期状态转移扇形图.png
 cp figures/R历史基准误差分布图.png paper/figures/R历史基准误差分布图.png
 cp figures/短期模型统计审计.png paper/figures/短期模型统计审计.png
+cp output/candidate_figures/Python长期敏感性热力候选图.png paper/figures/长期敏感性扰动热力图.png
+cp output/candidate_figures/Python候选模型权衡气泡候选图.png paper/figures/候选模型权衡气泡图.png
 
 "${PYTHON_BIN}" -m src.analysis.paper_visual_audit
 
