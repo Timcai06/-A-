@@ -20,6 +20,7 @@
 \usepackage{array}
 \usepackage{etoolbox}
 \usepackage{xcolor}
+\usepackage{listings}
 \usepackage{hyperref}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
@@ -42,6 +43,50 @@
 \definecolor{OilRed}{HTML}{0095F2}
 \definecolor{OilBorder}{HTML}{CBD5E1}
 \definecolor{OilAmber}{HTML}{00CFAE}
+\definecolor{CodeBack}{HTML}{FAFAFA}
+
+\newtcblisting[auto counter]{paperlisting}[3]{
+  enhanced,
+  breakable,
+  listing only,
+  listing engine=listings,
+  listing options={
+    basicstyle=\ttfamily\scriptsize,
+    numbers=left,
+    numberstyle=\tiny\color{OilGray},
+    numbersep=8pt,
+    breaklines=true,
+    breakatwhitespace=false,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    tabsize=4,
+    frame=none
+  },
+  title={代码~\thetcbcounter\quad #3},
+  label={#1},
+  colback=CodeBack,
+  colframe=OilBorder,
+  colbacktitle=OilTint,
+  coltitle=OilBlue,
+  fonttitle=\small\bfseries\sffamily,
+  coltext=OilDark,
+  boxrule=0.45pt,
+  arc=1.5pt,
+  outer arc=1.5pt,
+  left=1.8mm,
+  right=1.8mm,
+  top=1.2mm,
+  bottom=1.2mm,
+  boxed title style={
+    boxrule=0pt,
+    arc=1.5pt,
+    outer arc=1.5pt
+  },
+  attach boxed title to top left={xshift=1.6mm,yshift=-1.1mm},
+  before skip=0.9em,
+  after skip=0.9em
+}
 
 \sisetup{
   detect-all,

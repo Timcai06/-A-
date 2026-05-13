@@ -8,7 +8,7 @@ import pandas as pd
 
 from src.analysis.short_term_ml_features import OUTPUT_CSV as FEATURE_CSV
 from src.analysis.short_term_ml_features import main as build_features
-from src.analysis.short_term_ml_residual_model import fit_ridge, feature_columns, predict_ridge
+from src.analysis.short_term_ml_residual_model import feature_columns, make_ridge_pipeline
 from src.common.metrics import direction_hit_rate, mae, mape, rmse
 from src.common.paths import PROJECT_ROOT, ensure_parents
 from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
@@ -48,8 +48,9 @@ def expanding_ridge_predictions(features: pd.DataFrame) -> pd.DataFrame:
     for i in range(MIN_TRAIN_ROWS, len(features)):
         train_X = X_all[:i]
         train_y = y_all[:i]
-        beta, mu, sigma = fit_ridge(train_X, train_y, ALPHA)
-        pred_return = float(predict_ridge(X_all[i : i + 1], beta, mu, sigma)[0])
+        model = make_ridge_pipeline(ALPHA)
+        model.fit(train_X, train_y)
+        pred_return = float(model.predict(X_all[i : i + 1])[0])
         ridge_price = float(pre_close[i] * np.exp(pred_return))
         naive_price = float(pre_close[i])
         actual_price = float(actual[i])

@@ -1,0 +1,2 @@
+来源,状态,说明
+ICE官方多期限结算价CSV,waiting_for_official_csv,尚未发现 data/external/futures/布伦特期货多期限结算价_手工官方.csv；当前只生成模板和公开证据，不构造期限结构数值。

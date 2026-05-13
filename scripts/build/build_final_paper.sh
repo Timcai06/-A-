@@ -15,6 +15,8 @@ mkdir -p "${BUILD_DIR}" "${FINAL_DIR}"
 mkdir -p "tmp/matplotlib" "tmp/cache"
 export MPLCONFIGDIR="${ROOT_DIR}/tmp/matplotlib"
 export XDG_CACHE_HOME="${ROOT_DIR}/tmp/cache"
+export TEXMF_OUTPUT_DIRECTORY="${ROOT_DIR}/${BUILD_DIR}"
+export TEXINPUTS="${ROOT_DIR}/${BUILD_DIR}:${TEXINPUTS:-}"
 
 if [ -n "${PYTHON_BIN:-}" ]; then
   PYTHON_BIN="${PYTHON_BIN}"
@@ -75,6 +77,7 @@ fi
 "${PYTHON_BIN}" -m src.analysis.short_term_residual_correction
 "${PYTHON_BIN}" -m src.analysis.short_term_model_quality_audit
 "${PYTHON_BIN}" -m src.analysis.short_term_model_quality
+"${PYTHON_BIN}" -m src.analysis.short_term_parameter_event_audit
 "${PYTHON_BIN}" -m src.analysis.short_term_ml_features
 "${PYTHON_BIN}" -m src.analysis.short_term_ml_residual_model
 "${PYTHON_BIN}" -m src.analysis.short_term_rolling_validation
@@ -134,8 +137,8 @@ if ! command -v xelatex >/dev/null 2>&1; then
   fi
 fi
 
-xelatex -interaction=nonstopmode -halt-on-error -output-directory="${BUILD_DIR}" paper/总论文.tex
-xelatex -interaction=nonstopmode -halt-on-error -output-directory="${BUILD_DIR}" paper/总论文.tex
+xelatex -shell-escape -interaction=nonstopmode -halt-on-error -output-directory="${BUILD_DIR}" paper/总论文.tex
+xelatex -shell-escape -interaction=nonstopmode -halt-on-error -output-directory="${BUILD_DIR}" paper/总论文.tex
 
 cp "${BUILD_DIR}/总论文.pdf" "${FINAL_PDF}"
 echo "Built ${FINAL_PDF}"

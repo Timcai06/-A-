@@ -1,94 +1,292 @@
 \section*{附录}
 \addcontentsline{toc}{section}{附录}
 
-\keypoint{附录只保留复现路径、核心递推伪代码和关键结果核查表，完整 Python/R 程序随项目文件提交，避免正文后部被大段源码冲淡。}
+\keypoint{附录只保留复现路径、核心模型实现和关键检验代码。完整 Python/R 程序随项目文件提交，避免大段源码削弱论文主体可读性。}
 
-\subsection*{A.0 项目结构总览}
+\subsection*{A 代码复现说明}
 
-本文的建模、校验、绘图和论文生成均保存在同一项目目录中。核心目录结构如下，未列出的缓存文件、临时渲染文件和历史实验文件不影响最终复现。
+本文的建模、校验、绘图和论文生成均保存在同一项目目录中。Python 环境采用 \texttt{python=3.11}，主要依赖包括 \texttt{pandas}、\texttt{numpy}、\texttt{scipy}、\texttt{matplotlib}、\texttt{statsmodels}、\texttt{scikit-learn}、\texttt{plotly} 和 \texttt{pyyaml}。核心运行顺序如下。
+
+\begin{paperlisting}{lst:reproduce-flow}{python}{论文结果复现主流程}
+# 1. 清洗赛题附件数据
+python -m src.pipeline.clean_data
+
+# 2. 建立短期动态递推模型
+python -m src.models.dynamic_short_term
+
+# 3. 校准综合机制参数
+python -m src.calibration.calibrate_dynamic_model
+
+# 4. 生成 60--180 天三情景预测
+python -m src.scenarios.scenario_forecast
+
+# 5. 运行蒙特卡洛情景树与统计审计
+python -m src.analysis.monte_carlo_scenario_tree
+python -m src.analysis.statistical_audit
+
+# 6. 生成论文图表并构建最终论文
+python -m src.visualization.final_paper_figures
+./scripts/build_final_paper.sh
+\end{paperlisting}
+
+项目核心结构如下。未列出的缓存文件、临时渲染文件和历史实验文件不影响最终复现。
 
 {\footnotesize
 \begin{verbatim}
 数模/
 |-- data/                 原始数据、清洗数据和外部校验数据
-|   |-- raw/              赛题附件原始 CSV
-|   |-- processed/        清洗后完整序列与冲突窗口数据
-|   |-- external/         EIA、JODI、OPEC、GPR、OVX 等外部校验数据
-|-- src/                  Python 建模与分析源码
+|-- src/
 |   |-- pipeline/         数据清洗与校验
 |   |-- models/           传统供需基准与短期动态模型
 |   |-- calibration/      短期模型参数搜索与评价
-|   |-- scenarios/        60--180 天情景预测
+|   |-- scenarios/        60--180 天长期三情景预测
 |   |-- analysis/         敏感性、稳健性、GPR、OVX 与统计检验
 |   |-- visualization/    论文正式图表生成
-|-- scripts/
-|   |-- build/            PDF/DOCX 一键构建脚本
-|   |-- audit/            R 语言计量检验与学术图表脚本
-|   |-- postprocess/      DOCX 后处理脚本
-|-- paper/
-|   |-- 总论文.tex        最终论文主控文件
-|   |-- sections/         总论文章节源码
-|   |-- figures/          论文正式引用图表
-|   |-- diagrams/         Mermaid 结构图源码
-|-- output/               模型结果、校验报告和最终交付物
-|   |-- calibration/      短期模型校准结果
-|   |-- scenarios/        长期情景预测与状态转移结果
-|   |-- sensitivity/      敏感性分析与参数排序
-|   |-- reports/          自动生成的校验报告
-|   |-- final/            最终 PDF 和 DOCX
-|-- docs/                 项目总览、建模方案和交付物索引
-|-- figures/              中间图表与可视化生成结果
-|-- 审计报告/             外部评审意见和修改记录
+|-- scripts/              一键构建、R 审计与 DOCX 后处理脚本
+|-- paper/                总论文 LaTeX 源码、章节和正式图表
+|-- output/               模型结果、校验报告和最终 PDF/DOCX
 \end{verbatim}
 }
 
-\subsection*{A.1 数据口径}
+\subsection*{B 数据口径}
 
 本文真实价格数据只来自赛题附件，并经清洗后形成中文命名数据文件。短期拟合使用附件中 2026 年 3 月 3 日至 2026 年 5 月 5 日的冲突窗口；2017--2026 年完整价格序列仅用于历史同长度窗口、基准模型分布和事件极端性检验。EIA 周度 SPR、商业库存和原油产量数据、JODI 多国月度产量、库存、进出口、需求和炼厂数据、OPEC 全球供需平衡表、GPR 月度指数和 OVX 隐含波动率用于外部合理性校验，不反向替代附件真实价格。
 
-\subsection*{A.2 综合机制递推模型伪代码}
+\subsection*{C 综合机制递推模型核心代码}
 
-为避免在附录中堆叠大量源代码，本文只列出主模型的核心计算逻辑。完整程序随项目文件保存，若提交系统要求源程序，可作为单独附件提供。
+代码~\ref{lst:dynamic-recursion} 展示短期综合机制递推模型的核心实现。模型逐日计算有效需求、有效供应、剩余缺口、风险溢价和缓冲折价，并由目标价格递推得到模拟价格。
 
-{\small
-\begin{verbatim}
-输入：
-  附件布伦特价格序列 P_t
-  供应中断 I、基础需求 D_0、短期弹性 epsilon_t
-  SPR 释放 R_t、商业库存 B_t、绕道运输 Q_t
-  恐慌强度 F_t、地缘风险权重 beta、调整速度 v
+\begin{paperlisting}{lst:dynamic-recursion}{python}{综合机制递推模型核心实现}
+def simulate_dynamic_model(event_df, assumptions, behavior):
+    base_price = float(event_df.iloc[0]["pre_close"])
+    previous_price = base_price
+    previous_fear_excess = assumptions.fear_initial
+    inventory_remaining = assumptions.commercial_inventory
+    gap_closure_day = None
+    rows = []
 
-初始化：
-  设定 P_hat_0 = P_0
-  根据题面约束确定 I、SPR 上限、绕道能力和短期弹性范围
+    for step_index, actual_row in enumerate(event_df.itertuples(index=False)):
+        day_index = int((actual_row.trade_date - event_df["trade_date"].min()).days)
+        elasticity = interpolate_elasticity(day_index, assumptions)
+        price_ratio = max(previous_price / base_price, 0.1)
 
-对冲突窗口内每一日 t = 1,2,...,T：
-  1. 计算有效供应：
-       S_t = S_0 - I + R_t + B_t + Q_t
-  2. 计算有效需求：
-       D_t = D_0 * (1 + 恐慌需求项 + 需求收缩项)
-  3. 得到剩余缺口：
-       G_t = max(D_t - S_t, 0)
-  4. 构造目标价格：
-       P_t^* = 基准价格
-             + 物理缺口压力
-             + 地缘风险溢价
-             + 冲击不确定性溢价
-             + 恐慌溢价
-             - 缓冲确认折价
-             - 预期修复折价
-  5. 日度递推：
-       P_hat_t = P_hat_{t-1}
-               + v * (P_t^* - P_hat_{t-1})
-               + gamma_F * (F_t - F_{t-1})
-  6. 记录预测值、误差和各机制贡献
+        # 需求侧：价格弹性与高油价需求收缩共同作用
+        price_adjusted_demand = assumptions.base_demand * (price_ratio ** elasticity)
+        demand_decline = ramp(day_index, 0, assumptions.demand_decline_ramp_days,
+                              assumptions.observed_demand_decline)
+        effective_demand = max(price_adjusted_demand - demand_decline,
+                               assumptions.base_demand * 0.70)
 
-输出：
-  短期拟合路径、误差指标、机制贡献、消融结果和长期情景初始状态
-\end{verbatim}
-}
+        # 供给侧：基础供应扣除中断后，加入 SPR、绕道运输和库存缓冲
+        spr_release = ramp(day_index, assumptions.spr_delay_days,
+                           assumptions.spr_ramp_days, assumptions.spr_max_release)
+        route_supply = ramp(day_index, assumptions.route_start_day,
+                            assumptions.route_ramp_days, assumptions.route_max_capacity)
+        supply_without_inventory = (assumptions.base_supply
+                                    - assumptions.supply_interruption
+                                    + spr_release + route_supply)
 
-\subsection*{A.3 关键结果核查表}
+        raw_gap = max(effective_demand - supply_without_inventory, 0.0)
+        inventory_buffer = min(raw_gap * behavior.inventory_response,
+                               assumptions.inventory_daily_cap,
+                               inventory_remaining)
+        inventory_remaining -= inventory_buffer
+        effective_supply = supply_without_inventory + inventory_buffer
+        residual_gap = max(effective_demand - effective_supply, 0.0)
+        if gap_closure_day is None and residual_gap <= assumptions.base_demand * 0.005:
+            gap_closure_day = day_index
+
+        # 价格形成层：物理缺口、地缘风险、恐慌溢价与市场缓冲折价
+        fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * day_index)
+        shortage_pressure = (base_price * behavior.pressure_scale
+                             * (residual_gap / assumptions.base_demand)
+                             / max(abs(elasticity), 0.01))
+        blockade_risk_premium = (base_price * behavior.risk_weight
+                                 * (assumptions.supply_interruption / assumptions.base_demand)
+                                 * (1 - np.exp(-day_index / 7))
+                                 * np.exp(-BLOCKADE_RISK_DECAY * day_index))
+        panic_premium = base_price * 0.45 * fear_excess
+
+        target_price = (base_price + shortage_pressure + blockade_risk_premium
+                        + panic_premium
+                        - buffer_confirmation_discount(day_index, gap_closure_day,
+                                                       base_price, behavior)
+                        - expectation_relief_discount(day_index, base_price, behavior))
+
+        simulated_price = previous_price + behavior.adjustment_speed * (target_price - previous_price)
+        simulated_price += 2.5 * (fear_excess - previous_fear_excess)
+        rows.append({"day_index": day_index, "simulated_price": simulated_price})
+        previous_price = simulated_price
+        previous_fear_excess = fear_excess
+
+    return pd.DataFrame(rows)
+\end{paperlisting}
+
+\subsection*{D 参数校准模块}
+
+代码~\ref{lst:calibration} 给出参数校准流程。本文不是手工指定最优参数，而是在固定机制结构下，综合使用差分进化、局部稳定性搜索和拟合质量精修选择代表性参数。
+
+\begin{paperlisting}{lst:calibration}{python}{参数校准与局部稳健性搜索}
+def refine_with_continuous_search(event_df, base_assumptions):
+    def objective(values):
+        assumptions, behavior = decode_continuous_parameters(values, base_assumptions)
+        simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+        metrics = evaluate_simulation(simulation)
+
+        # 综合得分同时考虑整体误差、峰值误差、末日误差和平台解释能力
+        return metrics["综合得分"] + excellence_penalty(metrics)
+
+    result = differential_evolution(
+        objective,
+        CONTINUOUS_PARAMETER_BOUNDS,
+        seed=RANDOM_SEED,
+        maxiter=LOCAL_REFINEMENT_MAXITER,
+        popsize=LOCAL_REFINEMENT_POPSIZE,
+        polish=True,
+        workers=1,
+        tol=0.002,
+    )
+
+    assumptions, behavior = decode_continuous_parameters(result.x, base_assumptions)
+    simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+    metrics = evaluate_simulation(simulation)
+    metrics["局部精修目标值"] = float(result.fun)
+    return assumptions, behavior, simulation, metrics
+
+def calibrate(event_df, base_assumptions):
+    rows, simulations = [], {}
+    for candidate_id, (assumptions, behavior) in enumerate(sampled_parameter_sets(base_assumptions)):
+        simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+        metrics = evaluate_simulation(simulation)
+        rows.append({"candidate_id": candidate_id, "candidate_source": "seeded_random",
+                     **metrics})
+        simulations[candidate_id] = simulation
+
+    # 在随机搜索基础上继续做连续精修、局部稳健性搜索和拟合质量精修
+    refined = refine_with_continuous_search(event_df, base_assumptions)
+    stable = refine_with_local_stability_search(event_df, base_assumptions,
+                                                refined[0], refined[1])
+    final = refine_with_fit_quality_search(event_df, base_assumptions,
+                                           stable[0], stable[1])
+    return select_representative_candidates(rows, simulations, final)
+\end{paperlisting}
+
+\subsection*{E 长期情景递推与政策缓冲}
+
+代码~\ref{lst:future-recursion} 展示长期外推中 SPR 自适应释放与供需再平衡的处理。该模块避免把战略储备释放机械设为满额，而是根据剩余缺口、价格压力和时间衰减动态收缩释放强度。
+
+\begin{paperlisting}{lst:future-recursion}{python}{长期情景递推中的 SPR 自适应释放}
+def adaptive_spr_release(day_index, scheduled_spr, gross_gap_before_spr,
+                         previous_price, base_price, assumptions):
+    if scheduled_spr <= 0:
+        return 0.0, 0.0
+
+    # 当物理缺口已基本覆盖时，SPR 不再机械满额释放
+    reserve_buffer = assumptions.base_demand * GAP_CLOSURE_SHARE
+    coverage_need = max(gross_gap_before_spr + reserve_buffer, 0.0)
+    demand_based_release = min(scheduled_spr, coverage_need)
+
+    stress_ratio = np.clip(gross_gap_before_spr / max(assumptions.supply_interruption, 1.0),
+                           0.0, 1.0)
+    price_stress = np.clip((previous_price / base_price - SPR_PRICE_STRESS_START_RATIO)
+                           / SPR_PRICE_STRESS_WIDTH, 0.0, 1.0)
+    minimum_policy_share = SPR_MIN_POLICY_SHARE + SPR_PRICE_POLICY_SHARE * price_stress
+    stress_share = max(minimum_policy_share, stress_ratio)
+
+    time_taper = 1.0
+    if day_index > SPR_TAPER_START_DAY:
+        time_taper = SPR_TAPER_FLOOR + (1 - SPR_TAPER_FLOOR) * np.exp(
+            -(day_index - SPR_TAPER_START_DAY) / SPR_TAPER_DECAY_DAYS
+        )
+
+    actual_release = max(demand_based_release, scheduled_spr * stress_share * time_taper)
+    actual_release = float(min(scheduled_spr, actual_release))
+    return actual_release, actual_release / scheduled_spr
+\end{paperlisting}
+
+\subsection*{F 蒙特卡洛情景预测}
+
+代码~\ref{lst:monte-carlo} 展示长期蒙特卡洛情景树的核心思想。模型以压力指数为主轴，同时扰动供应中断、SPR 释放、绕道能力、需求弹性、风险权重和不确定性溢价，由此得到长期价格区间和尾部风险概率。
+
+\begin{paperlisting}{lst:monte-carlo}{python}{蒙特卡洛情景树参数抽样}
+def sample_parameters(rng, base_assumptions, base_behavior, historical_factors):
+    raw_stress = float(rng.beta(2.1, 2.3))
+    stress = float(np.clip(raw_stress + rng.normal(
+        0.0, historical_factors.monte_carlo_stress_noise_sigma), 0.0, 1.0))
+
+    supply_interruption = np.clip(1400 + 400 * stress + rng.normal(0, 35), 1400, 1800)
+    spr_max_release = np.clip(700 - 500 * (stress ** 1.08) + rng.normal(0, 30), 200, 700)
+    route_max_capacity = np.clip(360 - 210 * stress + rng.normal(0, 22), 150, 420)
+    long_elasticity = np.clip(-0.35 + 0.25 * stress + rng.normal(0, 0.018),
+                              -0.35, -0.10)
+
+    risk_weight = np.clip(base_behavior.risk_weight * (0.74 + 0.62 * stress
+                                                       + rng.normal(0, 0.06)),
+                          1.65, 3.35)
+    uncertainty_scale = 0.64 + 0.78 * stress + rng.normal(0, 0.06)
+    uncertainty_floor = np.clip(base_behavior.uncertainty_floor * uncertainty_scale,
+                                0.13, 0.36)
+
+    assumptions = replace(base_assumptions,
+                          supply_interruption=supply_interruption,
+                          spr_max_release=spr_max_release,
+                          route_max_capacity=route_max_capacity,
+                          long_elasticity=long_elasticity)
+    behavior = replace(base_behavior,
+                       risk_weight=risk_weight,
+                       uncertainty_floor=uncertainty_floor)
+    return assumptions, behavior, {"stress_index": stress}
+
+def run_monte_carlo(n_samples):
+    forecast_frame, prefix, base_assumptions, base_behavior = load_baseline()
+    historical_factors = load_historical_model_factors()
+    rng = np.random.default_rng(RANDOM_SEED)
+    paths, metric_rows = [], []
+
+    for sample_id in range(1, n_samples + 1):
+        assumptions, behavior, meta = sample_parameters(
+            rng, base_assumptions, base_behavior, historical_factors)
+        path = simulate_one_sample(forecast_frame, prefix, assumptions, behavior)
+        paths.append(path)
+        metric_rows.append(summarize_sample(path, prefix, meta))
+
+    metrics = pd.DataFrame(metric_rows)
+    return metrics, build_quantiles(paths), build_tail_risk(metrics)
+\end{paperlisting}
+
+\subsection*{G 机制消融与统计检验}
+
+代码~\ref{lst:ablation} 用于逐项关闭模型机制，检验主结论是否依赖某一个单独设定。若去除风险溢价、缓冲折价或预期修复后误差显著上升，则说明这些机制对解释价格平台具有实质贡献。
+
+\begin{paperlisting}{lst:ablation}{python}{机制消融实验设计}
+VARIANTS = [
+    ("完整统一模型", "题面物理机制 + 市场价格形成机制", base_variant),
+    ("去除SPR释放", "关闭战略石油储备释放", no_spr),
+    ("去除商业库存缓冲", "关闭库存吸收缺口能力", no_inventory),
+    ("去除绕道运输", "关闭绕道运输恢复能力", no_reroute),
+    ("去除需求收缩", "关闭高油价需求下降", no_demand_contraction),
+    ("去除风险与不确定性溢价", "关闭地缘风险和不确定性平台", no_risk_uncertainty),
+    ("去除缓冲确认折价", "关闭市场确认缓冲后的降温", no_buffer_confirmation),
+    ("去除预期修复折价", "关闭中后期预期修复再定价", no_expectation_relief),
+]
+
+def run_ablation(event_df, base_assumptions, base_behavior):
+    rows = []
+    for name, note, variant_fn in VARIANTS:
+        assumptions, behavior = variant_fn(base_assumptions, base_behavior)
+        simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+        metrics = evaluate_simulation(simulation)
+        rows.append({
+            "消融实验": name,
+            "说明": note,
+            "RMSE": metrics["RMSE"],
+            "MAE": metrics["MAE"],
+            "峰值误差": metrics["峰值误差"],
+        })
+    return pd.DataFrame(rows)
+\end{paperlisting}
+
+\subsection*{H 关键结果核查表}
 
 \begin{table}[htbp]
 \centering
@@ -110,16 +308,100 @@
 \end{tabularx}
 \end{table}
 
-\subsection*{A.4 稳健性检验补充}
+\subsection*{I 一键构建与独立审计补充}
 
-\begin{itemize}[leftmargin=2em,itemsep=0.2em]
-  \item 基准检验：与上一日价格、漂移随机游走和滚动 ARIMA 比较，防止模型只是复杂但无效的随机游走复制。
-  \item 滞后检验：检查预测曲线是否简单滞后真实价格，避免“马后炮曲线”问题。
-  \item 消融检验：逐项移除风险溢价、缓冲折价、预期修复等机制，验证各因素的边际贡献。
-  \item 参数压力测试：扰动价格传导、风险权重和长期机制参数，检验结论是否依赖唯一一组参数。
-  \item 外部校验：EIA 周度数据、JODI 多国月度石油数据、OPEC 全球供需平衡表、GPR 月度指数、OVX 隐含波动率和 2017--2026 历史同长度窗口用于验证数量级、风险定价和事件极端性。
-\end{itemize}
+代码~\ref{lst:build-pipeline} 展示最终论文的自动构建入口。该脚本将数据清洗、外部数据校验、情景预测、敏感性分析、蒙特卡洛、统计审计、图表生成和 PDF/DOCX 导出串联为统一流水线，用于避免手工复制结果造成口径不一致。
 
-\subsection*{A.5 程序材料说明}
+\begin{paperlisting}{lst:build-pipeline}{bash}{最终论文一键复现脚本核心流程}
+#!/usr/bin/env bash
+set -euo pipefail
 
-本文不在正文附录中展开完整 Python 或 R 源代码。原因是完整源程序较长，直接粘贴会削弱论文主体的可读性；同时，数学建模论文更应突出模型假设、递推公式、参数解释和结果检验。若比赛提交系统要求源程序，完整代码可作为独立附件提交，正文附录仅保留项目结构、核心算法伪代码和关键结果核查。
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "${ROOT_DIR}"
+
+if [ -x /opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 ]; then
+  PYTHON_BIN="/opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3"
+else
+  PYTHON_BIN="python3"
+fi
+
+require_artifact "output/calibration/动态模型校准后路径.csv" "Run FULL_REBUILD=1 first."
+
+"${PYTHON_BIN}" -m src.pipeline.clean_data
+"${PYTHON_BIN}" -m src.scenarios.scenario_forecast
+"${PYTHON_BIN}" -m src.analysis.sensitivity_analysis
+"${PYTHON_BIN}" -m src.analysis.monte_carlo_scenario_tree
+"${PYTHON_BIN}" -m src.analysis.statistical_audit
+"${PYTHON_BIN}" -m src.visualization.final_paper_figures
+
+if command -v Rscript >/dev/null 2>&1; then
+  Rscript scripts/audit/r_econometric_audit.R || true
+fi
+
+xelatex -shell-escape -interaction=nonstopmode -halt-on-error -output-directory=output/build/latex paper/总论文.tex
+pandoc --from=latex --to=docx --toc --output=output/final/论文.docx paper/总论文.tex
+\end{paperlisting}
+
+代码~\ref{lst:r-audit} 给出 R 语言独立计量审计的核心逻辑。Python 负责机制递推和情景生成，R 侧用于复核主模型相对朴素基准的误差优势、残差相关性和稳健标准误结果，从而降低单一语言实现自证的风险。
+
+\begin{paperlisting}{lst:r-audit}{r}{R 语言计量审计核心代码}
+model_df <- read_csv(calibrated_path, show_col_types = FALSE) %>%
+  arrange(trade_date) %>%
+  mutate(
+    naive_forecast = lag(actual_price),
+    model_error = simulated_price - actual_price,
+    naive_error = naive_forecast - actual_price
+  ) %>%
+  filter(!is.na(naive_forecast))
+
+model_error <- model_df$model_error
+naive_error <- model_df$naive_error
+
+# Diebold-Mariano 检验：模型损失是否显著低于朴素上一日基准
+dm_sq <- forecast::dm.test(model_error, naive_error,
+                           alternative = "less", h = 1, power = 2)
+dm_abs <- forecast::dm.test(model_error, naive_error,
+                            alternative = "less", h = 1, power = 1)
+
+# 校准回归与 Newey-West 稳健标准误
+calibration_lm <- lm(actual_price ~ simulated_price, data = model_df)
+calibration_hac <- lmtest::coeftest(
+  calibration_lm,
+  vcov. = sandwich::NeweyWest(calibration_lm, lag = 3,
+                              prewhite = FALSE, adjust = TRUE)
+)
+
+# 残差自相关、条件异方差和波动聚集检验
+lb_resid_5 <- Box.test(model_error, lag = 5, type = "Ljung-Box")
+lb_sq_5 <- Box.test(model_error^2, lag = 5, type = "Ljung-Box")
+arch_test <- FinTS::ArchTest(model_error, lags = 5)
+\end{paperlisting}
+
+代码~\ref{lst:sensitivity-specs} 展示敏感性分析的扰动设置。扰动对象覆盖题面物理层、政策缓冲层、需求层、行为层和长期机制透明层，用于说明本文的稳健性检验不是只改变单个便利参数，而是围绕主要不确定来源系统展开。
+
+\begin{paperlisting}{lst:sensitivity-specs}{python}{敏感性分析扰动参数设置}
+SENSITIVITY_SPECS = [
+    {"key": "supply_interruption", "参数": "供应中断量",
+     "层级": "题面物理层", "扰动": [1400, 1493, 1600, 1800],
+     "解释": "封锁实际造成的供应缺口。"},
+    {"key": "spr_max_release", "参数": "SPR释放上限",
+     "层级": "题面政策缓冲层", "扰动": [200, 450, 670, 700],
+     "解释": "战略石油储备释放能力。"},
+    {"key": "route_max_capacity", "参数": "绕道运输能力",
+     "层级": "题面物理缓冲层", "扰动": [150, 237, 300, 420],
+     "解释": "绕道和替代航线形成的额外供给能力。"},
+    {"key": "long_elasticity", "参数": "长期需求弹性",
+     "层级": "题面需求层", "扰动": [-0.35, -0.25, -0.18, -0.10],
+     "解释": "高油价持续后需求收缩强弱。"},
+    {"key": "risk_weight", "参数": "地缘风险权重",
+     "层级": "市场价格形成层", "扰动": [1.85, 2.22, 2.46, 2.95],
+     "解释": "市场定价地缘风险溢价的强度。"},
+    {"key": "uncertainty_floor", "参数": "制度风险强度",
+     "层级": "长期机制透明层", "扰动": [0.17, 0.22, 0.247, 0.30],
+     "解释": "持续封锁和政策协调失败带来的不确定性。"},
+]
+\end{paperlisting}
+
+\subsection*{J 程序材料说明}
+
+本文不在正文附录中展开完整 Python 或 R 源代码。原因是完整源程序较长，直接粘贴会削弱论文主体的可读性；同时，数学建模论文更应突出模型假设、递推公式、参数解释和结果检验。若比赛提交系统要求源程序，完整代码可作为独立附件提交，正文附录仅保留复现路径、核心算法代码和关键结果核查。
