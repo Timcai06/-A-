@@ -1,9 +1,10 @@
-"""Stage 2 traditional supply-demand baseline model.
+"""Traditional supply-demand counterfactual baseline model.
 
 This baseline deliberately keeps only the direct supply-gap effect and a low
-short-term demand-price elasticity. Its job is to be a contrast model: it
-should overestimate price relative to actual event-window observations, making
-room for the dynamic buffer mechanisms introduced in later stages.
+short-term demand-price elasticity. Its job is not to forecast the realized
+event-window oil price, but to show how much a static low-elasticity supply-
+demand view can overestimate prices before buffer and expectation mechanisms
+are introduced.
 """
 
 from __future__ import annotations
@@ -67,14 +68,15 @@ def load_event_window(path: Path) -> pd.DataFrame:
 
 
 def baseline_price_linearized(base_price: float, shortage_ratio: float, elasticity: float) -> float:
-    """Linearized inverse-demand estimate.
+    """Linear-demand counterfactual estimate.
 
-    Demand elasticity approximation:
-        demand_change_pct = elasticity * price_change_pct
+    Under a local linear inverse-demand curve, the point elasticity at P0 gives
 
-    If supply falls by shortage_ratio, the required price increase is roughly
-    shortage_ratio / abs(elasticity). This is deliberately simple and should be
-    interpreted as a static benchmark, not as the final market mechanism.
+        price_change_pct = shortage_ratio / abs(elasticity)
+
+    exactly for the counterfactual line used here. This formula should not be
+    interpreted as a first-order approximation to the constant-elasticity
+    demand curve when the shortage ratio is large.
     """
 
     if elasticity >= 0:
@@ -117,13 +119,14 @@ def run_baseline_model(event_df: pd.DataFrame, cfg: BaselineConfig) -> pd.DataFr
                 "供给缺口比例": shortage_ratio,
                 "基准价格_美元每桶": base_price,
                 "需求价格弹性": cfg.elasticity,
-                "线性化传统模型价格_美元每桶": linear_price,
+                "线性需求反事实价格_美元每桶": linear_price,
                 "常弹性机械上界价格_美元每桶": constant_elasticity_price,
                 "实际窗口最高收盘价_美元每桶": actual_peak_close,
                 "实际窗口最高盘中价_美元每桶": actual_peak_high,
                 "实际窗口平均收盘价_美元每桶": actual_mean_close,
                 "实际窗口末日收盘价_美元每桶": actual_final_close,
                 "线性模型相对最高收盘价倍数": linear_price / actual_peak_close,
+                "常弹性上界相对最高收盘价倍数": constant_elasticity_price / actual_peak_close,
                 "线性模型相对窗口均价倍数": linear_price / actual_mean_close,
             }
         )
@@ -161,15 +164,15 @@ def save_figure(event_df: pd.DataFrame, results: pd.DataFrame, cfg: BaselineConf
     }
     for _, row in results.iterrows():
         ax.axhline(
-            row["线性化传统模型价格_美元每桶"],
+            row["线性需求反事实价格_美元每桶"],
             color=colors[row["情景"]],
             linestyle="--",
             linewidth=1.6,
-            label=f"{row['情景']}传统模型: {row['线性化传统模型价格_美元每桶']:.1f}",
+            label=f"{row['情景']}线性需求基准: {row['线性需求反事实价格_美元每桶']:.1f}",
         )
 
     ax.axhspan(110, 120, color="#10b981", alpha=0.10, label="题面叙述110-120区间")
-    ax.set_title("传统供需基准模型与实际价格对比")
+    ax.set_title("线性需求反事实基准与实际价格对比")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
     ax.legend(loc="upper left")
@@ -184,7 +187,7 @@ def build_report(event_df: pd.DataFrame, results: pd.DataFrame, cfg: BaselineCon
     event_start = event_df["trade_date"].min().date()
     event_end = event_df["trade_date"].max().date()
     rows = "\n".join(
-        "| {情景} | {供应中断量_万桶每日:.0f} | {线性化传统模型价格_美元每桶:.2f} | {常弹性机械上界价格_美元每桶:.2f} | {线性模型相对最高收盘价倍数:.2f} |".format(
+        "| {情景} | {供应中断量_万桶每日:.0f} | {线性需求反事实价格_美元每桶:.2f} | {常弹性机械上界价格_美元每桶:.2f} | {线性模型相对最高收盘价倍数:.2f} | {常弹性上界相对最高收盘价倍数:.2f} |".format(
             **row
         )
         for row in results.to_dict("records")
@@ -194,9 +197,9 @@ def build_report(event_df: pd.DataFrame, results: pd.DataFrame, cfg: BaselineCon
 
 ## 运行结论
 
-阶段 2 已建立传统供需基准模型。在线性化短期需求价格弹性口径下，供应中断 1400-1800 万桶/日会给出约 278-337 美元/桶的理论价格，明显高于附件 CSV 中冲突窗口最高收盘价 114.06 美元/桶。
+已建立传统供需反事实基准模型。在线性需求曲线口径下，供应中断 1400-1800 万桶/日会给出约 278-337 美元/桶的理论价格，明显高于附件 CSV 中冲突窗口最高收盘价 114.06 美元/桶。
 
-这说明只看供应缺口和低需求弹性会显著高估油价，后续必须引入战略储备、商业库存、绕道运输、需求收缩和预期反转等缓冲机制。
+这说明只看供应缺口和低需求弹性会显著高估油价，后续必须引入战略储备、商业库存、绕道运输、需求收缩、价格传导折价和预期反转等缓冲机制。
 
 ## 输入数据
 
@@ -206,21 +209,23 @@ def build_report(event_df: pd.DataFrame, results: pd.DataFrame, cfg: BaselineCon
 - 基准价格：{base_price:.2f} USD/barrel，即冲突窗口首日 `pre_close`
 - 短期需求价格弹性：{cfg.elasticity}
 
-## 模型口径
+## 模型口径与需求函数假设
 
-主口径采用线性化需求弹性近似：
+主口径采用线性需求曲线假设。设局部反需求函数为 \\(P=a-bQ\\)，在战前均衡点附近用题面短期点弹性 \\(\\varepsilon\\) 标定斜率，则供应缺口对应的价格压力为：
 
 ```text
 price = base_price * (1 + supply_shortage_ratio / abs(elasticity))
 ```
 
-常弹性均衡口径也被计算并保留在结果表中，但它在短期弹性很低时会给出极高的机械上界，不作为主图结论。
+这里的公式不是把常弹性需求函数做一阶近似，而是线性需求反事实基准的主口径。选择线性需求，是因为它隐含消费者边际支付意愿随消费量下降；若采用常弹性需求 \\(Q=A P^\\varepsilon\\)，在 \\(\\varepsilon=-0.05\\) 且缺口较大时会给出极高的机械上界。本文同时保留常弹性口径，用来说明“传统低弹性供需模型高估现实价格”的结论不依赖单一公式。
 
 ## 结果表
 
-| 情景 | 供应中断量(万桶/日) | 线性化传统模型价格 | 常弹性机械上界价格 | 相对实际最高收盘价倍数 |
-|---|---:|---:|---:|---:|
+| 情景 | 供应中断量(万桶/日) | 线性需求反事实价格 | 常弹性机械上界价格 | 线性口径相对最高收盘倍数 | 常弹性口径相对最高收盘倍数 |
+|---|---:|---:|---:|---:|---:|
 {rows}
+
+实际窗口末日收盘价为 {float(results["实际窗口末日收盘价_美元每桶"].iloc[0]):.2f} 美元/桶。基准模型的职责不是精确预测末日价格，而是证明静态低弹性供需框架无法解释真实价格平台。
 
 ## 输出产物
 
@@ -229,8 +234,8 @@ price = base_price * (1 + supply_shortage_ratio / abs(elasticity))
 
 ## 后续作用
 
-- 阶段 3 将在此基础上引入库存、SPR、绕道运输和需求弹性变化。
-- 阶段 4 将使用实际价格路径校准动态模型，而不是继续依赖该静态基准。
+- 综合机制递推模型在此基础上引入库存、SPR、绕道运输和需求弹性变化。
+- 参数校准环节使用实际价格路径约束动态模型，而不是继续依赖该静态基准。
 """
 
 
@@ -248,7 +253,7 @@ def main() -> None:
     save_figure(event_df, results, cfg)
     write_report(event_df, results, cfg)
 
-    print("Stage 2 complete")
+    print("Baseline model complete")
     print(f"Results: {cfg.output_csv.relative_to(PROJECT_ROOT)}")
     print(f"Figure: {cfg.figure_path.relative_to(PROJECT_ROOT)}")
     print(f"Report: {cfg.report_path.relative_to(PROJECT_ROOT)}")
