@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.analysis.historical_volatility_calibration import load_historical_model_factors
 from src.models import dynamic_short_term as dynamic
 from src.scenarios import scenario_forecast as scenario
 
@@ -73,6 +74,10 @@ def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
 
 def estimate_event_volatility(short_path: pd.DataFrame, history: pd.DataFrame) -> float:
+    factors = load_historical_model_factors()
+    if factors.state_daily_sigma > 0:
+        return factors.state_daily_sigma
+
     event_return = short_path["actual_price"].astype(float).pct_change().dropna()
     history_return = history["close_price"].astype(float).pct_change().dropna()
     event_sigma = float(event_return.std(ddof=0))
@@ -115,6 +120,7 @@ def simulate_path(
     centers: dict[str, pd.DataFrame],
     start_price: float,
     daily_sigma: float,
+    transition_jump_sigma_scale: float,
 ) -> pd.DataFrame:
     state = "neutral"
     previous_price = start_price
@@ -134,7 +140,9 @@ def simulate_path(
         previous_noise = 0.30 * previous_noise + innovation
         transition_jump = 0.0
         if next_state != state:
-            transition_jump = float(rng.normal(spec.transition_jump_mean, spec.transition_jump_sigma))
+            transition_jump = float(
+                rng.normal(spec.transition_jump_mean, spec.transition_jump_sigma * transition_jump_sigma_scale)
+            )
 
         price = 0.82 * previous_price + 0.18 * target_price + previous_noise + transition_jump
         price = float(np.clip(price, 70.0, 145.0))
@@ -250,7 +258,12 @@ def save_figure(quantiles: pd.DataFrame, state_share: pd.DataFrame, scenario_res
     plt.close(fig)
 
 
-def build_report(metrics: pd.DataFrame, quantiles: pd.DataFrame, daily_sigma: float) -> str:
+def build_report(
+    metrics: pd.DataFrame,
+    quantiles: pd.DataFrame,
+    daily_sigma: float,
+    transition_jump_sigma_scale: float,
+) -> str:
     final_q = quantiles[quantiles["day_index"] == 180].iloc[0]
     peak_p95 = float(metrics["外推期最高价"].quantile(0.95))
     return f"""# 长期状态转移预测增强报告
@@ -259,13 +272,13 @@ def build_report(metrics: pd.DataFrame, quantiles: pd.DataFrame, daily_sigma: fl
 
 本增强模型不替代三情景物理中心路径，而是在其上加入缓和、维持、升级三类状态的马尔可夫切换，并用附件历史价格估计日度波动扰动。它回答的是：如果未来事件状态会切换，长期价格可能围绕中心路径怎样波动。
 
-本轮使用 {len(metrics)} 条状态转移样本，日度扰动波动率由附件数据估计为 {daily_sigma:.4f}。第 180 天价格中位数为 {final_q["p50"]:.2f} 美元/桶，5%-95% 区间为 {final_q["p05"]:.2f}--{final_q["p95"]:.2f} 美元/桶；外推期最高价 P95 为 {peak_p95:.2f} 美元/桶。突破 120 美元/桶的条件概率为 {metrics["突破120"].mean():.1%}，突破 130 美元/桶的条件概率为 {metrics["突破130"].mean():.1%}。
+本轮使用 {len(metrics)} 条状态转移样本，日度扰动波动率由附件历史数据校准为 {daily_sigma:.4f}，状态切换跳变标准差乘数为 {transition_jump_sigma_scale:.2f}。第 180 天价格中位数为 {final_q["p50"]:.2f} 美元/桶，5%-95% 区间为 {final_q["p05"]:.2f}--{final_q["p95"]:.2f} 美元/桶；外推期最高价 P95 为 {peak_p95:.2f} 美元/桶。突破 120 美元/桶的条件概率为 {metrics["突破120"].mean():.1%}，突破 130 美元/桶的条件概率为 {metrics["突破130"].mean():.1%}。
 
 ## 为什么它比单条线更可信
 
 - 原三情景线保留为物理中心路径，用来表达供应恢复、SPR 收缩、需求弹性和风险溢价衰减的慢变量。
 - 状态转移层表达未来事件的不确定性：冲突缓和时向乐观中心靠近，维持时围绕中性中心，升级时向悲观中心和跳涨方向移动。
-- 扰动强度来自附件历史价格波动，不使用爬虫数据，也不生成未来真实价格。
+- 扰动强度和状态切换跳变尺度来自 2017--2025 附件历史价格波动，不使用爬虫数据，也不生成未来真实价格。
 - 输出图应作为长期主图的辅助证据：长期预测不能承诺逐日精确命中，只能给出条件中心、概率区间和尾部风险。
 
 ## 输出产物
@@ -281,10 +294,21 @@ def run_state_transition(n_samples: int = N_SAMPLES) -> tuple[pd.DataFrame, pd.D
     scenario_result, short_path, history = load_inputs()
     centers = center_lookup(scenario_result)
     cutoff_price = float(short_path.sort_values("trade_date").iloc[-1]["simulated_price"])
+    factors = load_historical_model_factors()
     daily_sigma = estimate_event_volatility(short_path, history)
     rng = np.random.default_rng(RANDOM_SEED)
     paths = pd.concat(
-        [simulate_path(rng, sample_id, centers, cutoff_price, daily_sigma) for sample_id in range(1, n_samples + 1)],
+        [
+            simulate_path(
+                rng,
+                sample_id,
+                centers,
+                cutoff_price,
+                daily_sigma,
+                factors.transition_jump_sigma_scale,
+            )
+            for sample_id in range(1, n_samples + 1)
+        ],
         ignore_index=True,
     )
     quantiles = build_quantiles(paths)
@@ -303,7 +327,11 @@ def write_outputs(metrics: pd.DataFrame, quantiles: pd.DataFrame, state_share: p
     state_share.to_csv(STATE_SHARE_CSV, index=False)
     scenario_result, _, _ = load_inputs()
     save_figure(quantiles, state_share, scenario_result)
-    REPORT_PATH.write_text(build_report(metrics, quantiles, daily_sigma), encoding="utf-8")
+    factors = load_historical_model_factors()
+    REPORT_PATH.write_text(
+        build_report(metrics, quantiles, daily_sigma, factors.transition_jump_sigma_scale),
+        encoding="utf-8",
+    )
 
 
 def main() -> None:

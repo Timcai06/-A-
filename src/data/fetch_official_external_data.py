@@ -412,6 +412,15 @@ def write_source_table() -> None:
                 "当前状态": "已自动抓取 2025 和 2026 年官方 CSV",
                 "模型用途": "审计多国油品需求、炼厂产出和产品库存数量级。",
             },
+            {
+                "来源": "OPEC",
+                "数据集": "Monthly Oil Market Report - Balance of supply and demand",
+                "series_id": "OPEC_MOMR_BALANCE",
+                "URL": "https://publications.opec.org/momr/chapter/147/2738",
+                "单位": "mb/d",
+                "当前状态": "已整理官方公开表格快照",
+                "模型用途": "约束长期全球需求基线、非DoC供给恢复和DoC需求差额尾部风险。",
+            },
         ]
     )
     ensure_parent(SOURCE_TABLE)

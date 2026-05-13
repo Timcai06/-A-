@@ -4,3 +4,4 @@ EIA,美国商业原油库存_不含SPR,WCESTUS1,https://www.eia.gov/dnav/pet/his
 EIA,美国原油产量,WCRFPUS2,https://www.eia.gov/dnav/pet/hist_xls/WCRFPUS2w.xls,千桶/日,已自动抓取,审计非海湾供给弹性；只代表美国供给响应。
 JODI,JODI Oil World Database Primary,JODI_PRIMARY,https://www.jodidata.org/_resources/files/downloads/oil-data/annual-csv/primary/primaryyear2026.csv,KBD/KBBL,已自动抓取 2025 和 2026 年官方 CSV,审计多国原油及凝析油产量、库存、进出口数量级。
 JODI,JODI Oil World Database Secondary,JODI_SECONDARY,https://www.jodidata.org/_resources/files/downloads/oil-data/annual-csv/secondary/secondaryyear2026.csv,KBD/KBBL,已自动抓取 2025 和 2026 年官方 CSV,审计多国油品需求、炼厂产出和产品库存数量级。
+OPEC,Monthly Oil Market Report - Balance of supply and demand,OPEC_MOMR_BALANCE,https://publications.opec.org/momr/chapter/147/2738,mb/d,已整理官方公开表格快照,约束长期全球需求基线、非DoC供给恢复和DoC需求差额尾部风险。

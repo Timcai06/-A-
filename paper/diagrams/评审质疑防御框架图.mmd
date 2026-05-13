@@ -1,24 +1,24 @@
 %%{init: {"theme": "base", "themeVariables": {"fontFamily": "STHeiti, Songti SC, Arial", "primaryColor": "#F8FAFC", "primaryBorderColor": "#475569", "primaryTextColor": "#111827", "lineColor": "#64748B", "tertiaryColor": "#EFF6FF"}}}%%
 flowchart LR
-    subgraph Q["评委可能质疑"]
-        Q1["是否打败朴素基准"]
+    subgraph Q["关键检验假设"]
+        Q1["相对朴素基准是否有效"]
         Q2["是否滞后复制"]
-        Q3["是否参数过拟合"]
-        Q4["是否硬编码价格平台"]
-        Q5["是否存在内生性"]
-        Q6["长期预测是否可信"]
+        Q3["参数扰动下是否稳定"]
+        Q4["价格平台是否外生给定"]
+        Q5["风险变量是否存在内生性"]
+        Q6["长期外推边界是否清晰"]
     end
 
-    subgraph A["对应防御证据"]
+    subgraph A["对应检验证据"]
         A1["上一日基准、ARIMA、DM检验"]
         A2["平移检验、拐点局部图"]
-        A3["扰动压力测试、权重敏感性"]
-        A4["代码审计、机制消融"]
-        A5["不用新闻爬虫拟合、滞后GPR审计"]
+        A3["参数扰动、权重敏感性"]
+        A4["结构边界、机制消融"]
+        A5["不用新闻爬虫拟合、滞后GPR检验"]
         A6["三情景、敏感性、蒙特卡洛、状态转移"]
     end
 
-    R["证据链结论"]
+    R["鲁棒性结论"]
 
     Q1 --> A1
     Q2 --> A2

@@ -88,20 +88,21 @@ def diebold_mariano(loss_model: np.ndarray, loss_baseline: np.ndarray, max_lag: 
         max_lag = max(1, int(n ** (1 / 3)))
     max_lag = min(max_lag, n - 1)
 
-    variance = 0.0
-    for j in range(max_lag + 1):
-        if j == 0:
-            gamma = float(np.var(diff, ddof=1)) * (n - 1) / n
-        else:
-            c_j = (n - j) / n
-            gamma = c_j * float(np.sum(diff[j:] * diff[:-j]))
+    centered = diff - mean_diff
+    long_run_variance = float(np.dot(centered, centered) / n)
+    for j in range(1, max_lag + 1):
+        gamma = float(np.dot(centered[j:], centered[:-j]) / n)
         weight = 1.0 - j / (max_lag + 1)
-        variance += weight * gamma
-    variance *= 2.0
+        long_run_variance += 2.0 * weight * gamma
 
-    if variance <= 0:
+    variance_of_mean = long_run_variance / n
+    if variance_of_mean <= 0 or not np.isfinite(variance_of_mean):
+        fallback = float(np.var(diff, ddof=1) / n)
+        variance_of_mean = fallback if fallback > 0 else float("nan")
+
+    if not np.isfinite(variance_of_mean) or variance_of_mean <= 0:
         return mean_diff, float("nan"), float("nan")
-    statistic = mean_diff / sqrt(variance)
+    statistic = mean_diff / sqrt(variance_of_mean)
     p_value = float(stats.t.cdf(statistic, df=n - 1))
     return mean_diff, float(statistic), p_value
 
@@ -332,7 +333,7 @@ def build_report(summary: pd.DataFrame, diagnostics: pd.DataFrame, split_stats: 
 
 ## 论文可用表述
 
-统计审计进一步支持短期模型并非单纯复制上一日价格。与朴素上一日基准相比，综合机制递推模型在 RMSE、MAE 和 MAPE 上均有改善；DM 检验显示模型损失均值低于朴素基准，但由于样本窗口仅 45 个可比较交易日，显著性应以“支持性证据”表述，而不宜写成压倒性统计证明。残差自相关检验未发现明显线性滞后复制问题，ARCH 检验则提示金融价格残差仍可能存在波动聚集，因此本文将 GARCH/R 语言计量审计列为后续深化方向，而不把它替代机制递推主模型。
+统计审计进一步支持短期模型并非单纯复制上一日价格。与朴素上一日基准相比，综合机制递推模型在 RMSE、MAE 和 MAPE 上均有改善；DM 检验显示模型损失均值低于朴素基准，但由于样本窗口仅 45 个可比较交易日，显著性应以“支持性证据”表述，而不宜写成压倒性统计证明。Python 版 HAC-DM 与 R 版独立审计的 p 值口径不同，论文正文采用更保守的 R 独立复核结果；本报告用于可复现计算留档。残差自相关检验未发现明显线性滞后复制问题，ARCH 检验则提示金融价格残差仍可能存在波动聚集，因此本文将 GARCH/R 语言计量审计列为后续深化方向，而不把它替代机制递推主模型。
 
 ## 输出产物
 

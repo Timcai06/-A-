@@ -21,6 +21,7 @@ from src.models import dynamic_short_term as dynamic
 
 JODI_SUMMARY_CSV = PROJECT_ROOT / "data" / "external" / "jodi" / "JODI多国外生约束_关键摘要.csv"
 EIA_SUMMARY_CSV = PROJECT_ROOT / "data" / "external" / "eia" / "美国官方外生约束_关键摘要.csv"
+OPEC_SUMMARY_CSV = PROJECT_ROOT / "data" / "external" / "opec" / "OPEC全球供需平衡摘要.csv"
 CONSTRAINT_OUTPUT_CSV = PROJECT_ROOT / "output" / "scenarios" / "官方外生约束参数因子.csv"
 
 
@@ -56,7 +57,8 @@ def load_external_constraint_factors(write_output: bool = True) -> ExternalConst
     """Derive modest multipliers from EIA and JODI summary files."""
     jodi = _load_csv(JODI_SUMMARY_CSV)
     eia = _load_csv(EIA_SUMMARY_CSV)
-    if jodi.empty and eia.empty:
+    opec = _load_csv(OPEC_SUMMARY_CSV)
+    if jodi.empty and eia.empty and opec.empty:
         factors = ExternalConstraintFactors()
         if write_output:
             write_constraint_table(factors)
@@ -72,6 +74,10 @@ def load_external_constraint_factors(write_output: bool = True) -> ExternalConst
 
     eia_commercial_change_wan = _safe_metric(eia, "美国商业原油库存_不含SPR", "窗口变化_万桶口径")
     eia_spr_release_wan_day = abs(_safe_metric(eia, "美国SPR原油库存", "窗口日均变化_万桶每日期"))
+    opec_demand_growth_wan = _safe_metric(opec, "OPEC全球需求年增量", "数值_万桶每日")
+    opec_non_doc_growth_wan = _safe_metric(opec, "OPEC非DoC液体供给年增量", "数值_万桶每日")
+    opec_doc_gap_growth_wan = _safe_metric(opec, "OPEC DoC原油需求差额年增量", "数值_万桶每日")
+    opec_doc_gap_peak_above_avg_wan = _safe_metric(opec, "OPEC DoC原油需求差额峰值高于年均", "数值_万桶每日")
 
     # Positive stock changes mean there is audited buffer capacity, but the
     # adjustment is capped because JODI is a reported sample and EIA is U.S.-only.
@@ -92,8 +98,11 @@ def load_external_constraint_factors(write_output: bool = True) -> ExternalConst
     # If reported demand is still rising before the shock, long-horizon demand
     # destruction should not be made too aggressive.
     demand_pressure = np.clip(max(demand_change_kbd, 0.0) / 5_000.0, 0.0, 1.0)
+    opec_demand_pressure = np.clip(max(opec_demand_growth_wan - opec_non_doc_growth_wan, 0.0) / 120.0, 0.0, 1.0)
     demand_multiplier = float(np.clip(1 - 0.25 * demand_pressure, 0.90, 1.04))
     elasticity_multiplier = float(np.clip(1 - 0.14 * demand_pressure, 0.94, 1.03))
+    demand_multiplier = float(np.clip(demand_multiplier * (1 - 0.035 * opec_demand_pressure), 0.88, 1.04))
+    elasticity_multiplier = float(np.clip(elasticity_multiplier * (1 - 0.020 * opec_demand_pressure), 0.93, 1.03))
 
     # U.S. SPR release is not a global SPR proxy. Use it only as a gentle
     # credibility discount when it is extremely small relative to the contest
@@ -103,6 +112,9 @@ def load_external_constraint_factors(write_output: bool = True) -> ExternalConst
 
     risk_multiplier = float(np.clip(1 + 0.055 * np.clip(trade_stress_kbd / 2_000.0, 0.0, 1.0), 1.0, 1.06))
     uncertainty_multiplier = float(np.clip(1 + 0.030 * np.clip(trade_stress_kbd / 2_000.0, 0.0, 1.0), 1.0, 1.04))
+    opec_tail_pressure = np.clip((opec_doc_gap_growth_wan + opec_doc_gap_peak_above_avg_wan) / 180.0, 0.0, 1.0)
+    risk_multiplier = float(np.clip(risk_multiplier * (1 + 0.020 * opec_tail_pressure), 1.0, 1.08))
+    uncertainty_multiplier = float(np.clip(uncertainty_multiplier * (1 + 0.012 * opec_tail_pressure), 1.0, 1.05))
 
     factors = ExternalConstraintFactors(
         route_capacity_multiplier=route_multiplier,
@@ -114,7 +126,8 @@ def load_external_constraint_factors(write_output: bool = True) -> ExternalConst
         uncertainty_floor_multiplier=uncertainty_multiplier,
         evidence_note=(
             "基于 JODI 多国同口径产量、库存、进出口、需求和炼厂产出，"
-            "叠加 EIA 美国 SPR 与商业库存周度变化生成；仅作长期参数约束。"
+            "叠加 EIA 美国 SPR 与商业库存周度变化，并引入 OPEC 全球供需平衡表"
+            "约束长期需求基线和 DoC 需求差额尾部压力；仅作长期参数约束。"
         ),
     )
     if write_output:

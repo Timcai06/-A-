@@ -19,6 +19,8 @@ output/pdf/*.out
 
 # Local secrets
 .env
+.RData
+.deepseek/
 
 # Optional notebooks checkpoints
 .ipynb_checkpoints/
