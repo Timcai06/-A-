@@ -31,6 +31,7 @@ PATH_QUANTILE_CSV = OUTPUT_DIR / "长期状态转移路径分位数.csv"
 SAMPLE_METRICS_CSV = OUTPUT_DIR / "长期状态转移样本指标.csv"
 STATE_SHARE_CSV = OUTPUT_DIR / "长期状态转移状态占比.csv"
 STATE_RISK_CONSTRAINT_CSV = OUTPUT_DIR / "长期状态转移风险约束.csv"
+STATE_TRANSITION_MATRIX_CSV = OUTPUT_DIR / "长期状态转移基础矩阵.csv"
 REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "长期状态转移预测增强报告.md"
 FAN_FIGURE = PROJECT_ROOT / "figures" / "long_term_state_transition_fan.png"
 
@@ -142,6 +143,14 @@ def write_state_risk_constraints(constraints: StateRiskConstraints) -> None:
             {"约束项": "综合状态转移压力", "数值": constraints.combined_pressure},
         ]
     ).assign(证据说明=constraints.evidence_note).to_csv(STATE_RISK_CONSTRAINT_CSV, index=False)
+
+
+def write_transition_matrix() -> None:
+    ensure_parent(STATE_TRANSITION_MATRIX_CSV)
+    labels = [spec.label for spec in STATES]
+    frame = pd.DataFrame(TRANSITION_MATRIX, columns=[f"转为{label}" for label in labels])
+    frame.insert(0, "当前状态", labels)
+    frame.to_csv(STATE_TRANSITION_MATRIX_CSV, index=False)
 
 
 def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -387,6 +396,18 @@ def build_report(
 | GPR 事件月最高历史分位 | {risk_constraints.gpr_event_percentile:.1f}% | 地缘风险新闻指数处于历史高位 |
 | 综合状态转移压力 | {risk_constraints.combined_pressure:.3f} | 温和提高早中期升级概率，并随时间衰减 |
 
+## 基础转移矩阵
+
+行、列顺序均为“缓和、维持、升级”。基础矩阵为：
+
+| 当前状态 | 转为缓和 | 转为维持 | 转为升级 |
+|---|---:|---:|---:|
+| 缓和 | 0.90 | 0.09 | 0.01 |
+| 维持 | 0.16 | 0.78 | 0.06 |
+| 升级 | 0.07 | 0.24 | 0.69 |
+
+GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率，并在第 120 天和第 150 天后逐步提高缓和概率。所有行在扰动后重新归一化，因此每一日转移概率仍为合法概率分布。
+
 ## 为什么它比单条线更可信
 
 - 原三情景线保留为物理中心路径，用来表达供应恢复、SPR 收缩、需求弹性和风险溢价衰减的慢变量。
@@ -400,6 +421,7 @@ def build_report(
 - `{SAMPLE_METRICS_CSV.relative_to(PROJECT_ROOT)}`
 - `{STATE_SHARE_CSV.relative_to(PROJECT_ROOT)}`
 - `{STATE_RISK_CONSTRAINT_CSV.relative_to(PROJECT_ROOT)}`
+- `{STATE_TRANSITION_MATRIX_CSV.relative_to(PROJECT_ROOT)}`
 - `{FAN_FIGURE.relative_to(PROJECT_ROOT)}`
 """
 
@@ -441,6 +463,7 @@ def write_outputs(metrics: pd.DataFrame, quantiles: pd.DataFrame, state_share: p
     metrics.to_csv(SAMPLE_METRICS_CSV, index=False)
     quantiles.to_csv(PATH_QUANTILE_CSV, index=False)
     state_share.to_csv(STATE_SHARE_CSV, index=False)
+    write_transition_matrix()
     scenario_result, _, _ = load_inputs()
     save_figure(quantiles, state_share, scenario_result)
     factors = load_historical_model_factors()
