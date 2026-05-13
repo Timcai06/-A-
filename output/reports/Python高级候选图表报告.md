@@ -11,6 +11,8 @@
 - `output/candidate_figures/Python短期误差日历热力候选图.png`
 - `output/candidate_figures/Python长期敏感性热力候选图.png`
 - `output/candidate_figures/Python候选模型权衡气泡候选图.png`
+- `output/candidate_figures/Seaborn滞后特征相关性热力候选图.png`
+- `output/candidate_figures/Seaborn短期残差分段分布候选图.png`
 
 ## 初步判断
 
@@ -19,3 +21,5 @@
 - 误差日历热力图适合快速暴露误差集中在哪几周和哪些交易日。
 - 长期敏感性热力图适合替代单一龙卷风图，展示不同扰动档位下的价格方向。
 - 候选模型权衡气泡图适合说明主模型选择不是单一 RMSE 排序，而是多目标权衡。
+- Seaborn 滞后特征相关性热力图适合说明历史机器学习特征的冗余结构和信息边界。
+- Seaborn 短期残差分段分布图适合检查冲击启动、高位平台和回落修复三段的误差偏态。
