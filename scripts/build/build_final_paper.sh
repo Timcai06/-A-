@@ -33,6 +33,7 @@ fi
 "${PYTHON_BIN}" -m src.analysis.historical_robustness_audit
 "${PYTHON_BIN}" -m src.analysis.statistical_audit
 "${PYTHON_BIN}" -m src.analysis.short_term_residual_correction
+"${PYTHON_BIN}" -m src.analysis.short_term_model_quality_audit
 
 if command -v Rscript >/dev/null 2>&1; then
   Rscript scripts/audit/r_econometric_audit.R || echo "R econometric audit failed; continuing Python-led paper build." >&2

@@ -188,6 +188,7 @@ def simulate_dynamic_model(
     event_df: pd.DataFrame,
     assumptions: PhysicalAssumptions,
     behavior: BehavioralParameters,
+    time_axis: str = "calendar",
 ) -> pd.DataFrame:
     first_date = event_df["trade_date"].min()
     base_price = float(event_df.iloc[0]["pre_close"])
@@ -197,9 +198,14 @@ def simulate_dynamic_model(
     gap_closure_day: int | None = None
     rows: list[dict[str, Any]] = []
 
-    for _, actual_row in event_df.iterrows():
-        trade_date = actual_row["trade_date"]
-        day_index = int((trade_date - first_date).days)
+    for step_index, actual_row in enumerate(event_df.itertuples(index=False)):
+        trade_date = actual_row.trade_date
+        if time_axis == "calendar":
+            day_index = int((trade_date - first_date).days)
+        elif time_axis == "trading_day":
+            day_index = step_index
+        else:
+            raise ValueError(f"Unsupported time_axis: {time_axis}")
         elasticity = interpolate_elasticity(day_index, assumptions)
         price_ratio = max(previous_price / base_price, 0.1)
 
@@ -268,8 +274,10 @@ def simulate_dynamic_model(
         rows.append(
             {
                 "day_index": day_index,
+                "step_index": step_index,
+                "time_axis": time_axis,
                 "trade_date": trade_date,
-                "actual_price": float(actual_row["close_price"]),
+                "actual_price": float(actual_row.close_price),
                 "simulated_price": simulated_price,
                 "effective_supply": effective_supply,
                 "effective_demand": effective_demand,
