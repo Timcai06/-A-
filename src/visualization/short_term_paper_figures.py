@@ -32,9 +32,9 @@ def load_frames() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
 def add_phase_background(ax: plt.Axes, model: pd.DataFrame) -> None:
     phase_ranges = [
-        ("前期冲击", 0, 14, "#F4D7D7"),
-        ("中期平台", 15, 35, "#EFE4C8"),
-        ("后期再定价", 36, int(model["day_index"].max()), "#DCEBE3"),
+        ("前期冲击", 0, 14, "#EAF7FF"),
+        ("中期平台", 15, 35, "#E8FBFF"),
+        ("后期再定价", 36, int(model["day_index"].max()), "#ECFFF1"),
     ]
     for label, start_day, end_day, color in phase_ranges:
         sub = model[(model["day_index"] >= start_day) & (model["day_index"] <= end_day)]
@@ -49,7 +49,7 @@ def add_phase_background(ax: plt.Axes, model: pd.DataFrame) -> None:
             va="top",
             ha="left",
             fontsize=8.8,
-            color="#374151",
+            color=PAPER_COLORS["muted"],
             bbox={"boxstyle": "round,pad=0.18", "facecolor": "white", "edgecolor": "none", "alpha": 0.72},
         )
 
@@ -140,11 +140,11 @@ def save_mechanism_figure(model: pd.DataFrame) -> Path:
     fig, ax = plt.subplots(figsize=(11, 6.2))
     mechanism_map = {
         "shortage_pressure": ("供需缺口压力", SCENARIO_COLORS["risk"], "-"),
-        "blockade_risk_premium": ("封锁风险溢价", "#8C510A", "-"),
-        "uncertainty_premium": ("不确定性溢价", "#6A51A3", "-"),
+        "blockade_risk_premium": ("封锁风险溢价", PAPER_COLORS["blue"], "-"),
+        "uncertainty_premium": ("不确定性溢价", PAPER_COLORS["sky"], "-"),
         "panic_premium": ("恐慌溢价", PAPER_COLORS["muted"], "-"),
         "buffer_confirmation_discount": ("缓冲确认折价", SCENARIO_COLORS["optimistic"], "--"),
-        "expectation_relief_discount": ("预期修复折价", "#01665E", "--"),
+        "expectation_relief_discount": ("预期修复折价", PAPER_COLORS["teal"], "--"),
     }
     for column, (label, color, style) in mechanism_map.items():
         if column not in model.columns:
@@ -174,7 +174,7 @@ def save_candidate_figure(candidates: pd.DataFrame) -> Path:
     x = np.arange(len(selected))
     fig, ax = plt.subplots(figsize=(11, 5.8))
     width = 0.18
-    palette = [SCENARIO_COLORS["neutral"], "#6A51A3", SCENARIO_COLORS["optimistic"], "#8C510A"]
+    palette = [SCENARIO_COLORS["neutral"], PAPER_COLORS["sky"], SCENARIO_COLORS["optimistic"], PAPER_COLORS["teal"]]
     for idx, metric in enumerate(metrics):
         ax.bar(x + (idx - 1.5) * width, selected[metric], width=width, label=metric, color=palette[idx])
     ax.set_xticks(x)

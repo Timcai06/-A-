@@ -8,7 +8,7 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT
-from src.common.plotting import SCENARIO_COLORS, configure_plot_style as apply_plot_style, direct_label
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS, configure_plot_style as apply_plot_style, direct_label
 
 PAPER_FIGURES_DIR = PROJECT_ROOT / "paper" / "figures"
 
@@ -39,8 +39,8 @@ def save_integrated_forecast_figure(short_term: pd.DataFrame, scenarios: pd.Data
 
     observed_start = short_term["trade_date"].min()
     forecast_end = scenarios["trade_date"].max()
-    ax.axvspan(observed_start, cutoff_date, color="#E8EEF6", alpha=0.36, lw=0)
-    ax.axvspan(cutoff_date, forecast_end, color="#F2E8D5", alpha=0.30, lw=0)
+    ax.axvspan(observed_start, cutoff_date, color=PAPER_COLORS["band_light"], alpha=0.42, lw=0)
+    ax.axvspan(cutoff_date, forecast_end, color=PAPER_COLORS["teal"], alpha=0.10, lw=0)
 
     ax.plot(
         short_term["trade_date"],
@@ -96,11 +96,11 @@ def save_integrated_forecast_figure(short_term: pd.DataFrame, scenarios: pd.Data
         va="top",
         fontsize=9,
         color=SCENARIO_COLORS["actual"],
-        bbox={"boxstyle": "round,pad=0.25", "facecolor": "white", "edgecolor": "#9ca3af", "alpha": 0.9},
+        bbox={"boxstyle": "round,pad=0.25", "facecolor": "white", "edgecolor": PAPER_COLORS["border"], "alpha": 0.9},
     )
     ax.axhspan(110, 120, color=SCENARIO_COLORS["optimistic"], alpha=0.08, label="题面 110-120 美元平台")
     ax.text(observed_start, 121.0, "短期拟合区", color=SCENARIO_COLORS["neutral"], fontsize=10, weight="bold")
-    ax.text(cutoff_date + pd.Timedelta(days=9), 121.0, "60-180 天情景外推区", color="#8C510A", fontsize=10, weight="bold")
+    ax.text(cutoff_date + pd.Timedelta(days=9), 121.0, "60-180 天情景外推区", color=PAPER_COLORS["teal"], fontsize=10, weight="bold")
 
     ax.set_title("短期机制拟合与 60-180 天三情景预测总览")
     ax.set_xlabel("日期")
@@ -150,13 +150,13 @@ def save_method_route_figure() -> Path:
     ax.axis("off")
 
     nodes = [
-        ("附件数据清洗", "统一日期、价格口径\n截取冲突窗口", 0.65, 4.65, "#eff6ff", "#2563eb"),
-        ("传统供需基准", "低短期弹性\n估计反事实上界", 3.10, 4.65, "#f8fafc", "#475569"),
-        ("短期动态递推", "SPR、库存、绕道\n恐慌与预期修复", 5.55, 4.65, "#ecfdf5", "#059669"),
-        ("模型检验防御", "基准对比、滞后检验\n消融与压力测试", 8.00, 4.65, "#fff7ed", "#ea580c"),
-        ("长期情景预测", "60-180 天\n乐观/中性/悲观", 3.10, 1.55, "#fef2f2", "#dc2626"),
-        ("敏感性分析", "识别关键参数\n解释政策含义", 5.55, 1.55, "#f5f3ff", "#7c3aed"),
-        ("最终结论", "短期平台机制\n长期尾部风险", 8.00, 1.55, "#fefce8", "#ca8a04"),
+        ("附件数据清洗", "统一日期、价格口径\n截取冲突窗口", 0.65, 4.65, PAPER_COLORS["band_light"], PAPER_COLORS["sky"]),
+        ("传统供需基准", "低短期弹性\n估计反事实上界", 3.10, 4.65, "#f8fafc", PAPER_COLORS["muted"]),
+        ("短期动态递推", "SPR、库存、绕道\n恐慌与预期修复", 5.55, 4.65, "#E8FFF8", PAPER_COLORS["teal"]),
+        ("模型检验防御", "基准对比、滞后检验\n消融与压力测试", 8.00, 4.65, "#E8FBFF", PAPER_COLORS["blue"]),
+        ("长期情景预测", "60-180 天\n乐观/中性/悲观", 3.10, 1.55, "#EAF7FF", PAPER_COLORS["cyan"]),
+        ("敏感性分析", "识别关键参数\n解释政策含义", 5.55, 1.55, "#ECFFF1", PAPER_COLORS["green"]),
+        ("最终结论", "短期平台机制\n长期尾部风险", 8.00, 1.55, "#F4FFE8", PAPER_COLORS["lime"]),
     ]
 
     for title, subtitle, x, y, fill, edge in nodes:
@@ -170,8 +170,8 @@ def save_method_route_figure() -> Path:
             facecolor=fill,
         )
         ax.add_patch(box)
-        ax.text(x + 0.95, y + 0.70, title, ha="center", va="center", fontsize=13, weight="bold", color="#111827")
-        ax.text(x + 0.95, y + 0.34, subtitle, ha="center", va="center", fontsize=10.5, color="#374151", linespacing=1.35)
+        ax.text(x + 0.95, y + 0.70, title, ha="center", va="center", fontsize=13, weight="bold", color=PAPER_COLORS["ink"])
+        ax.text(x + 0.95, y + 0.34, subtitle, ha="center", va="center", fontsize=10.5, color=PAPER_COLORS["muted"], linespacing=1.35)
 
     arrows = [
         ((2.55, 5.18), (3.05, 5.18)),
@@ -191,7 +191,7 @@ def save_method_route_figure() -> Path:
                 arrowstyle="-|>",
                 mutation_scale=16,
                 linewidth=1.5,
-                color="#6b7280",
+                color=PAPER_COLORS["muted"],
                 connectionstyle="arc3,rad=0.0",
             )
         )
@@ -204,7 +204,7 @@ def save_method_route_figure() -> Path:
         va="center",
         fontsize=15,
         weight="bold",
-        color="#111827",
+        color=PAPER_COLORS["ink"],
     )
     ax.text(
         6,
@@ -213,7 +213,7 @@ def save_method_route_figure() -> Path:
         ha="center",
         va="center",
         fontsize=11.5,
-        color="#4b5563",
+        color=PAPER_COLORS["muted"],
     )
     fig.tight_layout()
     fig.savefig(path)

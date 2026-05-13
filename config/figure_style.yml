@@ -1,0 +1,33 @@
+palette:
+  lime: "#55ff37"
+  emerald: "#00e978"
+  teal: "#00cfae"
+  cyan: "#00b3d9"
+  sky: "#0095f2"
+  blue: "#0074f2"
+
+neutrals:
+  ink: "#1A1A1A"
+  muted: "#4b5563"
+  grid: "#e5e7eb"
+  border: "#cbd5e1"
+  band_light: "#DDF8FF"
+  band_mid: "#99E7F4"
+
+roles:
+  actual: "ink"
+  fit: "blue"
+  machine_learning: "sky"
+  neutral: "cyan"
+  optimistic: "emerald"
+  pessimistic: "blue"
+  risk: "sky"
+  buffer: "teal"
+  highlight: "lime"
+  band_outer: "band_light"
+  band_inner: "band_mid"
+
+usage_notes:
+  - "真实价格保持深灰黑，保证论文可读性。"
+  - "亮绿色只用于重点高亮或缓冲机制，不大面积铺底。"
+  - "悲观与风险用深蓝/天蓝并配合虚线、阈值线和文字标注区分，避免整篇图表过度红色化。"

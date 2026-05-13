@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 import matplotlib.pyplot as plt
+import yaml
+
+from src.common.paths import PROJECT_ROOT
 
 
 DEFAULT_CHINESE_FONTS = [
@@ -13,33 +19,95 @@ DEFAULT_CHINESE_FONTS = [
     "DejaVu Sans",
 ]
 
+STYLE_CONFIG_PATH = PROJECT_ROOT / "config" / "figure_style.yml"
+
+
+def _load_style_config(path: Path = STYLE_CONFIG_PATH) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def _resolve_palette(config: dict[str, Any]) -> dict[str, str]:
+    palette = config.get("palette", {})
+    neutrals = config.get("neutrals", {})
+    colors = {
+        "lime": "#55ff37",
+        "emerald": "#00e978",
+        "teal": "#00cfae",
+        "cyan": "#00b3d9",
+        "sky": "#0095f2",
+        "blue": "#0074f2",
+        "ink": "#1A1A1A",
+        "muted": "#4b5563",
+        "grid": "#e5e7eb",
+        "border": "#cbd5e1",
+        "band_light": "#DDF8FF",
+        "band_mid": "#99E7F4",
+    }
+    colors.update({key: str(value) for key, value in palette.items()})
+    colors.update({key: str(value) for key, value in neutrals.items()})
+    return colors
+
+
+_STYLE_CONFIG = _load_style_config()
+_COLORS = _resolve_palette(_STYLE_CONFIG)
+_ROLES = _STYLE_CONFIG.get("roles", {})
+
 PAPER_COLORS = {
-    "ink": "#1A1A1A",
-    "muted": "#4b5563",
-    "blue": "#2B6A99",
-    "navy": "#1F4E79",
-    "teal": "#1B9E77",
-    "green": "#1B9E77",
-    "red": "#B2182B",
-    "brick": "#B2182B",
-    "amber": "#b45309",
-    "band": "#8DA0CB",
-    "band_light": "#D8E2F0",
-    "grid": "#e5e7eb",
-    "border": "#cbd5e1",
+    "ink": _COLORS["ink"],
+    "muted": _COLORS["muted"],
+    "blue": _COLORS["blue"],
+    "navy": _COLORS["blue"],
+    "teal": _COLORS["teal"],
+    "green": _COLORS["emerald"],
+    "emerald": _COLORS["emerald"],
+    "cyan": _COLORS["cyan"],
+    "sky": _COLORS["sky"],
+    "lime": _COLORS["lime"],
+    "red": _COLORS["sky"],
+    "brick": _COLORS["blue"],
+    "amber": _COLORS["teal"],
+    "band": _COLORS["band_mid"],
+    "band_light": _COLORS["band_light"],
+    "grid": _COLORS["grid"],
+    "border": _COLORS["border"],
 }
 
+
+def role_color(role: str, fallback: str | None = None) -> str:
+    """Return a configured semantic color role."""
+    color_key = _ROLES.get(role)
+    if color_key in _COLORS:
+        return _COLORS[color_key]
+    if fallback is not None:
+        return fallback
+    return PAPER_COLORS["muted"]
+
 SCENARIO_COLORS = {
-    "actual": PAPER_COLORS["ink"],
-    "fit": PAPER_COLORS["blue"],
-    "neutral": PAPER_COLORS["blue"],
-    "optimistic": PAPER_COLORS["teal"],
-    "pessimistic": PAPER_COLORS["brick"],
-    "risk": PAPER_COLORS["brick"],
+    "actual": role_color("actual", PAPER_COLORS["ink"]),
+    "fit": role_color("fit", PAPER_COLORS["blue"]),
+    "machine_learning": role_color("machine_learning", PAPER_COLORS["sky"]),
+    "neutral": role_color("neutral", PAPER_COLORS["cyan"]),
+    "optimistic": role_color("optimistic", PAPER_COLORS["green"]),
+    "pessimistic": role_color("pessimistic", PAPER_COLORS["blue"]),
+    "risk": role_color("risk", PAPER_COLORS["sky"]),
+    "buffer": role_color("buffer", PAPER_COLORS["teal"]),
+    "highlight": role_color("highlight", PAPER_COLORS["lime"]),
     "muted": PAPER_COLORS["muted"],
-    "band_outer": PAPER_COLORS["band_light"],
-    "band_inner": PAPER_COLORS["band"],
+    "band_outer": role_color("band_outer", PAPER_COLORS["band_light"]),
+    "band_inner": role_color("band_inner", PAPER_COLORS["band"]),
 }
+
+SEABORN_PALETTE = [
+    PAPER_COLORS["green"],
+    PAPER_COLORS["teal"],
+    PAPER_COLORS["cyan"],
+    PAPER_COLORS["sky"],
+    PAPER_COLORS["blue"],
+    PAPER_COLORS["lime"],
+]
 
 
 def configure_plot_style(savefig_dpi: int = 180, figure_dpi: int = 150, title_size: int = 13) -> None:
