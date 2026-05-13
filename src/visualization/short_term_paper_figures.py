@@ -42,12 +42,14 @@ def add_phase_background(ax: plt.Axes, model: pd.DataFrame) -> None:
         ax.axvspan(sub["trade_date"].min(), sub["trade_date"].max(), color=color, alpha=0.28, lw=0)
         ax.text(
             sub["trade_date"].min(),
-            ax.get_ylim()[1],
+            0.965,
             label,
+            transform=ax.get_xaxis_transform(),
             va="top",
             ha="left",
-            fontsize=9,
+            fontsize=8.8,
             color="#374151",
+            bbox={"boxstyle": "round,pad=0.18", "facecolor": "white", "edgecolor": "none", "alpha": 0.72},
         )
 
 
@@ -78,7 +80,7 @@ def save_fit_figure(model: pd.DataFrame) -> Path:
     ax.set_title("短期动态模型对冲突窗口油价的拟合效果")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
-    ax.legend(loc="upper left", ncol=3)
+    ax.legend(loc="lower left", ncol=3)
     fig.autofmt_xdate()
     fig.tight_layout()
     fig.savefig(path)
