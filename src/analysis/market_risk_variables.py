@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from io import StringIO
+from urllib.error import URLError
 from urllib.request import urlopen
 
 import matplotlib.dates as mdates
@@ -45,9 +46,14 @@ class RiskAuditResult:
 
 def fetch_ovx() -> pd.DataFrame:
     """Download OVX from FRED and normalize column names."""
-    with urlopen(OVX_URL, timeout=30) as response:
-        raw = response.read().decode("utf-8")
-    df = pd.read_csv(StringIO(raw))
+    try:
+        with urlopen(OVX_URL, timeout=30) as response:
+            raw = response.read().decode("utf-8")
+        df = pd.read_csv(StringIO(raw))
+    except URLError:
+        if not OVX_CSV.exists():
+            raise
+        df = pd.read_csv(OVX_CSV)
     df = df.rename(columns={"observation_date": "date", "OVXCLS": "ovx"})
     df["date"] = pd.to_datetime(df["date"])
     df["ovx"] = pd.to_numeric(df["ovx"].replace(".", np.nan), errors="coerce")

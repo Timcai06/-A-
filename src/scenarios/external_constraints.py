@@ -22,6 +22,7 @@ from src.models import dynamic_short_term as dynamic
 JODI_SUMMARY_CSV = PROJECT_ROOT / "data" / "external" / "jodi" / "JODI多国外生约束_关键摘要.csv"
 EIA_SUMMARY_CSV = PROJECT_ROOT / "data" / "external" / "eia" / "美国官方外生约束_关键摘要.csv"
 OPEC_SUMMARY_CSV = PROJECT_ROOT / "data" / "external" / "opec" / "OPEC全球供需平衡摘要.csv"
+OVX_METRICS_CSV = PROJECT_ROOT / "output" / "risk" / "OVX滞后风险检验指标.csv"
 CONSTRAINT_OUTPUT_CSV = PROJECT_ROOT / "output" / "scenarios" / "官方外生约束参数因子.csv"
 
 
@@ -34,6 +35,8 @@ class ExternalConstraintFactors:
     spr_release_multiplier: float = 1.0
     risk_weight_multiplier: float = 1.0
     uncertainty_floor_multiplier: float = 1.0
+    ovx_market_risk_multiplier: float = 1.0
+    ovx_uncertainty_multiplier: float = 1.0
     evidence_note: str = "未接入外部数据，使用模型原参数。"
 
 
@@ -58,7 +61,8 @@ def load_external_constraint_factors(write_output: bool = True) -> ExternalConst
     jodi = _load_csv(JODI_SUMMARY_CSV)
     eia = _load_csv(EIA_SUMMARY_CSV)
     opec = _load_csv(OPEC_SUMMARY_CSV)
-    if jodi.empty and eia.empty and opec.empty:
+    ovx = _load_csv(OVX_METRICS_CSV)
+    if jodi.empty and eia.empty and opec.empty and ovx.empty:
         factors = ExternalConstraintFactors()
         if write_output:
             write_constraint_table(factors)
@@ -78,6 +82,8 @@ def load_external_constraint_factors(write_output: bool = True) -> ExternalConst
     opec_non_doc_growth_wan = _safe_metric(opec, "OPEC非DoC液体供给年增量", "数值_万桶每日")
     opec_doc_gap_growth_wan = _safe_metric(opec, "OPEC DoC原油需求差额年增量", "数值_万桶每日")
     opec_doc_gap_peak_above_avg_wan = _safe_metric(opec, "OPEC DoC原油需求差额峰值高于年均", "数值_万桶每日")
+    ovx_event_percentile = _safe_metric(ovx, "冲突窗口OVX均值历史分位", "数值")
+    ovx_lag1_vol_corr = _safe_metric(ovx, "OVX_lag1_与7日实现波动相关", "数值")
 
     # Positive stock changes mean there is audited buffer capacity, but the
     # adjustment is capped because JODI is a reported sample and EIA is U.S.-only.
@@ -116,6 +122,16 @@ def load_external_constraint_factors(write_output: bool = True) -> ExternalConst
     risk_multiplier = float(np.clip(risk_multiplier * (1 + 0.020 * opec_tail_pressure), 1.0, 1.08))
     uncertainty_multiplier = float(np.clip(uncertainty_multiplier * (1 + 0.012 * opec_tail_pressure), 1.0, 1.05))
 
+    # OVX is a market-priced volatility variable. Use it only to tilt long-run
+    # risk and uncertainty layers, not to predict the daily price direction.
+    ovx_percentile_pressure = np.clip((ovx_event_percentile - 85.0) / 15.0, 0.0, 1.0)
+    ovx_corr_pressure = np.clip((ovx_lag1_vol_corr - 0.50) / 0.40, 0.0, 1.0)
+    ovx_pressure = float(np.clip(0.65 * ovx_percentile_pressure + 0.35 * ovx_corr_pressure, 0.0, 1.0))
+    ovx_risk_multiplier = float(np.clip(1 + 0.035 * ovx_pressure, 1.0, 1.04))
+    ovx_uncertainty_multiplier = float(np.clip(1 + 0.055 * ovx_pressure, 1.0, 1.06))
+    risk_multiplier = float(np.clip(risk_multiplier * ovx_risk_multiplier, 1.0, 1.11))
+    uncertainty_multiplier = float(np.clip(uncertainty_multiplier * ovx_uncertainty_multiplier, 1.0, 1.11))
+
     factors = ExternalConstraintFactors(
         route_capacity_multiplier=route_multiplier,
         inventory_daily_cap_multiplier=inventory_multiplier,
@@ -124,10 +140,13 @@ def load_external_constraint_factors(write_output: bool = True) -> ExternalConst
         spr_release_multiplier=spr_multiplier,
         risk_weight_multiplier=risk_multiplier,
         uncertainty_floor_multiplier=uncertainty_multiplier,
+        ovx_market_risk_multiplier=ovx_risk_multiplier,
+        ovx_uncertainty_multiplier=ovx_uncertainty_multiplier,
         evidence_note=(
             "基于 JODI 多国同口径产量、库存、进出口、需求和炼厂产出，"
             "叠加 EIA 美国 SPR 与商业库存周度变化，并引入 OPEC 全球供需平衡表"
-            "约束长期需求基线和 DoC 需求差额尾部压力；仅作长期参数约束。"
+            "约束长期需求基线和 DoC 需求差额尾部压力；同时使用 OVX 隐含波动率"
+            "温和约束长期风险权重和不确定性强度。所有外部数据仅作长期参数约束。"
         ),
     )
     if write_output:
@@ -208,6 +227,16 @@ def write_constraint_table(factors: ExternalConstraintFactors) -> None:
             "参数因子": "uncertainty_floor_multiplier",
             "中文含义": "长期不确定性强度乘数",
             "数值": factors.uncertainty_floor_multiplier,
+        },
+        {
+            "参数因子": "ovx_market_risk_multiplier",
+            "中文含义": "OVX市场风险权重附加乘数",
+            "数值": factors.ovx_market_risk_multiplier,
+        },
+        {
+            "参数因子": "ovx_uncertainty_multiplier",
+            "中文含义": "OVX不确定性强度附加乘数",
+            "数值": factors.ovx_uncertainty_multiplier,
         },
     ]
     frame = pd.DataFrame(rows)

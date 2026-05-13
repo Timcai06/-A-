@@ -23,6 +23,7 @@ fi
 
 "${PYTHON_BIN}" -m src.pipeline.clean_data
 "${PYTHON_BIN}" -m src.data.fetch_opec_balance
+"${PYTHON_BIN}" -m src.analysis.market_risk_variables
 "${PYTHON_BIN}" -m src.scenarios.scenario_forecast
 "${PYTHON_BIN}" -m src.visualization.final_paper_figures
 "${PYTHON_BIN}" -m src.visualization.short_term_paper_figures
@@ -66,6 +67,7 @@ cp figures/sensitivity_tornado_180day.png paper/figures/参数敏感性龙卷风
 cp figures/monte_carlo_tail_risk.png paper/figures/蒙特卡洛尾部风险概率.png
 cp figures/gpr_event_window_audit.png paper/figures/地缘风险指数滞后审计.png
 cp figures/lagged_gpr_brent_return.png paper/figures/滞后GPR与布伦特收益关系.png
+cp figures/OVX隐含波动率滞后检验.png paper/figures/OVX隐含波动率滞后检验.png
 cp figures/historical_event_extremeness.png paper/figures/历史窗口极端性检验.png
 cp figures/历史波动参数校准.png paper/figures/历史波动参数校准.png
 cp figures/R短期误差学术诊断.png paper/figures/R短期误差学术诊断.png
