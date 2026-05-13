@@ -8,6 +8,7 @@ import pandas as pd
 from src.calibration.evaluation import segment_error_rows
 from src.calibration.settings import FIT_REFINEMENT_SAMPLES, Stage4Paths
 from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -18,7 +19,7 @@ def save_figure(simulation: pd.DataFrame) -> None:
     ax.plot(
         simulation["trade_date"],
         simulation["actual_price"],
-        color="#2563eb",
+        color=SCENARIO_COLORS["actual"],
         marker="o",
         markersize=2.8,
         linewidth=1.8,
@@ -27,13 +28,13 @@ def save_figure(simulation: pd.DataFrame) -> None:
     ax.plot(
         simulation["trade_date"],
         simulation["simulated_price"],
-        color="#dc2626",
+        color=SCENARIO_COLORS["fit"],
         marker="s",
         markersize=2.4,
         linewidth=1.7,
         label="精修后动态模型",
     )
-    ax.axhspan(110, 120, color="#10b981", alpha=0.10, label="题面110-120区间")
+    ax.axhspan(110, 120, color=PAPER_COLORS["lime"], alpha=0.10, label="题面110-120区间")
     ax.set_title("精修后动态模型与实际价格对比")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")

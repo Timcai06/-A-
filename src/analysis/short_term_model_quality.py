@@ -12,6 +12,7 @@ import pandas as pd
 from src.calibration import calibrate_dynamic_model as calibration
 from src.common.metrics import mae, rmse
 from src.common.paths import PROJECT_ROOT, ensure_parents
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -192,10 +193,10 @@ def draw_robustness_figure(best_path: pd.DataFrame, band: pd.DataFrame) -> None:
     dynamic.configure_plot_style()
     fig, ax = plt.subplots(figsize=(11, 5.8))
     dates = pd.to_datetime(band["trade_date"])
-    ax.fill_between(dates, band["q10"], band["q90"], color="#93c5fd", alpha=0.25, label="优秀扰动样本 10%-90% 区间")
-    ax.fill_between(dates, band["q25"], band["q75"], color="#2563eb", alpha=0.16, label="优秀扰动样本 25%-75% 区间")
-    ax.plot(best_path["trade_date"], best_path["actual_price"], color="#111827", lw=2.0, label="实际收盘价")
-    ax.plot(best_path["trade_date"], best_path["simulated_price"], color="#dc2626", lw=2.0, label="综合最优模型")
+    ax.fill_between(dates, band["q10"], band["q90"], color=SCENARIO_COLORS["band_outer"], alpha=0.48, label="优秀扰动样本 10%-90% 区间")
+    ax.fill_between(dates, band["q25"], band["q75"], color=SCENARIO_COLORS["band_inner"], alpha=0.30, label="优秀扰动样本 25%-75% 区间")
+    ax.plot(best_path["trade_date"], best_path["actual_price"], color=SCENARIO_COLORS["actual"], lw=2.0, label="实际收盘价")
+    ax.plot(best_path["trade_date"], best_path["simulated_price"], color=SCENARIO_COLORS["fit"], lw=2.0, label="综合最优模型")
     ax.set_title("短期动态模型局部扰动稳健性区间")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
@@ -213,19 +214,19 @@ def draw_residual_figure(best_path: pd.DataFrame, rolling: pd.DataFrame) -> None
 
     lo = min(best_path["actual_price"].min(), best_path["simulated_price"].min()) - 2
     hi = max(best_path["actual_price"].max(), best_path["simulated_price"].max()) + 2
-    axes[0].scatter(best_path["actual_price"], best_path["simulated_price"], color="#2563eb", alpha=0.78)
-    axes[0].plot([lo, hi], [lo, hi], color="#111827", linestyle="--", lw=1)
+    axes[0].scatter(best_path["actual_price"], best_path["simulated_price"], color=SCENARIO_COLORS["fit"], alpha=0.78)
+    axes[0].plot([lo, hi], [lo, hi], color=PAPER_COLORS["ink"], linestyle="--", lw=1)
     axes[0].set_title("实际值-模拟值一致性")
     axes[0].set_xlabel("实际价格")
     axes[0].set_ylabel("模拟价格")
 
-    axes[1].hist(best_path["error"], bins=12, color="#0f766e", alpha=0.78)
-    axes[1].axvline(0, color="#111827", lw=1)
+    axes[1].hist(best_path["error"], bins=12, color=SCENARIO_COLORS["buffer"], alpha=0.78)
+    axes[1].axvline(0, color=PAPER_COLORS["ink"], lw=1)
     axes[1].set_title("残差分布")
     axes[1].set_xlabel("模拟价格 - 实际价格")
 
-    axes[2].plot(rolling["trade_date"], rolling["rolling_rmse_7"], color="#dc2626", lw=2.0, label="7日滚动RMSE")
-    axes[2].plot(rolling["trade_date"], rolling["rolling_mae_7"], color="#2563eb", lw=1.8, label="7日滚动MAE")
+    axes[2].plot(rolling["trade_date"], rolling["rolling_rmse_7"], color=SCENARIO_COLORS["risk"], lw=2.0, label="7日滚动RMSE")
+    axes[2].plot(rolling["trade_date"], rolling["rolling_mae_7"], color=SCENARIO_COLORS["neutral"], lw=1.8, label="7日滚动MAE")
     axes[2].set_title("滚动误差")
     axes[2].set_xlabel("日期")
     axes[2].set_ylabel("美元/桶")
@@ -233,8 +234,8 @@ def draw_residual_figure(best_path: pd.DataFrame, rolling: pd.DataFrame) -> None
 
     lags = np.arange(1, 8)
     autocorr = [best_path["error"].autocorr(int(lag)) for lag in lags]
-    axes[3].bar(lags, autocorr, color="#7c3aed", alpha=0.78)
-    axes[3].axhline(0, color="#111827", lw=1)
+    axes[3].bar(lags, autocorr, color=SCENARIO_COLORS["optimistic"], alpha=0.78)
+    axes[3].axhline(0, color=PAPER_COLORS["ink"], lw=1)
     axes[3].set_title("残差自相关")
     axes[3].set_xlabel("滞后阶数")
     axes[3].set_ylabel("相关系数")

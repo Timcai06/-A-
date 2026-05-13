@@ -19,11 +19,11 @@ price_band:
   upper: 120
 
 charts:
-  actual_price_color: "#2563eb"
-  simulated_price_color: "#dc2626"
-  price_band_color: "rgba(16, 185, 129, 0.12)"
-  positive_error_color: "#ef4444"
-  negative_error_color: "#0f766e"
+  actual_price_color: "#1A1A1A"
+  simulated_price_color: "#0074f2"
+  price_band_color: "rgba(85, 255, 55, 0.12)"
+  positive_error_color: "#0095f2"
+  negative_error_color: "#00e978"
 
 mechanism_columns:
   premiums:

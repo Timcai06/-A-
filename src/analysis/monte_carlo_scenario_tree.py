@@ -295,11 +295,11 @@ def save_figures(metrics: pd.DataFrame, quantiles: pd.DataFrame, path_frame: pd.
 
     fig, ax = plt.subplots(figsize=(11.5, 6.4))
     dates = pd.to_datetime(quantiles["trade_date"])
-    ax.fill_between(dates, quantiles["p05"], quantiles["p95"], color="#bfdbfe", alpha=0.45, label="5%-95% 区间")
-    ax.fill_between(dates, quantiles["p25"], quantiles["p75"], color="#60a5fa", alpha=0.35, label="25%-75% 区间")
-    ax.plot(dates, quantiles["p50"], color="#1d4ed8", linewidth=2.2, label="中位数路径")
-    ax.axhspan(110, 120, color="#f59e0b", alpha=0.10, label="110-120美元平台")
-    ax.axhline(120, color="#dc2626", linestyle="--", linewidth=1.0, label="120美元风险线")
+    ax.fill_between(dates, quantiles["p05"], quantiles["p95"], color=SCENARIO_COLORS["band_outer"], alpha=0.45, label="5%-95% 区间")
+    ax.fill_between(dates, quantiles["p25"], quantiles["p75"], color=SCENARIO_COLORS["band_inner"], alpha=0.35, label="25%-75% 区间")
+    ax.plot(dates, quantiles["p50"], color=SCENARIO_COLORS["neutral"], linewidth=2.2, label="中位数路径")
+    ax.axhspan(110, 120, color=SCENARIO_COLORS["optimistic"], alpha=0.10, label="110-120美元平台")
+    ax.axhline(120, color=SCENARIO_COLORS["risk"], linestyle="--", linewidth=1.0, label="120美元风险线")
     ax.set_title("蒙特卡洛情景树：60-180天价格扇形区间")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
@@ -321,7 +321,11 @@ def save_figures(metrics: pd.DataFrame, quantiles: pd.DataFrame, path_frame: pd.
         }
     )
     fig, ax = plt.subplots(figsize=(9.2, 5.2))
-    bars = ax.bar(risk_probs["风险事件"], risk_probs["概率"] * 100, color=["#2563eb", "#dc2626", "#f59e0b", "#7c3aed"])
+    bars = ax.bar(
+        risk_probs["风险事件"],
+        risk_probs["概率"] * 100,
+        color=[SCENARIO_COLORS["fit"], SCENARIO_COLORS["risk"], SCENARIO_COLORS["neutral"], SCENARIO_COLORS["optimistic"]],
+    )
     ax.set_title("蒙特卡洛尾部风险概率")
     ax.set_ylabel("概率（%）")
     ax.set_ylim(0, max(10, float((risk_probs["概率"] * 100).max()) + 8))

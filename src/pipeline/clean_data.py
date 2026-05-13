@@ -19,7 +19,7 @@ import pandas as pd
 import yaml
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
-from src.common.plotting import configure_plot_style as apply_plot_style
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS, configure_plot_style as apply_plot_style
 
 CONFIG_PATH = PROJECT_ROOT / "config" / "base.yml"
 
@@ -142,7 +142,7 @@ def save_price_trend(df: pd.DataFrame, figures_dir: Path) -> Path:
     fig, ax = plt.subplots(figsize=(11, 5.5))
     start_year = df["trade_date"].min().year
     end_year = df["trade_date"].max().year
-    ax.plot(df["trade_date"], df["close_price"], color="#2563eb", linewidth=1.4, label="收盘价")
+    ax.plot(df["trade_date"], df["close_price"], color=SCENARIO_COLORS["fit"], linewidth=1.4, label="收盘价")
     ax.set_title(f"布伦特原油期货主力合约收盘价走势（{start_year}-{end_year}）")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
@@ -159,13 +159,13 @@ def save_event_window_price(event_df: pd.DataFrame, event_window: EventWindow, f
     ax.plot(
         event_df["trade_date"],
         event_df["close_price"],
-        color="#dc2626",
+        color=SCENARIO_COLORS["fit"],
         linewidth=1.8,
         marker="o",
         markersize=2.8,
         label="2026冲突窗口收盘价",
     )
-    ax.axvline(event_window.start, color="#111827", linestyle="--", linewidth=1.0, label="冲突开始")
+    ax.axvline(event_window.start, color=PAPER_COLORS["ink"], linestyle="--", linewidth=1.0, label="冲突开始")
     event_start = event_df["trade_date"].min().date()
     event_end = event_df["trade_date"].max().date()
     ax.set_title(f"2026冲突窗口布伦特收盘价（{event_start} 至 {event_end}）")
@@ -186,14 +186,14 @@ def save_return_volatility(df: pd.DataFrame, figures_dir: Path) -> Path:
     start_year = df["trade_date"].min().year
     end_year = df["trade_date"].max().year
 
-    axes[0].plot(df["trade_date"], df["return_pct"] * 100, color="#059669", linewidth=1.0)
-    axes[0].axhline(0, color="#111827", linewidth=0.8)
+    axes[0].plot(df["trade_date"], df["return_pct"] * 100, color=SCENARIO_COLORS["buffer"], linewidth=1.0)
+    axes[0].axhline(0, color=PAPER_COLORS["ink"], linewidth=0.8)
     axes[0].set_title(f"布伦特原油日收益率（{start_year}-{end_year}）")
     axes[0].set_ylabel("收益率（%）")
 
-    axes[1].plot(df["trade_date"], df["volatility_7d"], color="#f97316", linewidth=1.2, label="7日")
-    axes[1].plot(df["trade_date"], df["volatility_14d"], color="#7c3aed", linewidth=1.2, label="14日")
-    axes[1].plot(df["trade_date"], df["volatility_30d"], color="#0f766e", linewidth=1.2, label="30日")
+    axes[1].plot(df["trade_date"], df["volatility_7d"], color=SCENARIO_COLORS["optimistic"], linewidth=1.2, label="7日")
+    axes[1].plot(df["trade_date"], df["volatility_14d"], color=SCENARIO_COLORS["neutral"], linewidth=1.2, label="14日")
+    axes[1].plot(df["trade_date"], df["volatility_30d"], color=SCENARIO_COLORS["fit"], linewidth=1.2, label="30日")
     axes[1].set_title(f"滚动对数收益率波动率（{start_year}-{end_year}）")
     axes[1].set_xlabel("日期")
     axes[1].set_ylabel("标准差")

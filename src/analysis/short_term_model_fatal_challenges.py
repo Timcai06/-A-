@@ -20,6 +20,7 @@ import pandas as pd
 from src.analysis.short_term_model_defense import reconstruct_best_parameters
 from src.calibration import calibrate_dynamic_model as calibration
 from src.common.paths import PROJECT_ROOT, ensure_parents
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import baseline_supply_demand as baseline
 from src.models import dynamic_short_term as dynamic
 
@@ -171,16 +172,16 @@ def draw_stress_figure(stress: pd.DataFrame) -> None:
     dynamic.configure_plot_style()
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.8))
 
-    axes[0].hist(stress["RMSE"], bins=28, color="#2563eb", alpha=0.82)
-    axes[0].axvline(3.467, color="#dc2626", linewidth=2, label="最优模型")
-    axes[0].axvline(5.0, color="#111827", linewidth=1.5, linestyle="--", label="RMSE=5")
+    axes[0].hist(stress["RMSE"], bins=28, color=SCENARIO_COLORS["neutral"], alpha=0.82)
+    axes[0].axvline(3.467, color=SCENARIO_COLORS["fit"], linewidth=2, label="最优模型")
+    axes[0].axvline(5.0, color=PAPER_COLORS["ink"], linewidth=1.5, linestyle="--", label="RMSE=5")
     axes[0].set_title("±15% 参数压力测试：RMSE分布")
     axes[0].set_xlabel("RMSE")
     axes[0].set_ylabel("样本数")
     axes[0].legend()
 
-    axes[1].hist(stress["模拟峰值"], bins=28, color="#0f766e", alpha=0.82)
-    axes[1].axvspan(105, 125, color="#f59e0b", alpha=0.18, label="105-125美元区间")
+    axes[1].hist(stress["模拟峰值"], bins=28, color=SCENARIO_COLORS["buffer"], alpha=0.82)
+    axes[1].axvspan(105, 125, color=SCENARIO_COLORS["highlight"], alpha=0.13, label="105-125美元区间")
     axes[1].set_title("±15% 参数压力测试：模拟峰值分布")
     axes[1].set_xlabel("模拟峰值（美元/桶）")
     axes[1].set_ylabel("样本数")

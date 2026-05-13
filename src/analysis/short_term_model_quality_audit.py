@@ -18,7 +18,7 @@ import pandas as pd
 from src.calibration.evaluation import evaluate_simulation, segment_error_rows
 from src.common.metrics import mae, rmse
 from src.common.paths import PROJECT_ROOT, ensure_parent
-from src.common.plotting import configure_plot_style
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS, configure_plot_style
 from src.models import dynamic_short_term as dynamic
 
 
@@ -142,12 +142,12 @@ def save_figure(simulations: dict[str, pd.DataFrame], chunk_df: pd.DataFrame) ->
 
     fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.2))
     ax = axes[0]
-    ax.plot(calendar["trade_date"], calendar["actual_price"], color="#111827", linewidth=2.0, label="实际收盘价")
-    ax.plot(calendar["trade_date"], calendar["simulated_price"], color="#2563eb", linewidth=1.8, label="日历日口径")
+    ax.plot(calendar["trade_date"], calendar["actual_price"], color=SCENARIO_COLORS["actual"], linewidth=2.0, label="实际收盘价")
+    ax.plot(calendar["trade_date"], calendar["simulated_price"], color=SCENARIO_COLORS["fit"], linewidth=1.8, label="日历日口径")
     ax.plot(
         trading_day["trade_date"],
         trading_day["simulated_price"],
-        color="#dc2626",
+        color=SCENARIO_COLORS["neutral"],
         linewidth=1.8,
         linestyle="--",
         label="交易日序号口径",
@@ -158,8 +158,8 @@ def save_figure(simulations: dict[str, pd.DataFrame], chunk_df: pd.DataFrame) ->
     ax.legend(loc="upper left")
 
     ax = axes[1]
-    ax.bar(holdout["删块编号"].astype(str), holdout["RMSE"], color="#0f766e")
-    ax.axhline(calendar_pipe_rmse := rmse(calendar["simulated_price"] - calendar["actual_price"]), color="#111827", linewidth=1.5)
+    ax.bar(holdout["删块编号"].astype(str), holdout["RMSE"], color=SCENARIO_COLORS["buffer"])
+    ax.axhline(calendar_pipe_rmse := rmse(calendar["simulated_price"] - calendar["actual_price"]), color=PAPER_COLORS["ink"], linewidth=1.5)
     ax.text(0.02, 0.93, f"全窗口RMSE={calendar_pipe_rmse:.2f}", transform=ax.transAxes, fontsize=10)
     ax.set_title("同参删块检验：被删除块误差")
     ax.set_xlabel("被删除块编号")

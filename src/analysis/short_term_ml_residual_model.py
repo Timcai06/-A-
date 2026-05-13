@@ -18,6 +18,7 @@ from src.analysis.short_term_ml_features import OUTPUT_CSV as FEATURE_CSV
 from src.analysis.short_term_ml_features import main as build_features
 from src.common.metrics import direction_hit_rate, mae, mape, rmse
 from src.common.paths import PROJECT_ROOT, ensure_parents
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -170,27 +171,27 @@ def draw_figure(predictions: pd.DataFrame) -> None:
     fig, axes = plt.subplots(2, 1, figsize=(11, 8.2), sharex=True, gridspec_kw={"height_ratios": [2.0, 1.0]})
 
     ax = axes[0]
-    ax.plot(predictions["trade_date"], predictions["actual_price"], color="#111827", linewidth=2.1, label="实际收盘价")
-    ax.plot(predictions["trade_date"], predictions["simulated_price"], color="#dc2626", linewidth=1.8, label="机制递推主模型")
+    ax.plot(predictions["trade_date"], predictions["actual_price"], color=SCENARIO_COLORS["actual"], linewidth=2.1, label="实际收盘价")
+    ax.plot(predictions["trade_date"], predictions["simulated_price"], color=SCENARIO_COLORS["fit"], linewidth=1.8, label="机制递推主模型")
     if "online_corrected_price" in predictions.columns:
         ax.plot(
             predictions["trade_date"],
             predictions["online_corrected_price"],
-            color="#2563eb",
+            color=SCENARIO_COLORS["neutral"],
             linewidth=1.7,
             linestyle="--",
             label="在线残差校正",
         )
-    ax.plot(predictions["trade_date"], predictions["ridge_price"], color="#7c3aed", linewidth=1.5, label="历史Ridge收益率")
+    ax.plot(predictions["trade_date"], predictions["ridge_price"], color=SCENARIO_COLORS["optimistic"], linewidth=1.5, label="历史Ridge收益率")
     ax.set_title("短期机器学习基准与机制模型对比")
     ax.set_ylabel("美元/桶")
     ax.legend(loc="upper left", ncols=2)
 
     base_error = predictions["simulated_price"] - predictions["actual_price"]
     ridge_error = predictions["ridge_price"] - predictions["actual_price"]
-    axes[1].plot(predictions["trade_date"], base_error, color="#dc2626", linewidth=1.5, label="机制主模型误差")
-    axes[1].plot(predictions["trade_date"], ridge_error, color="#7c3aed", linewidth=1.5, label="历史Ridge误差")
-    axes[1].axhline(0, color="#111827", linewidth=1.0)
+    axes[1].plot(predictions["trade_date"], base_error, color=SCENARIO_COLORS["risk"], linewidth=1.5, label="机制主模型误差")
+    axes[1].plot(predictions["trade_date"], ridge_error, color=SCENARIO_COLORS["optimistic"], linewidth=1.5, label="历史Ridge误差")
+    axes[1].axhline(0, color=PAPER_COLORS["ink"], linewidth=1.0)
     axes[1].set_title("误差对比")
     axes[1].set_xlabel("日期")
     axes[1].set_ylabel("美元/桶")

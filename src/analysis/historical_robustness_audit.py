@@ -17,6 +17,7 @@ from statsmodels.tsa.stattools import adfuller
 
 from src.common.metrics import mae, mape, rmse
 from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -264,8 +265,8 @@ def save_figures(rolling: pd.DataFrame, event_extremeness: pd.DataFrame, high_wi
         event_extremeness["metric"].isin(["累计收益率", "实现波动率", "平均绝对日收益率", "最大单日绝对收益", "价格区间比例", "朴素上一日基准_RMSE"])
     ].copy()
     fig, ax = plt.subplots(figsize=(10.6, 5.8))
-    bars = ax.barh(selected_metrics["metric"], selected_metrics["historical_percentile"] * 100, color="#2563eb")
-    ax.axvline(95, color="#dc2626", linestyle="--", linewidth=1.3, label="95%历史分位")
+    bars = ax.barh(selected_metrics["metric"], selected_metrics["historical_percentile"] * 100, color=SCENARIO_COLORS["fit"])
+    ax.axvline(95, color=SCENARIO_COLORS["risk"], linestyle="--", linewidth=1.3, label="95%历史分位")
     ax.set_xlim(0, 105)
     ax.set_xlabel("历史分位数（%）")
     ax.set_title("2026冲突窗口在2017-2026同长度窗口中的历史位置")
@@ -283,9 +284,9 @@ def save_figures(rolling: pd.DataFrame, event_extremeness: pd.DataFrame, high_wi
     model_rmse = rmse(calibrated["model_error"])
 
     fig, ax = plt.subplots(figsize=(10.2, 5.8))
-    ax.hist(reference["朴素上一日基准_RMSE"], bins=38, color="#93c5fd", edgecolor="white", alpha=0.92, label="历史46日窗口朴素RMSE")
-    ax.axvline(event["朴素上一日基准_RMSE"], color="#dc2626", linewidth=2.2, label=f"冲突窗口朴素RMSE={event['朴素上一日基准_RMSE']:.2f}")
-    ax.axvline(model_rmse, color="#16a34a", linewidth=2.2, label=f"本文机制模型RMSE={model_rmse:.2f}")
+    ax.hist(reference["朴素上一日基准_RMSE"], bins=38, color=SCENARIO_COLORS["band_outer"], edgecolor="white", alpha=0.92, label="历史46日窗口朴素RMSE")
+    ax.axvline(event["朴素上一日基准_RMSE"], color=SCENARIO_COLORS["risk"], linewidth=2.2, label=f"冲突窗口朴素RMSE={event['朴素上一日基准_RMSE']:.2f}")
+    ax.axvline(model_rmse, color=SCENARIO_COLORS["optimistic"], linewidth=2.2, label=f"本文机制模型RMSE={model_rmse:.2f}")
     ax.set_title("历史窗口中的随机游走基准误差分布")
     ax.set_xlabel("RMSE（美元/桶）")
     ax.set_ylabel("窗口数量")
@@ -297,7 +298,7 @@ def save_figures(rolling: pd.DataFrame, event_extremeness: pd.DataFrame, high_wi
     ensure_parent(HIGH_VOL_FIGURE)
     fig, ax = plt.subplots(figsize=(10.8, 5.8))
     labels = high_windows["窗口起始"].str.slice(0, 7) + " 至 " + high_windows["窗口终止"].str.slice(0, 7)
-    bars = ax.bar(labels, high_windows["历史压力综合分"], color="#f97316")
+    bars = ax.bar(labels, high_windows["历史压力综合分"], color=SCENARIO_COLORS["neutral"])
     ax.set_title("历史高波动窗口排名（46交易日非重叠窗口）")
     ax.set_ylabel("历史压力综合分")
     ax.tick_params(axis="x", labelrotation=28)

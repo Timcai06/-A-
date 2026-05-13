@@ -25,6 +25,12 @@ history_path <- file.path(root, "data", "processed", "布伦特原油期货主�
 output_dir <- file.path(root, "output", "statistics")
 report_path <- file.path(root, "output", "reports", "R语言计量审计报告.md")
 figure_path <- file.path(root, "figures", "R计量审计诊断.png")
+
+ink <- "#1A1A1A"
+muted <- "#4b5563"
+grid_col <- "#e5e7eb"
+fit_blue <- "#0074f2"
+risk_blue <- "#0095f2"
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(report_path), recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(figure_path), recursive = TRUE, showWarnings = FALSE)
@@ -229,29 +235,29 @@ date_ticks <- pretty(date_vec, n = 5)
 op <- par(mfrow = c(1, 3), mar = c(4, 4, 3, 1), family = "STHeiti")
 plot(
   date_vec, plot_df$model_error,
-  type = "l", col = "#2563eb", lwd = 2,
+  type = "l", col = fit_blue, lwd = 2,
   xlab = "", ylab = "美元/桶", main = "模型残差序列",
   xaxt = "n"
 )
 axis(1, at = date_ticks, labels = format(date_ticks, "%m月%d日"))
-abline(h = 0, col = "#1f2937", lwd = 1)
-grid(col = "#e5e7eb")
+abline(h = 0, col = ink, lwd = 1)
+grid(col = grid_col)
 hist(
   plot_df$model_error, breaks = 12,
-  col = "#2563eb", border = "white",
+  col = fit_blue, border = "white",
   xlab = "美元/桶", ylab = "频数", main = "残差分布"
 )
-abline(v = 0, col = "#1f2937", lwd = 1)
+abline(v = 0, col = ink, lwd = 1)
 plot(
   date_vec, plot_df$loss_diff,
-  type = "l", col = "#dc2626", lwd = 2,
+  type = "l", col = risk_blue, lwd = 2,
   xlab = "", ylab = "小于0表示模型优于朴素基准",
   main = "相对朴素基准的平方损失差",
   xaxt = "n"
 )
 axis(1, at = date_ticks, labels = format(date_ticks, "%m月%d日"))
-abline(h = 0, col = "#1f2937", lwd = 1)
-grid(col = "#e5e7eb")
+abline(h = 0, col = ink, lwd = 1)
+grid(col = grid_col)
 par(op)
 dev.off()
 

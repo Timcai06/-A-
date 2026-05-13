@@ -19,7 +19,7 @@ import pandas as pd
 import yaml
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
-from src.common.plotting import configure_plot_style as apply_plot_style
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS, configure_plot_style as apply_plot_style
 
 CONFIG_PATH = PROJECT_ROOT / "config" / "base.yml"
 PROBLEM_PARAMETERS_PATH = PROJECT_ROOT / "data" / "metadata" / "题面参数表.csv"
@@ -150,7 +150,7 @@ def save_figure(event_df: pd.DataFrame, results: pd.DataFrame, cfg: BaselineConf
     ax.plot(
         event_df["trade_date"],
         event_df["close_price"],
-        color="#2563eb",
+            color=SCENARIO_COLORS["actual"],
         linewidth=1.8,
         marker="o",
         markersize=2.6,
@@ -158,9 +158,9 @@ def save_figure(event_df: pd.DataFrame, results: pd.DataFrame, cfg: BaselineConf
     )
 
     colors = {
-        "低中断": "#f59e0b",
-        "中中断": "#ef4444",
-        "高中断": "#7c3aed",
+        "低中断": SCENARIO_COLORS["optimistic"],
+        "中中断": SCENARIO_COLORS["neutral"],
+        "高中断": SCENARIO_COLORS["risk"],
     }
     for _, row in results.iterrows():
         ax.axhline(
@@ -171,7 +171,7 @@ def save_figure(event_df: pd.DataFrame, results: pd.DataFrame, cfg: BaselineConf
             label=f"{row['情景']}线性需求基准: {row['线性需求反事实价格_美元每桶']:.1f}",
         )
 
-    ax.axhspan(110, 120, color="#10b981", alpha=0.10, label="题面叙述110-120区间")
+    ax.axhspan(110, 120, color=PAPER_COLORS["lime"], alpha=0.10, label="题面叙述110-120区间")
     ax.set_title("线性需求反事实基准与实际价格对比")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")

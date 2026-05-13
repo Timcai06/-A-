@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -218,24 +219,24 @@ def save_figures(sample: pd.DataFrame) -> None:
 
     ensure_parent(EVENT_FIGURE)
     fig, ax1 = plt.subplots(figsize=(11.2, 6.0))
-    ax1.plot(recent["月份"], recent["月末收盘价"], color="#2563eb", linewidth=2.2, marker="o", label="布伦特月末收盘价")
-    ax1.set_ylabel("美元/桶", color="#2563eb")
-    ax1.tick_params(axis="y", labelcolor="#2563eb")
-    ax1.axvspan(pd.Timestamp("2026-03-01"), pd.Timestamp("2026-05-01"), color="#fee2e2", alpha=0.42, label="冲突窗口月")
+    ax1.plot(recent["月份"], recent["月末收盘价"], color=SCENARIO_COLORS["fit"], linewidth=2.2, marker="o", label="布伦特月末收盘价")
+    ax1.set_ylabel("美元/桶", color=SCENARIO_COLORS["fit"])
+    ax1.tick_params(axis="y", labelcolor=SCENARIO_COLORS["fit"])
+    ax1.axvspan(pd.Timestamp("2026-03-01"), pd.Timestamp("2026-05-01"), color=SCENARIO_COLORS["band_outer"], alpha=0.50, label="冲突窗口月")
 
     ax2 = ax1.twinx()
-    ax2.plot(recent["月份"], recent["GPR_全球综合"], color="#dc2626", linewidth=2.0, marker="s", label="GPR同步读数")
+    ax2.plot(recent["月份"], recent["GPR_全球综合"], color=SCENARIO_COLORS["risk"], linewidth=2.0, marker="s", label="GPR同步读数")
     ax2.plot(
         recent["月份"],
         recent["GPR_全球综合_滞后1月"],
-        color="#f97316",
+        color=SCENARIO_COLORS["neutral"],
         linewidth=1.8,
         linestyle="--",
         marker="^",
         label="GPR滞后1月可用读数",
     )
-    ax2.set_ylabel("GPR指数", color="#dc2626")
-    ax2.tick_params(axis="y", labelcolor="#dc2626")
+    ax2.set_ylabel("GPR指数", color=SCENARIO_COLORS["risk"])
+    ax2.tick_params(axis="y", labelcolor=SCENARIO_COLORS["risk"])
 
     lines, labels = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
@@ -252,12 +253,12 @@ def save_figures(sample: pd.DataFrame) -> None:
     )
     ensure_parent(SCATTER_FIGURE)
     fig, ax = plt.subplots(figsize=(8.8, 6.0))
-    colors = np.where(scatter["是否冲突窗口月"], "#dc2626", "#2563eb")
+    colors = np.where(scatter["是否冲突窗口月"], SCENARIO_COLORS["risk"], SCENARIO_COLORS["fit"])
     ax.scatter(scatter["GPR_历史标准分_滞后1月"], scatter["油价月度对数收益"] * 100, c=colors, alpha=0.78)
     reg = ols(scatter["油价月度对数收益"] * 100, scatter["GPR_历史标准分_滞后1月"])
     x_vals = np.linspace(scatter["GPR_历史标准分_滞后1月"].min(), scatter["GPR_历史标准分_滞后1月"].max(), 100)
-    ax.plot(x_vals, reg.alpha + reg.beta * x_vals, color="#111827", linewidth=1.8, label=f"线性趋势 R²={reg.r2:.2f}")
-    ax.axhline(0, color="#6b7280", linewidth=1.0, linestyle="--")
+    ax.plot(x_vals, reg.alpha + reg.beta * x_vals, color=PAPER_COLORS["ink"], linewidth=1.8, label=f"线性趋势 R²={reg.r2:.2f}")
+    ax.axhline(0, color=PAPER_COLORS["muted"], linewidth=1.0, linestyle="--")
     ax.set_title("滞后1月GPR与布伦特月度收益")
     ax.set_xlabel("GPR历史标准分（滞后1月）")
     ax.set_ylabel("布伦特月度对数收益（%）")

@@ -213,7 +213,7 @@ if (file.exists(sensitivity_path)) {
       subtitle = "封锁风险衰减、地缘风险权重和制度风险项是长期价格区间的主要扰动源",
       x = "综合敏感度得分",
       y = NULL,
-      caption = "红色表示外生低可控变量，蓝色表示可通过模型机制或政策假设部分约束的变量。"
+      caption = "深蓝表示外生低可控变量，青绿色表示可通过模型机制或政策假设部分约束的变量。"
     ) +
     paper_theme(base_size = 11)
   save_plot(sensitivity_plot, r_sensitivity_fig, width = 9.8, height = 5.4)

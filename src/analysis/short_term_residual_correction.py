@@ -16,6 +16,7 @@ import pandas as pd
 
 from src.common.metrics import mae, rmse
 from src.common.paths import PROJECT_ROOT, ensure_parents
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -126,12 +127,12 @@ def draw_figure(df: pd.DataFrame) -> None:
     dynamic.configure_plot_style()
     fig, axes = plt.subplots(2, 1, figsize=(11, 8.2), sharex=True, gridspec_kw={"height_ratios": [2.0, 1.0]})
     ax = axes[0]
-    ax.plot(df["trade_date"], df["actual_price"], color="#111827", linewidth=2.1, label="实际收盘价")
-    ax.plot(df["trade_date"], df["simulated_price"], color="#dc2626", linewidth=1.8, label="机制递推主模型")
+    ax.plot(df["trade_date"], df["actual_price"], color=SCENARIO_COLORS["actual"], linewidth=2.1, label="实际收盘价")
+    ax.plot(df["trade_date"], df["simulated_price"], color=SCENARIO_COLORS["fit"], linewidth=1.8, label="机制递推主模型")
     ax.plot(
         df["trade_date"],
         df["online_corrected_price"],
-        color="#2563eb",
+        color=SCENARIO_COLORS["neutral"],
         linewidth=1.8,
         linestyle="--",
         label="在线残差校正模型",
@@ -141,9 +142,9 @@ def draw_figure(df: pd.DataFrame) -> None:
     ax.set_ylabel("美元/桶")
     ax.legend(loc="upper left", ncols=2)
 
-    axes[1].bar(df["trade_date"], df["机制模型误差"], color="#ef4444", alpha=0.58, label="机制主模型误差")
-    axes[1].plot(df["trade_date"], df["在线校正后误差"], color="#2563eb", linewidth=1.7, label="校正后误差")
-    axes[1].axhline(0, color="#111827", linewidth=1.0)
+    axes[1].bar(df["trade_date"], df["机制模型误差"], color=SCENARIO_COLORS["risk"], alpha=0.58, label="机制主模型误差")
+    axes[1].plot(df["trade_date"], df["在线校正后误差"], color=SCENARIO_COLORS["neutral"], linewidth=1.7, label="校正后误差")
+    axes[1].axhline(0, color=PAPER_COLORS["ink"], linewidth=1.0)
     axes[1].set_title("逐日误差对比")
     axes[1].set_xlabel("日期")
     axes[1].set_ylabel("美元/桶")

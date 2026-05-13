@@ -21,6 +21,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from src.calibration import calibrate_dynamic_model as calibration
 from src.common.metrics import direction_hit_rate, mae, mape, rmse
 from src.common.paths import PROJECT_ROOT, ensure_parents
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -287,7 +288,7 @@ def draw_baseline_figure(table: pd.DataFrame) -> None:
     dynamic.configure_plot_style()
     fig, ax = plt.subplots(figsize=(10.5, 5.8))
     plot = table.sort_values("RMSE", ascending=False)
-    colors = ["#2563eb" if name == "本文短期动态模型" else "#9ca3af" for name in plot["模型"]]
+    colors = [SCENARIO_COLORS["fit"] if name == "本文短期动态模型" else PAPER_COLORS["border"] for name in plot["模型"]]
     ax.barh(plot["模型"], plot["RMSE"], color=colors)
     ax.set_title("短期模型与朴素/时间序列基准 RMSE 对比")
     ax.set_xlabel("RMSE（美元/桶，越低越好）")
@@ -301,12 +302,12 @@ def draw_baseline_figure(table: pd.DataFrame) -> None:
 def draw_lag_figure(lag: pd.DataFrame) -> None:
     dynamic.configure_plot_style()
     fig, ax = plt.subplots(figsize=(9.5, 5.5))
-    colors = ["#2563eb" if shift == 0 else "#94a3b8" for shift in lag["模型平移天数"]]
+    colors = [SCENARIO_COLORS["fit"] if shift == 0 else PAPER_COLORS["border"] for shift in lag["模型平移天数"]]
     ax.bar(lag["模型平移天数"], lag["RMSE"], color=colors)
     ax.set_title("模型曲线平移后的 RMSE 检验")
     ax.set_xlabel("模型平移天数（负数=向左移，检查是否滞后）")
     ax.set_ylabel("RMSE")
-    ax.axvline(0, color="#111827", linewidth=1.0)
+    ax.axvline(0, color=PAPER_COLORS["ink"], linewidth=1.0)
     fig.tight_layout()
     fig.savefig(DefensePaths.lag_figure, dpi=190)
     plt.close(fig)
@@ -321,8 +322,8 @@ def draw_turning_figure(path: pd.DataFrame) -> None:
     ]
     for ax, (title, start, end) in zip(axes, windows, strict=True):
         sub = path[path["trade_date"].between(pd.Timestamp(start), pd.Timestamp(end))]
-        ax.plot(sub["trade_date"], sub["actual_price"], color="#111827", marker="o", linewidth=2.0, label="实际收盘价")
-        ax.plot(sub["trade_date"], sub["simulated_price"], color="#dc2626", marker="s", linewidth=2.0, label="短期动态模型")
+        ax.plot(sub["trade_date"], sub["actual_price"], color=SCENARIO_COLORS["actual"], marker="o", linewidth=2.0, label="实际收盘价")
+        ax.plot(sub["trade_date"], sub["simulated_price"], color=SCENARIO_COLORS["fit"], marker="s", linewidth=2.0, label="短期动态模型")
         ax.set_title(title)
         ax.set_ylabel("美元/桶")
         ax.legend(loc="upper left")

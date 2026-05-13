@@ -11,6 +11,7 @@ from src.analysis.short_term_ml_features import main as build_features
 from src.analysis.short_term_ml_residual_model import fit_ridge, feature_columns, predict_ridge
 from src.common.metrics import direction_hit_rate, mae, mape, rmse
 from src.common.paths import PROJECT_ROOT, ensure_parents
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -110,11 +111,11 @@ def draw_figure(metrics: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(10.5, 6.2))
     normal = metrics[~metrics["是否冲突窗口"]].copy()
     event = metrics[metrics["是否冲突窗口"]].tail(1)
-    ax.hist(normal["Ridge相对Naive_RMSE改善率"], bins=30, color="#2563eb", alpha=0.72, label="历史46日窗口")
+    ax.hist(normal["Ridge相对Naive_RMSE改善率"], bins=30, color=SCENARIO_COLORS["fit"], alpha=0.72, label="历史46日窗口")
     if not event.empty:
         value = float(event["Ridge相对Naive_RMSE改善率"].iloc[0])
-        ax.axvline(value, color="#dc2626", linewidth=2.2, label=f"冲突窗口：{value:.1f}%")
-    ax.axvline(0, color="#111827", linewidth=1.0)
+        ax.axvline(value, color=SCENARIO_COLORS["risk"], linewidth=2.2, label=f"冲突窗口：{value:.1f}%")
+    ax.axvline(0, color=PAPER_COLORS["ink"], linewidth=1.0)
     ax.set_title("历史滚动窗口中 Ridge 相对朴素基准的 RMSE 改善分布")
     ax.set_xlabel("Ridge 相对朴素基准 RMSE 改善率（%）")
     ax.set_ylabel("窗口数量")

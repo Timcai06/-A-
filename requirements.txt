@@ -3,6 +3,9 @@ numpy
 scipy
 matplotlib
 seaborn
+scikit-learn
+tqdm
+joblib
 plotly
 pyyaml
 statsmodels

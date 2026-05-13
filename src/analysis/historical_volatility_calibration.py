@@ -17,7 +17,7 @@ import pandas as pd
 
 from src.common.metrics import rmse
 from src.common.paths import PROJECT_ROOT, ensure_parent
-from src.common.plotting import configure_plot_style
+from src.common.plotting import SCENARIO_COLORS, configure_plot_style
 
 
 EVENT_START = pd.Timestamp("2026-03-02")
@@ -150,15 +150,15 @@ def save_figure(windows: pd.DataFrame, event_metrics: dict[str, float | str]) ->
     event_jump = float(event_metrics["最大单日绝对收益"])
 
     fig, axes = plt.subplots(1, 2, figsize=(12.5, 4.8))
-    axes[0].hist(windows["日收益波动率"], bins=36, color="#93c5fd", edgecolor="white")
-    axes[0].axvline(event_sigma, color="#dc2626", linewidth=2.0, label="2026冲突窗口")
+    axes[0].hist(windows["日收益波动率"], bins=36, color=SCENARIO_COLORS["band_outer"], edgecolor="white")
+    axes[0].axvline(event_sigma, color=SCENARIO_COLORS["risk"], linewidth=2.0, label="2026冲突窗口")
     axes[0].set_title("历史46日窗口日收益波动率分布")
     axes[0].set_xlabel("日收益波动率")
     axes[0].set_ylabel("窗口数量")
     axes[0].legend()
 
-    axes[1].hist(windows["最大单日绝对收益"], bins=36, color="#bbf7d0", edgecolor="white")
-    axes[1].axvline(event_jump, color="#dc2626", linewidth=2.0, label="2026冲突窗口")
+    axes[1].hist(windows["最大单日绝对收益"], bins=36, color=SCENARIO_COLORS["optimistic"], alpha=0.35, edgecolor="white")
+    axes[1].axvline(event_jump, color=SCENARIO_COLORS["risk"], linewidth=2.0, label="2026冲突窗口")
     axes[1].set_title("历史46日窗口最大单日跳变分布")
     axes[1].set_xlabel("最大单日绝对收益")
     axes[1].legend()

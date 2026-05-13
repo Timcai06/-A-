@@ -17,6 +17,7 @@ import pandas as pd
 from src.analysis.short_term_model_defense import reconstruct_best_parameters
 from src.calibration import calibrate_dynamic_model as calibration
 from src.common.paths import PROJECT_ROOT, ensure_parents
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -177,30 +178,30 @@ def draw_figure(table: pd.DataFrame) -> None:
     plot = table.iloc[1:].copy().sort_values("RMSE相对完整模型变化")
     colors = plot["机制层级"].map(
         {
-            "题面物理层": "#2563eb",
-            "题面需求层": "#0f766e",
-            "题面行为层": "#7c3aed",
-            "市场价格形成层": "#f97316",
+            "题面物理层": SCENARIO_COLORS["fit"],
+            "题面需求层": SCENARIO_COLORS["buffer"],
+            "题面行为层": SCENARIO_COLORS["optimistic"],
+            "市场价格形成层": SCENARIO_COLORS["neutral"],
         }
     )
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 6.2))
     axes[0].barh(plot["消融实验"], plot["RMSE相对完整模型变化"], color=colors)
-    axes[0].axvline(0, color="#111827", linewidth=1)
+    axes[0].axvline(0, color=PAPER_COLORS["ink"], linewidth=1)
     axes[0].set_title("机制消融后 RMSE 变化")
     axes[0].set_xlabel("相对完整模型 RMSE 变化")
 
     late_plot = table.iloc[1:].copy().sort_values("后期RMSE相对完整模型变化")
     late_colors = late_plot["机制层级"].map(
         {
-            "题面物理层": "#2563eb",
-            "题面需求层": "#0f766e",
-            "题面行为层": "#7c3aed",
-            "市场价格形成层": "#f97316",
+            "题面物理层": SCENARIO_COLORS["fit"],
+            "题面需求层": SCENARIO_COLORS["buffer"],
+            "题面行为层": SCENARIO_COLORS["optimistic"],
+            "市场价格形成层": SCENARIO_COLORS["neutral"],
         }
     )
     axes[1].barh(late_plot["消融实验"], late_plot["后期RMSE相对完整模型变化"], color=late_colors)
-    axes[1].axvline(0, color="#111827", linewidth=1)
+    axes[1].axvline(0, color=PAPER_COLORS["ink"], linewidth=1)
     axes[1].set_title("机制消融后后期 RMSE 变化")
     axes[1].set_xlabel("相对完整模型后期 RMSE 变化")
 

@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -179,10 +180,10 @@ def save_figure(merged: pd.DataFrame) -> None:
 
     fig, axes = plt.subplots(2, 1, figsize=(12.8, 8.2), sharex=False)
     ax = axes[0]
-    ax.plot(sample["trade_date"], sample["ovx"], color="#2563eb", linewidth=1.2, alpha=0.72, label="OVX隐含波动率")
-    ax.axhline(sample["ovx"].median(), color="#475569", linestyle="--", linewidth=1.0, label="历史中位数")
+    ax.plot(sample["trade_date"], sample["ovx"], color=SCENARIO_COLORS["fit"], linewidth=1.2, alpha=0.72, label="OVX隐含波动率")
+    ax.axhline(sample["ovx"].median(), color=PAPER_COLORS["muted"], linestyle="--", linewidth=1.0, label="历史中位数")
     if not event.empty:
-        ax.axvspan(event["trade_date"].min(), event["trade_date"].max(), color="#fee2e2", alpha=0.32, label="冲突窗口")
+        ax.axvspan(event["trade_date"].min(), event["trade_date"].max(), color=SCENARIO_COLORS["band_outer"], alpha=0.42, label="冲突窗口")
     ax.set_title("Cboe原油ETF隐含波动率（OVX）")
     ax.set_ylabel("指数")
     ax.legend(loc="upper left", frameon=False, ncol=3)
@@ -190,11 +191,11 @@ def save_figure(merged: pd.DataFrame) -> None:
 
     ax = axes[1]
     plot_df = sample[sample["trade_date"] >= pd.Timestamp("2025-01-01")].copy()
-    ax.plot(plot_df["trade_date"], plot_df["close_price"], color="#111827", linewidth=1.6, label="布伦特主力收盘价")
+    ax.plot(plot_df["trade_date"], plot_df["close_price"], color=PAPER_COLORS["ink"], linewidth=1.6, label="布伦特主力收盘价")
     ax2 = ax.twinx()
-    ax2.plot(plot_df["trade_date"], plot_df["ovx"], color="#dc2626", linewidth=1.2, alpha=0.74, label="OVX")
+    ax2.plot(plot_df["trade_date"], plot_df["ovx"], color=SCENARIO_COLORS["risk"], linewidth=1.2, alpha=0.74, label="OVX")
     if not event.empty:
-        ax.axvspan(event["trade_date"].min(), event["trade_date"].max(), color="#fee2e2", alpha=0.32)
+        ax.axvspan(event["trade_date"].min(), event["trade_date"].max(), color=SCENARIO_COLORS["band_outer"], alpha=0.42)
     ax.set_title("冲突前后：价格与市场隐含波动率")
     ax.set_ylabel("美元/桶")
     ax2.set_ylabel("OVX指数")

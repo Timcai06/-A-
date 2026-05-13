@@ -21,6 +21,7 @@ from statsmodels.stats.diagnostic import acorr_ljungbox, het_arch
 
 from src.common.metrics import mae, mape, rmse
 from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS
 from src.models import dynamic_short_term as dynamic
 
 
@@ -267,20 +268,20 @@ def save_figure(series: ForecastSeries) -> None:
     loss_diff = df["model_squared_error"] - df["naive_squared_error"]
 
     fig, axes = plt.subplots(2, 2, figsize=(12.5, 7.2))
-    axes[0, 0].plot(df["trade_date"], df["model_residual"], color="#2563eb", linewidth=1.8)
-    axes[0, 0].axhline(0, color="#111827", linewidth=0.9)
+    axes[0, 0].plot(df["trade_date"], df["model_residual"], color=SCENARIO_COLORS["fit"], linewidth=1.8)
+    axes[0, 0].axhline(0, color=PAPER_COLORS["ink"], linewidth=0.9)
     axes[0, 0].set_title("短期模型残差序列")
     axes[0, 0].set_ylabel("美元/桶")
 
-    sm.graphics.tsa.plot_acf(series.residual, lags=min(15, len(series.residual) - 2), ax=axes[0, 1], color="#2563eb")
+    sm.graphics.tsa.plot_acf(series.residual, lags=min(15, len(series.residual) - 2), ax=axes[0, 1], color=SCENARIO_COLORS["fit"])
     axes[0, 1].set_title("残差自相关函数")
 
-    axes[1, 0].hist(series.residual, bins=12, color="#2563eb", alpha=0.82, edgecolor="white")
-    axes[1, 0].axvline(0, color="#111827", linewidth=0.9)
+    axes[1, 0].hist(series.residual, bins=12, color=SCENARIO_COLORS["neutral"], alpha=0.82, edgecolor="white")
+    axes[1, 0].axvline(0, color=PAPER_COLORS["ink"], linewidth=0.9)
     axes[1, 0].set_title("残差分布")
 
-    axes[1, 1].plot(df["trade_date"], loss_diff, color="#dc2626", linewidth=1.8)
-    axes[1, 1].axhline(0, color="#111827", linewidth=0.9)
+    axes[1, 1].plot(df["trade_date"], loss_diff, color=SCENARIO_COLORS["risk"], linewidth=1.8)
+    axes[1, 1].axhline(0, color=PAPER_COLORS["ink"], linewidth=0.9)
     axes[1, 1].set_title("模型相对朴素基准的平方损失差")
     axes[1, 1].set_ylabel("负值表示模型更优")
 
