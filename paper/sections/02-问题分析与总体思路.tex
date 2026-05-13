@@ -8,7 +8,7 @@
   \item 最后建立 60--180 天三情景预测模型，并通过敏感性分析、蒙特卡洛情景树、滞后地缘风险指数检验和历史样本稳健性检验识别影响长期价格平衡点和二次跳涨风险的关键变量。
 \end{enumerate}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.96\linewidth]{论文总体技术路线图.png}
 \caption{本文总体技术路线。模型从附件真实数据出发，先解释短期价格平台，再外推长期情景风险。}
@@ -20,7 +20,7 @@
 
 最终论文只推荐一个主模型，即综合机制递推模型。传统供需模型用于提供反事实基准，三情景模型是主模型在 60--180 天尺度上的条件外推，消融实验、敏感性分析和蒙特卡洛情景树用于证明主模型中的因素是否值得保留，并刻画多因素同时恶化时的尾部风险。因素纳入原则见表 \ref{tab:factor-inclusion}。
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{因素纳入原则}
 \label{tab:factor-inclusion}
@@ -40,7 +40,7 @@
 
 从评审视角看，本文的关键目标不是把附件价格曲线“画得像”，而是回答三个可检验问题：第一，在题面给定低弹性和封锁冲击下，传统供需模型为什么会明显高估价格；第二，哪些缓冲机制能够把理论高位压回附件中的现实价格平台；第三，当封锁延长至 60--180 天时，哪些因素决定价格中枢和尾部跳涨风险。本文的贡献与边界见表 \ref{tab:contribution-boundary}。
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{本文贡献与识别边界}
 \label{tab:contribution-boundary}
@@ -69,7 +69,7 @@
 
 在风险变量方面，Caldara 与 Iacoviello（2022）提供了 GPR 指数的理论和数据基础，Mei 等（2020）、Liu 等（2019）说明地缘风险更适合解释油价波动和尾部风险。由于 GPR 来自新闻文本，本文不将同步 GPR 输入短期拟合，而只将其作为外部风险校验和滞后检验变量，防止同月新闻与同月油价之间的内生性循环。进一步地，本文接入 Cboe/FRED 的 OVX 原油 ETF 隐含波动率，将更接近市场交易定价的风险变量用于长期风险权重和不确定性强度约束，而不把它包装成短期方向预测因子。
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{核心文献对本文模型设计的约束}
 \begin{tabularx}{\linewidth}{lX X}

@@ -6,7 +6,7 @@
 
 本文采用附件 CSV 中的 \texttt{close\_price} 作为拟合目标。题面中提到的极端峰值和附件 CSV 的收盘价口径并不完全一致，因此本文在建模评价中坚持“以附件数据为准”，并把题面峰值作为极端冲击叙述背景。
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{附件数据和冲突窗口关键统计}
 \begin{tabular}{lr}
@@ -28,7 +28,7 @@
 
 为增强长期情景预测的外部约束，本文进一步补充 EIA 官方周度数据，包括美国 SPR 原油库存、美国商业原油库存和美国原油产量。需要说明的是，这些数据均为美国口径，不能直接等同全球战略储备、全球商业库存或全球供给恢复能力；本文将其用于校验长期模型的数量级和叙述边界，而不是粗暴替换赛题给定的全球冲击参数。
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{EIA 官方外生数据摘要}
 \small
@@ -47,7 +47,7 @@
 
 为补强全球口径约束，本文进一步接入 JODI Oil World Database。JODI 数据由国际能源论坛协调，汇集多国官方上报的月度石油数据。本文下载 2025 年完整年度 CSV 和 2026 年当前年度 CSV，抽取一次石油和二次石油中的产量、库存、进出口、油品需求与炼厂产出。由于 JODI 存在国家覆盖差异和发布滞后，本文不把它写成完整全球总量，而称为“多国上报口径”；所有变化量均采用 2026 年 2 月已上报国家/地区作为同口径样本，再回看这些国家/地区在 2025 年 2 月和 2025 年 12 月的数值。
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{JODI 多国口径外生约束摘要}
 \small
@@ -70,7 +70,7 @@ JODI 数据对长期模型提供了更强的外部边界：第一，非海湾供
 
 在此基础上，本文进一步整理 OPEC Monthly Oil Market Report 中的全球供需平衡表。与 EIA、JODI 不同，OPEC 表给出的是全球正常情景下的年度和季度供需基线，适合约束 60--180 天长期外推中的需求背景、非 DoC 供给恢复和 DoC 原油需求差额尾部压力。
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{OPEC 全球供需平衡表关键约束}
 \small
@@ -93,13 +93,13 @@ OPEC 表并不替代赛题冲击参数。它只说明：在没有霍尔木兹极
 
 \keypoint{数据使用遵循“附件真实价格为主、外部数据只做校验与长期约束”的原则。EIA 用于美国口径数量级校验，JODI 用于多国供需和库存约束，OPEC 用于全球供需平衡基线，GPR 用于地缘风险校验，OVX 用于市场隐含波动率约束；这些数据均不反向替代附件真实价格。}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{布伦特原油长期价格走势.png}
 \caption{布伦特原油期货主力合约收盘价长期走势。}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{冲突窗口价格走势.png}
 \caption{冲突窗口内附件真实价格路径。}
@@ -109,7 +109,7 @@ OPEC 表并不替代赛题冲击参数。它只说明：在没有霍尔木兹极
 
 冲突窗口内，油价从 78.07 美元/桶快速上行至高位平台，并在后期出现再定价回落和反复震荡。这一现象说明，价格不只是由供应缺口单向推升，还受到政策缓冲、市场确认和预期修复的共同影响。滚动波动率图显示，冲突窗口附近波动明显放大，适合使用事件机制模型而不是普通平稳时间序列模型。
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{布伦特收益率与波动率.png}
 \caption{收益率与滚动波动率。冲突窗口波动放大，为事件机制建模提供依据。}
