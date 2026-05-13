@@ -1,0 +1,22 @@
+experiment_suite:
+  name: "模型实验管理层"
+  description: "统一汇总短期模型、长期情景模型、传统供需反事实和质量闸门指标。"
+  output_dir: "output/experiments"
+  summary_csv: "output/experiments/模型实验总览.csv"
+  short_term_ranking_csv: "output/experiments/短期模型指标排序.csv"
+  long_term_summary_csv: "output/experiments/长期情景概率摘要.csv"
+  report_path: "output/reports/模型实验管理报告.md"
+
+inputs:
+  short_term_baselines: "output/calibration/短期模型基准对比.csv"
+  short_term_ml: "output/calibration/短期机器学习模型对比.csv"
+  short_term_quality_gate: "output/calibration/短期模型最终质量闸门.csv"
+  traditional_counterfactual: "output/baseline/传统供需基准模型结果.csv"
+  long_term_scenarios: "output/scenarios/三情景关键指标.csv"
+  monte_carlo_samples: "output/monte_carlo/蒙特卡洛样本指标.csv"
+  state_transition_samples: "output/scenarios/长期状态转移样本指标.csv"
+
+rules:
+  short_term_sort_metric: "RMSE"
+  long_term_is_probabilistic: true
+  long_term_note: "长期 60-180 天没有真实标签，实验层只汇总中心路径、分位区间和尾部概率，不计算拟合 RMSE。"

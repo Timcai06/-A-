@@ -78,6 +78,7 @@ fi
 "${PYTHON_BIN}" -m src.analysis.short_term_ml_residual_model
 "${PYTHON_BIN}" -m src.analysis.short_term_rolling_validation
 "${PYTHON_BIN}" -m src.analysis.short_term_final_quality_gate
+"${PYTHON_BIN}" -m src.experiments.run_model_suite
 "${PYTHON_BIN}" -m src.visualization.advanced_candidate_figures
 
 if command -v Rscript >/dev/null 2>&1; then
