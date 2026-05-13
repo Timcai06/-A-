@@ -17,6 +17,20 @@
   \item 风险侧：恐慌溢价逐步衰减，不确定性溢价拆分为前期冲击不确定性和持续封锁制度风险，使长期价格由物理恢复与制度风险共同决定。
 \end{enumerate}
 
+为避免短期弹性与长期弹性之间出现突变，本文采用平滑过渡函数刻画需求调整过程。设题面短期弹性为 \(\varepsilon_s=-0.05\)，长期情景目标弹性为 \(\varepsilon_\infty\)，冲击后的第 \(t_s=60\) 天作为长期外推起点，则
+
+\begin{equation}
+\varepsilon_t
+=
+\varepsilon_s
++
+\left(\varepsilon_\infty-\varepsilon_s\right)
+\left[1-\exp\left(-\alpha_\varepsilon\max(t-t_s,0)\right)\right],
+\quad t\ge 0 .
+\end{equation}
+
+其中 \(\alpha_\varepsilon\) 为需求调整速度。该式表示：封锁初期消费与生产难以及时替代，弹性接近题面低弹性；高油价持续后，炼厂采购、交通消费、工业用能和替代运输逐渐调整，弹性绝对值向长期情景值平滑靠近。因此，表中长期弹性不是在第 60 天突然替换短期弹性，而是作为 \(\varepsilon_t\) 的渐近目标进入递推。
+
 记长期外推期第 $t$ 日有效供应为 $S_t^{(L)}$，有效需求为 $D_t^{(L)}$。在短期模型的基础上，长期供需缺口可写为
 
 \begin{equation}
@@ -35,7 +49,29 @@ S_0-I+R_t+Q_t+B_t+A_t
 R_t=\min\left\{\bar R_t,\ \max\left(G_{t,\mathrm{pre}}+\rho D_0,\ \bar R_t \lambda_t \tau_t\right)\right\},
 \end{equation}
 
-其中 $\bar R_t$ 为计划释放能力，$G_{t,\mathrm{pre}}$ 为不含 SPR 时的预释放缺口，$\rho D_0$ 为安全余量，$\lambda_t$ 表示由物理缺口和价格压力共同决定的释放强度，$\tau_t$ 为长期持续后的政策收缩系数。因此，当缺口已基本闭合时，SPR 不会继续按上限满额释放。
+其中 $\bar R_t$ 为计划释放能力，$G_{t,\mathrm{pre}}$ 为不含 SPR 时的预释放缺口，$\rho D_0$ 为安全余量，$\lambda_t$ 表示由物理缺口和价格压力共同决定的释放强度，$\tau_t$ 为长期持续后的政策收缩系数。二者定义为
+
+\begin{equation}
+\lambda_t
+=
+\mathrm{clip}\left[
+\lambda_0
++\lambda_G\frac{\max(G_{t,\mathrm{pre}},0)}{D_0}
++\lambda_P\max\left(\frac{\hat P_t-P_0}{P_0},0\right),
+\lambda_{\min},1
+\right],
+\end{equation}
+
+\begin{equation}
+\tau_t
+=
+\tau_{\min}
++
+\frac{1-\tau_{\min}}
+{1+\exp\left[\kappa_\tau(t-t_{\mathrm{shrink}})\right]} .
+\end{equation}
+
+其中 \(\mathrm{clip}(x,a,b)=\min\{\max(x,a),b\}\)，\(t_{\mathrm{shrink}}\) 对应表中 SPR 收缩起点。上述定义使 SPR 在缺口较大、价格压力较高时保持较强释放；当长期封锁进入政策收缩期且缺口逐步闭合时，\(\tau_t\) 平滑下降，实际释放量转向缺口驱动。因此，当缺口已基本闭合时，SPR 不会继续按上限满额释放。
 
 长期价格递推采用
 
