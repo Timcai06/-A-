@@ -1,0 +1,2 @@
+来源,状态,说明
+Nasdaq Data Link CHRIS,skipped_missing_api_key,未设置 NASDAQ_DATA_LINK_API_KEY，跳过自动拉取。
