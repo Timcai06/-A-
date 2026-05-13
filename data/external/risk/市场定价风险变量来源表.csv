@@ -1,0 +1,4 @@
+变量,推荐代理,权威来源,URL,当前处理,能否入模
+期权隐含波动率,Cboe Crude Oil ETF Volatility Index (OVXCLS),FRED / Cboe Market Statistics,https://fred.stlouisfed.org/series/OVXCLS,已接入日度序列，并与附件布伦特价格做滞后检验,可作为长期风险权重或尾部概率的外部校验变量；不直接替代短期价格拟合因子
+期货期限结构,Brent M1-M3、M1-M6 价差或年化斜率,ICE Brent futures settlement / ICE End of Day data,https://www.ice.com/report/83,附件只有主力合约BRN0W.ICE，不能计算期限结构,需获得多到期合约官方历史结算价后再接入
+油轮保险费/运输风险,战争险费率、BDTI、TD3C VLCC运费,Baltic Exchange / Lloyd's市场与行业数据,https://www.balticexchange.com/en/data-services/market-information0/tankers-services.html,权威日度历史数据通常需要授权；公开新闻可作叙述证据但不宜生成数值模型输入,暂不进入主模型；可作为论文改进方向或附加情景冲击变量
