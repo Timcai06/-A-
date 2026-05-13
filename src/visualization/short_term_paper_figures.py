@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT
-from src.common.plotting import configure_plot_style as apply_plot_style
+from src.common.plotting import PAPER_COLORS, SCENARIO_COLORS, configure_plot_style as apply_plot_style, direct_label
 
 PAPER_FIGURES_DIR = PROJECT_ROOT / "paper" / "figures"
 
@@ -31,9 +31,9 @@ def load_frames() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
 def add_phase_background(ax: plt.Axes, model: pd.DataFrame) -> None:
     phase_ranges = [
-        ("前期冲击", 0, 14, "#fee2e2"),
-        ("中期平台", 15, 35, "#fef3c7"),
-        ("后期再定价", 36, int(model["day_index"].max()), "#dcfce7"),
+        ("前期冲击", 0, 14, "#F4D7D7"),
+        ("中期平台", 15, 35, "#EFE4C8"),
+        ("后期再定价", 36, int(model["day_index"].max()), "#DCEBE3"),
     ]
     for label, start_day, end_day, color in phase_ranges:
         sub = model[(model["day_index"] >= start_day) & (model["day_index"] <= end_day)]
@@ -62,7 +62,7 @@ def save_fit_figure(model: pd.DataFrame) -> Path:
         marker="o",
         markersize=3.8,
         linewidth=2.1,
-        color="#111827",
+        color=SCENARIO_COLORS["actual"],
         label="实际收盘价",
     )
     ax.plot(
@@ -71,16 +71,34 @@ def save_fit_figure(model: pd.DataFrame) -> Path:
         marker="s",
         markersize=3.2,
         linewidth=2.0,
-        color="#2563eb",
+        color=SCENARIO_COLORS["fit"],
         label="短期动态模型",
     )
-    ax.axhspan(110, 120, color="#10b981", alpha=0.12, label="题面 110-120 美元区间")
+    ax.axhspan(110, 120, color=SCENARIO_COLORS["optimistic"], alpha=0.10, label="题面 110-120 美元区间")
     ax.set_ylim(min(model["actual_price"].min(), model["simulated_price"].min()) - 5, 123)
     add_phase_background(ax, model)
     ax.set_title("短期动态模型对冲突窗口油价的拟合效果")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
-    ax.legend(loc="lower left", ncol=3)
+    direct_label(
+        ax,
+        model["trade_date"].iloc[-1],
+        model["actual_price"].iloc[-1],
+        "实际价格",
+        SCENARIO_COLORS["actual"],
+        dx=8,
+        dy=7,
+    )
+    direct_label(
+        ax,
+        model["trade_date"].iloc[-1],
+        model["simulated_price"].iloc[-1],
+        "短期模型",
+        SCENARIO_COLORS["fit"],
+        dx=8,
+        dy=-8,
+    )
+    ax.legend(loc="lower left", ncol=2)
     fig.autofmt_xdate()
     fig.tight_layout()
     fig.savefig(path)
@@ -91,17 +109,17 @@ def save_fit_figure(model: pd.DataFrame) -> Path:
 def save_error_figure(model: pd.DataFrame, segment: pd.DataFrame) -> Path:
     path = PAPER_FIGURES_DIR / "短期模型误差诊断.png"
     fig, axes = plt.subplots(2, 1, figsize=(11, 8.2), gridspec_kw={"height_ratios": [1.0, 1.05]})
-    colors = np.where(model["error"] >= 0, "#ef4444", "#0f766e")
+    colors = np.where(model["error"] >= 0, SCENARIO_COLORS["risk"], SCENARIO_COLORS["optimistic"])
     axes[0].bar(model["trade_date"], model["error"], color=colors, width=1.2)
-    axes[0].axhline(0, color="#111827", lw=0.9)
+    axes[0].axhline(0, color=SCENARIO_COLORS["actual"], lw=0.9)
     axes[0].set_title("逐日拟合误差：模拟价格 - 实际价格")
     axes[0].set_ylabel("美元/桶")
 
     segment_plot = segment[["分段", "RMSE", "MAE"]].copy()
     x = np.arange(len(segment_plot))
     width = 0.35
-    axes[1].bar(x - width / 2, segment_plot["RMSE"], width=width, label="RMSE", color="#2563eb")
-    axes[1].bar(x + width / 2, segment_plot["MAE"], width=width, label="MAE", color="#0f766e")
+    axes[1].bar(x - width / 2, segment_plot["RMSE"], width=width, label="RMSE", color=SCENARIO_COLORS["neutral"])
+    axes[1].bar(x + width / 2, segment_plot["MAE"], width=width, label="MAE", color=SCENARIO_COLORS["optimistic"])
     axes[1].set_xticks(x)
     axes[1].set_xticklabels(segment_plot["分段"], rotation=18, ha="right")
     axes[1].set_ylabel("美元/桶")
@@ -120,12 +138,12 @@ def save_mechanism_figure(model: pd.DataFrame) -> Path:
     path = PAPER_FIGURES_DIR / "短期模型机制贡献.png"
     fig, ax = plt.subplots(figsize=(11, 6.2))
     mechanism_map = {
-        "shortage_pressure": ("供需缺口压力", "#b91c1c", "-"),
-        "blockade_risk_premium": ("封锁风险溢价", "#f97316", "-"),
-        "uncertainty_premium": ("不确定性溢价", "#7c3aed", "-"),
-        "panic_premium": ("恐慌溢价", "#64748b", "-"),
-        "buffer_confirmation_discount": ("缓冲确认折价", "#059669", "--"),
-        "expectation_relief_discount": ("预期修复折价", "#0f766e", "--"),
+        "shortage_pressure": ("供需缺口压力", SCENARIO_COLORS["risk"], "-"),
+        "blockade_risk_premium": ("封锁风险溢价", "#8C510A", "-"),
+        "uncertainty_premium": ("不确定性溢价", "#6A51A3", "-"),
+        "panic_premium": ("恐慌溢价", PAPER_COLORS["muted"], "-"),
+        "buffer_confirmation_discount": ("缓冲确认折价", SCENARIO_COLORS["optimistic"], "--"),
+        "expectation_relief_discount": ("预期修复折价", "#01665E", "--"),
     }
     for column, (label, color, style) in mechanism_map.items():
         if column not in model.columns:
@@ -133,7 +151,7 @@ def save_mechanism_figure(model: pd.DataFrame) -> Path:
         values = -model[column] if "discount" in column else model[column]
         ax.plot(model["trade_date"], values, label=label, color=color, linestyle=style, linewidth=2.0)
 
-    ax.axhline(0, color="#111827", lw=0.9)
+    ax.axhline(0, color=SCENARIO_COLORS["actual"], lw=0.9)
     ax.set_title("短期动态模型中的价格推升项与压低项")
     ax.set_xlabel("日期")
     ax.set_ylabel("价格贡献：正值推升，负值压低")
@@ -155,7 +173,7 @@ def save_candidate_figure(candidates: pd.DataFrame) -> Path:
     x = np.arange(len(selected))
     fig, ax = plt.subplots(figsize=(11, 5.8))
     width = 0.18
-    palette = ["#2563eb", "#7c3aed", "#0f766e", "#f97316"]
+    palette = [SCENARIO_COLORS["neutral"], "#6A51A3", SCENARIO_COLORS["optimistic"], "#8C510A"]
     for idx, metric in enumerate(metrics):
         ax.bar(x + (idx - 1.5) * width, selected[metric], width=width, label=metric, color=palette[idx])
     ax.set_xticks(x)

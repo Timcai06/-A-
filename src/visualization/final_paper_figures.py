@@ -8,7 +8,7 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT
-from src.common.plotting import configure_plot_style as apply_plot_style
+from src.common.plotting import SCENARIO_COLORS, configure_plot_style as apply_plot_style, direct_label
 
 PAPER_FIGURES_DIR = PROJECT_ROOT / "paper" / "figures"
 
@@ -39,13 +39,13 @@ def save_integrated_forecast_figure(short_term: pd.DataFrame, scenarios: pd.Data
 
     observed_start = short_term["trade_date"].min()
     forecast_end = scenarios["trade_date"].max()
-    ax.axvspan(observed_start, cutoff_date, color="#dbeafe", alpha=0.22, lw=0)
-    ax.axvspan(cutoff_date, forecast_end, color="#fef3c7", alpha=0.22, lw=0)
+    ax.axvspan(observed_start, cutoff_date, color="#E8EEF6", alpha=0.36, lw=0)
+    ax.axvspan(cutoff_date, forecast_end, color="#F2E8D5", alpha=0.30, lw=0)
 
     ax.plot(
         short_term["trade_date"],
         short_term["actual_price"],
-        color="#111827",
+        color=SCENARIO_COLORS["actual"],
         linewidth=2.3,
         marker="o",
         markersize=3.2,
@@ -55,16 +55,16 @@ def save_integrated_forecast_figure(short_term: pd.DataFrame, scenarios: pd.Data
     ax.plot(
         short_term["trade_date"],
         short_term["simulated_price"],
-        color="#2563eb",
+        color=SCENARIO_COLORS["fit"],
         linewidth=2.2,
         label="短期机制拟合",
         zorder=3,
     )
 
     color_map = {
-        "optimistic": ("乐观情景预测", "#059669"),
-        "neutral": ("中性情景预测", "#2563eb"),
-        "pessimistic": ("悲观情景预测", "#dc2626"),
+        "optimistic": ("乐观情景预测", SCENARIO_COLORS["optimistic"]),
+        "neutral": ("中性情景预测", SCENARIO_COLORS["neutral"]),
+        "pessimistic": ("悲观情景预测", SCENARIO_COLORS["pessimistic"]),
     }
     for scenario, (label, color) in color_map.items():
         forecast = scenarios[(scenarios["scenario"] == scenario) & (~scenarios["is_observed_price"].astype(bool))]
@@ -87,7 +87,7 @@ def save_integrated_forecast_figure(short_term: pd.DataFrame, scenarios: pd.Data
             zorder=2,
         )
 
-    ax.axvline(cutoff_date, color="#111827", linewidth=1.2, linestyle=":")
+    ax.axvline(cutoff_date, color=SCENARIO_COLORS["actual"], linewidth=1.2, linestyle=":")
     ax.text(
         cutoff_date,
         ax.get_ylim()[1] - 2,
@@ -95,20 +95,46 @@ def save_integrated_forecast_figure(short_term: pd.DataFrame, scenarios: pd.Data
         ha="right",
         va="top",
         fontsize=9,
-        color="#111827",
+        color=SCENARIO_COLORS["actual"],
         bbox={"boxstyle": "round,pad=0.25", "facecolor": "white", "edgecolor": "#9ca3af", "alpha": 0.9},
     )
-    ax.axhspan(110, 120, color="#10b981", alpha=0.10, label="题面 110-120 美元平台")
-    ax.text(observed_start, 121.0, "短期拟合区", color="#1d4ed8", fontsize=10, weight="bold")
-    ax.text(cutoff_date + pd.Timedelta(days=9), 121.0, "60-180 天情景外推区", color="#92400e", fontsize=10, weight="bold")
+    ax.axhspan(110, 120, color=SCENARIO_COLORS["optimistic"], alpha=0.08, label="题面 110-120 美元平台")
+    ax.text(observed_start, 121.0, "短期拟合区", color=SCENARIO_COLORS["neutral"], fontsize=10, weight="bold")
+    ax.text(cutoff_date + pd.Timedelta(days=9), 121.0, "60-180 天情景外推区", color="#8C510A", fontsize=10, weight="bold")
 
     ax.set_title("短期机制拟合与 60-180 天三情景预测总览")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
     ax.set_ylim(72, 134)
+    ax.set_xlim(observed_start, forecast_end + pd.Timedelta(days=18))
     ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=3))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
-    ax.legend(loc="upper left", ncol=2, frameon=True)
+    for scenario, (_, color) in color_map.items():
+        forecast = scenarios[(scenarios["scenario"] == scenario) & (~scenarios["is_observed_price"].astype(bool))]
+        if forecast.empty:
+            continue
+        label = {"optimistic": "乐观情景", "neutral": "中性情景", "pessimistic": "悲观情景"}[scenario]
+        direct_label(
+            ax,
+            forecast["trade_date"].iloc[-1],
+            forecast["forecast_price"].iloc[-1],
+            label,
+            color,
+            dx=8,
+            dy=0,
+            size=9.5,
+        )
+    direct_label(
+        ax,
+        short_term["trade_date"].iloc[-1],
+        short_term["actual_price"].iloc[-1],
+        "真实价格",
+        SCENARIO_COLORS["actual"],
+        dx=-50,
+        dy=12,
+        size=9.2,
+    )
+    ax.legend(loc="lower left", ncol=2, frameon=True)
     fig.autofmt_xdate()
     fig.tight_layout()
     fig.savefig(path)

@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import SCENARIO_COLORS
 from src.scenarios import scenario_forecast as scenario
 from src.scenarios import simulation as scenario_sim
 
@@ -413,9 +414,9 @@ def save_figures(result: pd.DataFrame, ranking: pd.DataFrame) -> None:
     ensure_parent(TORNADO_FIGURE)
 
     top = ranking.sort_values("综合敏感度得分", ascending=True)
-    colors = ["#dc2626" if controllability == "低" else "#2563eb" for controllability in top["可控性"]]
+    colors = [SCENARIO_COLORS["risk"] if controllability == "低" else SCENARIO_COLORS["neutral"] for controllability in top["可控性"]]
     fig, ax = plt.subplots(figsize=(10.8, 6.6))
-    ax.barh(top["参数"], top["综合敏感度得分"], color=colors, alpha=0.86)
+    ax.barh(top["参数"], top["综合敏感度得分"], color=colors, alpha=0.82)
     ax.set_title("关键参数综合敏感度排序")
     ax.set_xlabel("综合敏感度得分（终点价波动 + 峰值波动加权）")
     ax.set_ylabel("")
@@ -431,7 +432,7 @@ def save_figures(result: pd.DataFrame, ranking: pd.DataFrame) -> None:
     for ax, parameter in zip(axes, top_names, strict=False):
         sub = response[response["参数"] == parameter].copy()
         sub = sub.sort_values("扰动值")
-        ax.plot(sub["扰动标签"], sub["第180天价格"], color="#2563eb", marker="o", linewidth=2.0)
+        ax.plot(sub["扰动标签"], sub["第180天价格"], color=SCENARIO_COLORS["neutral"], marker="o", linewidth=2.0)
         ax.axhline(
             float(result.loc[result["参数键"] == "baseline", "第180天价格"].iloc[0]),
             color="#6b7280",

@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import SCENARIO_COLORS, direct_label
 from src.analysis.historical_volatility_calibration import load_historical_model_factors
 from src.models import dynamic_short_term as dynamic
 from src.scenarios import scenario_forecast as scenario
@@ -330,34 +331,46 @@ def save_figure(quantiles: pd.DataFrame, state_share: pd.DataFrame, scenario_res
     fig, axes = plt.subplots(2, 1, figsize=(11.8, 8.6), sharex=True, gridspec_kw={"height_ratios": [2.2, 1.0]})
     ax = axes[0]
     dates = pd.to_datetime(quantiles["trade_date"])
-    ax.fill_between(dates, quantiles["p05"], quantiles["p95"], color="#dbeafe", alpha=0.70, label="5%-95% 状态区间")
-    ax.fill_between(dates, quantiles["p25"], quantiles["p75"], color="#60a5fa", alpha=0.45, label="25%-75% 状态区间")
-    ax.plot(dates, quantiles["p50"], color="#1d4ed8", linewidth=2.3, label="状态转移中位数")
+    ax.fill_between(dates, quantiles["p05"], quantiles["p95"], color=SCENARIO_COLORS["band_outer"], alpha=0.15, label="5%-95% 状态区间")
+    ax.fill_between(dates, quantiles["p25"], quantiles["p75"], color=SCENARIO_COLORS["band_inner"], alpha=0.30, label="25%-75% 状态区间")
+    ax.plot(dates, quantiles["p50"], color=SCENARIO_COLORS["neutral"], linewidth=2.6, label="状态转移中位数")
     neutral = scenario_result[
         (scenario_result["scenario"] == "neutral") & (~scenario_result["is_observed_price"].astype(bool))
     ].copy()
     ax.plot(
         neutral["trade_date"],
         neutral["forecast_price"],
-        color="#111827",
+        color=SCENARIO_COLORS["actual"],
         linewidth=1.6,
         linestyle="--",
         label="原中性中心线",
     )
-    ax.axhspan(110, 120, color="#f59e0b", alpha=0.11, label="110-120美元参考区间")
-    ax.axhline(120, color="#dc2626", linestyle=":", linewidth=1.2)
+    ax.axhspan(110, 120, color=SCENARIO_COLORS["optimistic"], alpha=0.07, label="110-120美元参考区间")
+    ax.axhline(120, color=SCENARIO_COLORS["risk"], linestyle=":", linewidth=1.2)
+    ax.set_xlim(dates.iloc[0], dates.iloc[-1] + pd.Timedelta(days=14))
+    direct_label(ax, dates.iloc[-1], quantiles["p50"].iloc[-1], "状态转移中位数", SCENARIO_COLORS["neutral"], dx=8, dy=0)
+    if not neutral.empty:
+        direct_label(
+            ax,
+            neutral["trade_date"].iloc[-1],
+            neutral["forecast_price"].iloc[-1],
+            "原中性中心线",
+            SCENARIO_COLORS["actual"],
+            dx=8,
+            dy=-10,
+        )
     ax.set_title("长期状态转移情景树：中心路径不等于每日精确预测")
     ax.set_ylabel("美元/桶")
     ax.legend(loc="upper right", ncol=2)
 
     pivot = state_share.pivot_table(index="trade_date", columns="状态", values="状态占比", fill_value=0.0).sort_index()
-    state_colors = {"缓和": "#10b981", "维持": "#2563eb", "升级": "#dc2626"}
+    state_colors = {"缓和": SCENARIO_COLORS["optimistic"], "维持": SCENARIO_COLORS["neutral"], "升级": SCENARIO_COLORS["pessimistic"]}
     axes[1].stackplot(
         pd.to_datetime(pivot.index),
         [pivot.get(label, pd.Series(0.0, index=pivot.index)) for label in ["缓和", "维持", "升级"]],
         labels=["缓和", "维持", "升级"],
         colors=[state_colors[label] for label in ["缓和", "维持", "升级"]],
-        alpha=0.72,
+        alpha=0.62,
     )
     axes[1].set_ylabel("状态占比")
     axes[1].set_xlabel("日期")

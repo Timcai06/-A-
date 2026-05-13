@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import SCENARIO_COLORS, direct_label
 from src.analysis.historical_volatility_calibration import HistoricalModelFactors, load_historical_model_factors
 from src.scenarios import scenario_forecast as scenario
 from src.scenarios.external_constraints import (
@@ -336,7 +337,11 @@ def save_figures(metrics: pd.DataFrame, quantiles: pd.DataFrame, path_frame: pd.
     path_frame["trade_date"] = pd.to_datetime(path_frame["trade_date"])
     selected_ids = _select_path_samples(metrics, n=120, seed=RANDOM_SEED + 7)
     selected_paths = path_frame[path_frame["sample_id"].isin(selected_ids)]
-    category_color = {"缓和路径": "#2563eb", "中性附近": "#64748b", "高压尾部": "#b91c1c"}
+    category_color = {
+        "缓和路径": SCENARIO_COLORS["optimistic"],
+        "中性附近": SCENARIO_COLORS["muted"],
+        "高压尾部": SCENARIO_COLORS["pessimistic"],
+    }
 
     fig = plt.figure(figsize=(12.8, 6.8), constrained_layout=True)
     gs = GridSpec(2, 3, figure=fig, width_ratios=[2.9, 0.06, 1.15], height_ratios=[1.1, 0.9])
@@ -344,26 +349,28 @@ def save_figures(metrics: pd.DataFrame, quantiles: pd.DataFrame, path_frame: pd.
     ax_dist = fig.add_subplot(gs[0, 2], sharey=ax_main)
     ax_tail = fig.add_subplot(gs[1, 2])
 
-    ax_main.axhspan(110, 120, color="#fef3c7", alpha=0.45, zorder=0)
+    ax_main.axhspan(110, 120, color=SCENARIO_COLORS["optimistic"], alpha=0.07, zorder=0)
     for _, group in selected_paths.groupby("sample_id"):
         label = str(group["路径类别"].iloc[0])
         ax_main.plot(
             group["trade_date"],
             group["forecast_price"],
             color=category_color.get(label, "#64748b"),
-            alpha=0.075,
+            alpha=0.055,
             linewidth=0.7,
             zorder=1,
         )
-    ax_main.fill_between(dates, quantiles["p05"], quantiles["p95"], color="#dbeafe", alpha=0.74, zorder=2)
-    ax_main.fill_between(dates, quantiles["p25"], quantiles["p75"], color="#93c5fd", alpha=0.58, zorder=3)
-    ax_main.plot(dates, quantiles["p50"], color="#0f172a", linewidth=2.35, zorder=4)
-    ax_main.axhline(120, color="#991b1b", linestyle=(0, (5, 3)), linewidth=1.2, zorder=5)
-    ax_main.text(dates.iloc[-1], 120.7, "120 美元风险线", color="#991b1b", ha="right", va="bottom", fontsize=9)
-    ax_main.text(dates.iloc[4], 116.7, "110-120 美元平台", color="#92400e", ha="left", va="center", fontsize=9)
+    ax_main.fill_between(dates, quantiles["p05"], quantiles["p95"], color=SCENARIO_COLORS["band_outer"], alpha=0.15, zorder=2)
+    ax_main.fill_between(dates, quantiles["p25"], quantiles["p75"], color=SCENARIO_COLORS["band_inner"], alpha=0.30, zorder=3)
+    ax_main.plot(dates, quantiles["p50"], color=SCENARIO_COLORS["neutral"], linewidth=2.65, zorder=4)
+    ax_main.axhline(120, color=SCENARIO_COLORS["risk"], linestyle=(0, (5, 3)), linewidth=1.2, zorder=5)
+    ax_main.text(dates.iloc[-1], 120.7, "120 美元风险线", color=SCENARIO_COLORS["risk"], ha="right", va="bottom", fontsize=9)
+    ax_main.text(dates.iloc[4], 116.7, "110-120 美元平台", color="#8C510A", ha="left", va="center", fontsize=9)
+    direct_label(ax_main, dates.iloc[-1], quantiles["p50"].iloc[-1], "中位数路径", SCENARIO_COLORS["neutral"], dx=8, dy=0)
     ax_main.set_ylabel("布伦特价格（美元/桶）")
     ax_main.set_xlabel("外推日期")
     ax_main.set_ylim(84, max(132, float(quantiles["p95"].max()) + 2))
+    ax_main.set_xlim(dates.iloc[0], dates.iloc[-1] + pd.Timedelta(days=14))
     ax_main.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
     ax_main.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
     _format_axis(ax_main)
@@ -372,10 +379,10 @@ def save_figures(metrics: pd.DataFrame, quantiles: pd.DataFrame, path_frame: pd.
     bins = np.linspace(float(final_prices.min()) - 1, float(final_prices.max()) + 1, 22)
     ax_dist.hist(final_prices, bins=bins, orientation="horizontal", color="#cbd5e1", edgecolor="white", linewidth=0.6)
     q05, q50, q95 = np.quantile(final_prices, [0.05, 0.50, 0.95])
-    for q, color, text in [(q05, "#2563eb", "P05"), (q50, "#0f172a", "P50"), (q95, "#2563eb", "P95")]:
+    for q, color, text in [(q05, SCENARIO_COLORS["neutral"], "P05"), (q50, SCENARIO_COLORS["actual"], "P50"), (q95, SCENARIO_COLORS["neutral"], "P95")]:
         ax_dist.axhline(q, color=color, linewidth=1.1)
         ax_dist.text(ax_dist.get_xlim()[1] * 0.96, q, text, color=color, ha="right", va="bottom", fontsize=8)
-    ax_dist.axhline(120, color="#991b1b", linestyle=(0, (5, 3)), linewidth=1.0)
+    ax_dist.axhline(120, color=SCENARIO_COLORS["risk"], linestyle=(0, (5, 3)), linewidth=1.0)
     ax_dist.set_xlabel("样本数")
     ax_dist.set_title("第180天分布", fontsize=10, pad=7)
     ax_dist.tick_params(axis="y", labelleft=False)
@@ -383,13 +390,13 @@ def save_figures(metrics: pd.DataFrame, quantiles: pd.DataFrame, path_frame: pd.
 
     thresholds = np.arange(95, 141, 1)
     exceedance = [(metrics["外推期最高价"] >= threshold).mean() * 100 for threshold in thresholds]
-    ax_tail.plot(thresholds, exceedance, color="#0f172a", linewidth=2.0)
-    ax_tail.fill_between(thresholds, exceedance, color="#bfdbfe", alpha=0.55)
+    ax_tail.plot(thresholds, exceedance, color=SCENARIO_COLORS["actual"], linewidth=2.0)
+    ax_tail.fill_between(thresholds, exceedance, color=SCENARIO_COLORS["band_outer"], alpha=0.22)
     prob120 = float((metrics["外推期最高价"] >= 120).mean() * 100)
     prob130 = float((metrics["外推期最高价"] >= 130).mean() * 100)
-    ax_tail.scatter([120, 130], [prob120, prob130], color=["#991b1b", "#991b1b"], s=32, zorder=3)
-    ax_tail.text(120, prob120 + 2.0, f"120: {prob120:.1f}%", color="#991b1b", ha="center", fontsize=8.5)
-    ax_tail.text(130, prob130 + 2.0, f"130: {prob130:.1f}%", color="#991b1b", ha="center", fontsize=8.5)
+    ax_tail.scatter([120, 130], [prob120, prob130], color=[SCENARIO_COLORS["risk"], SCENARIO_COLORS["risk"]], s=32, zorder=3)
+    ax_tail.text(120, prob120 + 2.0, f"120: {prob120:.1f}%", color=SCENARIO_COLORS["risk"], ha="center", fontsize=8.5)
+    ax_tail.text(130, prob130 + 2.0, f"130: {prob130:.1f}%", color=SCENARIO_COLORS["risk"], ha="center", fontsize=8.5)
     ax_tail.set_xlabel("最高价阈值（美元/桶）")
     ax_tail.set_ylabel("突破概率（%）")
     ax_tail.set_ylim(0, max(35, max(exceedance) + 4))
@@ -397,11 +404,11 @@ def save_figures(metrics: pd.DataFrame, quantiles: pd.DataFrame, path_frame: pd.
     _format_axis(ax_tail)
 
     legend_handles = [
-        Patch(facecolor="#dbeafe", alpha=0.74, label="5%-95% 区间"),
-        Patch(facecolor="#93c5fd", alpha=0.58, label="25%-75% 区间"),
-        Line2D([0], [0], color="#0f172a", linewidth=2.2, label="中位数路径"),
-        Line2D([0], [0], color="#64748b", alpha=0.45, linewidth=1.2, label="抽样路径云"),
-        Line2D([0], [0], color="#991b1b", linestyle=(0, (5, 3)), linewidth=1.1, label="风险阈值"),
+        Patch(facecolor=SCENARIO_COLORS["band_outer"], alpha=0.15, label="5%-95% 区间"),
+        Patch(facecolor=SCENARIO_COLORS["band_inner"], alpha=0.30, label="25%-75% 区间"),
+        Line2D([0], [0], color=SCENARIO_COLORS["neutral"], linewidth=2.5, label="中位数路径"),
+        Line2D([0], [0], color=SCENARIO_COLORS["muted"], alpha=0.35, linewidth=1.2, label="抽样路径云"),
+        Line2D([0], [0], color=SCENARIO_COLORS["risk"], linestyle=(0, (5, 3)), linewidth=1.1, label="风险阈值"),
     ]
     ax_main.legend(handles=legend_handles, loc="upper right", frameon=False, ncol=2)
     fig.savefig(ACADEMIC_PANEL_FIGURE, dpi=260)
@@ -410,7 +417,7 @@ def save_figures(metrics: pd.DataFrame, quantiles: pd.DataFrame, path_frame: pd.
     cloud_ids = _select_path_samples(metrics, n=320, seed=RANDOM_SEED + 13)
     cloud = path_frame[path_frame["sample_id"].isin(cloud_ids)]
     fig, ax = plt.subplots(figsize=(11.8, 6.4))
-    ax.axhspan(110, 120, color="#fef3c7", alpha=0.45, zorder=0)
+    ax.axhspan(110, 120, color=SCENARIO_COLORS["optimistic"], alpha=0.07, zorder=0)
     for _, group in cloud.groupby("sample_id"):
         label = str(group["路径类别"].iloc[0])
         ax.plot(
@@ -421,13 +428,14 @@ def save_figures(metrics: pd.DataFrame, quantiles: pd.DataFrame, path_frame: pd.
             linewidth=0.65,
             zorder=1,
         )
-    ax.plot(dates, quantiles["p50"], color="#0f172a", linewidth=2.35, label="中位数路径", zorder=3)
-    ax.plot(dates, quantiles["p05"], color="#2563eb", linewidth=1.0, linestyle="--", label="P05/P95", zorder=3)
-    ax.plot(dates, quantiles["p95"], color="#2563eb", linewidth=1.0, linestyle="--", zorder=3)
-    ax.axhline(120, color="#991b1b", linestyle=(0, (5, 3)), linewidth=1.1, label="120 美元风险线")
+    ax.plot(dates, quantiles["p50"], color=SCENARIO_COLORS["neutral"], linewidth=2.45, label="中位数路径", zorder=3)
+    ax.plot(dates, quantiles["p05"], color=SCENARIO_COLORS["neutral"], linewidth=1.0, linestyle="--", label="P05/P95", zorder=3)
+    ax.plot(dates, quantiles["p95"], color=SCENARIO_COLORS["neutral"], linewidth=1.0, linestyle="--", zorder=3)
+    ax.axhline(120, color=SCENARIO_COLORS["risk"], linestyle=(0, (5, 3)), linewidth=1.1, label="120 美元风险线")
     ax.set_xlabel("外推日期")
     ax.set_ylabel("布伦特价格（美元/桶）")
     ax.set_ylim(84, max(132, float(quantiles["p95"].max()) + 2))
+    ax.set_xlim(dates.iloc[0], dates.iloc[-1] + pd.Timedelta(days=14))
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
     _format_axis(ax)

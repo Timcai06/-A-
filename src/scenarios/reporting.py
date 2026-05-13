@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from src.common.paths import PROJECT_ROOT, ensure_parent
+from src.common.plotting import SCENARIO_COLORS, direct_label
 from src.models import dynamic_short_term as dynamic
 from src.scenarios.settings import (
     BUFFER_FIGURE,
@@ -25,9 +26,9 @@ def save_figures(result: pd.DataFrame) -> None:
     ensure_parent(SCENARIO_PRICE_FIGURE)
 
     colors = {
-        "optimistic": "#059669",
-        "neutral": "#2563eb",
-        "pessimistic": "#dc2626",
+        "optimistic": SCENARIO_COLORS["optimistic"],
+        "neutral": SCENARIO_COLORS["neutral"],
+        "pessimistic": SCENARIO_COLORS["pessimistic"],
     }
     fig, ax = plt.subplots(figsize=(11.5, 6.2))
     observed = result[(result["scenario"] == "neutral") & (result["is_observed_price"])]
@@ -35,7 +36,7 @@ def save_figures(result: pd.DataFrame) -> None:
     ax.plot(
         observed["trade_date"],
         observed["actual_price"],
-        color="#111827",
+        color=SCENARIO_COLORS["actual"],
         linewidth=1.8,
         marker="o",
         markersize=2.5,
@@ -52,10 +53,15 @@ def save_figures(result: pd.DataFrame) -> None:
             label=label,
         )
     ax.axvline(observed_end, color="#6b7280", linestyle="--", linewidth=1.0, label="附件数据截止")
-    ax.axhspan(110, 120, color="#f59e0b", alpha=0.10, label="110-120美元/桶参考区间")
+    ax.axhspan(110, 120, color=SCENARIO_COLORS["optimistic"], alpha=0.07, label="110-120美元/桶参考区间")
     ax.set_title("60-180天三情景原油价格路径")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
+    for key, label in SCENARIO_NAMES.items():
+        plot_sub = result[(result["scenario"] == key) & (result["trade_date"] >= observed_end)]
+        if plot_sub.empty:
+            continue
+        direct_label(ax, plot_sub["trade_date"].iloc[-1], plot_sub["forecast_price"].iloc[-1], label, colors[key], dx=8)
     ax.legend(loc="upper left", ncol=2)
     fig.autofmt_xdate()
     fig.tight_layout()

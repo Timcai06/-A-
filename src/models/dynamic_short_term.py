@@ -21,7 +21,7 @@ import yaml
 from src.common.metrics import mae as calc_mae
 from src.common.metrics import rmse as calc_rmse
 from src.common.paths import PROJECT_ROOT, ensure_parent
-from src.common.plotting import configure_plot_style as apply_plot_style
+from src.common.plotting import SCENARIO_COLORS, configure_plot_style as apply_plot_style, direct_label
 
 BASE_CONFIG_PATH = PROJECT_ROOT / "config" / "base.yml"
 SCENARIO_CONFIG_PATH = PROJECT_ROOT / "config" / "scenarios.yml"
@@ -399,7 +399,7 @@ def save_figure(simulation: pd.DataFrame, paths: DynamicPaths) -> None:
     ax.plot(
         simulation["trade_date"],
         simulation["actual_price"],
-        color="#2563eb",
+        color=SCENARIO_COLORS["actual"],
         marker="o",
         markersize=2.8,
         linewidth=1.8,
@@ -408,13 +408,31 @@ def save_figure(simulation: pd.DataFrame, paths: DynamicPaths) -> None:
     ax.plot(
         simulation["trade_date"],
         simulation["simulated_price"],
-        color="#dc2626",
+        color=SCENARIO_COLORS["fit"],
         marker="s",
         markersize=2.4,
         linewidth=1.7,
         label="短期动态递推模型",
     )
-    ax.axhspan(110, 120, color="#10b981", alpha=0.10, label="题面110-120区间")
+    ax.axhspan(110, 120, color=SCENARIO_COLORS["optimistic"], alpha=0.08, label="题面110-120区间")
+    direct_label(
+        ax,
+        simulation["trade_date"].iloc[-1],
+        simulation["actual_price"].iloc[-1],
+        "实际价格",
+        SCENARIO_COLORS["actual"],
+        dx=8,
+        dy=8,
+    )
+    direct_label(
+        ax,
+        simulation["trade_date"].iloc[-1],
+        simulation["simulated_price"].iloc[-1],
+        "短期模型",
+        SCENARIO_COLORS["fit"],
+        dx=8,
+        dy=-8,
+    )
     ax.set_title("短期动态递推模型与实际价格对比")
     ax.set_xlabel("日期")
     ax.set_ylabel("美元/桶")
