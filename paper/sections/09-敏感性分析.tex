@@ -16,7 +16,7 @@
 
 \subsection{参数重要性排序}
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{参数综合敏感度排序}
 \begin{tabularx}{\linewidth}{rXrrr}
@@ -43,7 +43,7 @@
 \end{tabularx}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{参数敏感性龙卷风图.png}
 \caption{关键参数综合敏感度排序。}
@@ -64,20 +64,20 @@
 
 为避免蒙特卡洛区间完全依赖主观设定，本文进一步利用 2017--2025 年附件历史数据构造 2146 个同长度窗口，校准长期扰动尺度。2026 冲突窗口的日收益波动率位于历史约 95.5\% 分位，最大单日跳变位于约 89.4\% 分位；据此设定压力指数噪声标准差为 0.073，并将状态转移日度扰动波动率校准为 0.0132。历史数据因此进入长期模型的不确定性参数层，而不直接替代霍尔木兹封锁机制。
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.86\linewidth]{历史波动参数校准.png}
 \caption{历史波动参数校准。2017--2025 同长度窗口为长期蒙特卡洛和状态转移扰动提供历史尺度。}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{传统蒙特卡洛路径云图.png}
 \caption{传统蒙特卡洛路径云图。图中从 2000 条模拟路径中分层抽取代表路径，黑线为中位数路径，蓝色虚线为 P05/P95 条件边界，红色虚线为 120 美元/桶风险线。}
 \label{fig:mc-path-cloud}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{蒙特卡洛情景树尾部风险结果}
 \begin{tabular}{lr}
@@ -96,7 +96,7 @@
 \end{tabular}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.78\linewidth]{蒙特卡洛尾部风险概率.png}
 \caption{蒙特卡洛尾部风险概率。}
@@ -123,7 +123,7 @@
 
 本检验共生成 3000 条状态转移路径。结果显示，第 180 天价格中位数为 89.49 美元/桶，5\%--95\% 条件区间为 86.31--95.55 美元/桶；外推期最高价 P95 为 128.72 美元/桶，突破 120 美元/桶的条件概率为 27.7\%，突破 130 美元/桶的条件概率为 3.5\%。这说明状态切换确实会放大外推期局部峰值，但不会推翻“中性平衡点回落、悲观尾部保留”的主结论。也就是说，长期模型的可信表达不应是“我能精确预测每天油价”，而应是“在不同冲突状态下给出可解释的中心、区间和尾部风险”。
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{R长期状态转移扇形图.png}
 \caption{R/ggplot2 长期状态转移区间预测。双层阴影分别表示 5\%--95\% 和 25\%--75\% 条件区间，虚线为原中性中心路径。}
@@ -133,7 +133,7 @@
 
 综合机制递推模型中包含地缘风险权重和恐慌衰减项。若直接用新闻情绪或风险指数解释同日油价，可能存在反向因果：油价上涨可能先刺激媒体报道增加，随后模型又用新闻恐慌解释油价上涨。为避免这种内生性循环，本文不把新闻爬虫数据作为短期模型输入，而是使用 Caldara-Iacoviello GPR 月度指数做外部校验，并采用滞后一期口径。
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{滞后 GPR 风险检验指标}
 \begin{tabularx}{\linewidth}{l r X}
@@ -150,13 +150,13 @@
 \end{tabularx}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{地缘风险指数滞后审计.png}
 \caption{地缘风险指数检验：同步 GPR 与滞后可用 GPR。3 月油价解释不能使用 3 月同步 GPR，4 月以后才可使用已实现的 3 月风险读数。}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.84\linewidth]{滞后GPR与布伦特收益关系.png}
 \caption{滞后 1 月 GPR 与布伦特月度收益关系。散点关系较弱，说明 GPR 更适合作为风险溢价外部校验，而非单独点预测模型。}
@@ -168,7 +168,7 @@
 
 GPR 的优势是覆盖长期地缘政治风险叙事，但它来自新闻文本，天然存在内生性边界。为补充更接近市场交易定价的风险变量，本文接入 Cboe/FRED 的 OVX 原油 ETF 隐含波动率日度序列，并与附件布伦特主力合约价格进行滞后检验。
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{OVX 市场隐含波动率检验指标}
 \begin{tabularx}{\linewidth}{l r X}
@@ -185,7 +185,7 @@ GPR 的优势是覆盖长期地缘政治风险叙事，但它来自新闻文本�
 \end{tabularx}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{OVX隐含波动率滞后检验.png}
 \caption{OVX 隐含波动率滞后检验。冲突窗口内 OVX 明显升高，说明期权市场也对原油尾部风险重新定价。}
@@ -197,7 +197,7 @@ OVX 接入长期模型的方式是克制的：它只作为长期风险权重和�
 
 附件数据覆盖 2017 年 9 月至 2026 年 5 月。除用于绘制长期价格和波动背景外，完整历史数据还可以检验 2026 冲突窗口在历史分布中的位置。本文采用与冲突窗口相同的 46 个交易日长度，在全样本中滚动构造历史窗口，并比较累计收益率、实现波动率、价格区间、最大单日跳变和朴素上一日基准误差。
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{2026 冲突窗口在历史同长度窗口中的位置}
 \begin{tabularx}{\linewidth}{l r r X}
@@ -215,13 +215,13 @@ OVX 接入长期模型的方式是克制的：它只作为长期风险权重和�
 \end{tabularx}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{历史窗口极端性检验.png}
 \caption{2026 冲突窗口在历史同长度窗口中的极端性。累计涨幅、波动率和朴素基准误差均处于历史高分位。}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.90\linewidth]{R历史基准误差分布图.png}
 \caption{R/ggplot2 历史同长度窗口基准误差分布。蓝色区间表示历史分位带，红点表示 2026 冲突窗口，说明该窗口对普通基准模型显著更难。}
