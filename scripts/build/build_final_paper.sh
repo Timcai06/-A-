@@ -16,12 +16,48 @@ mkdir -p "tmp/matplotlib" "tmp/cache"
 export MPLCONFIGDIR="${ROOT_DIR}/tmp/matplotlib"
 export XDG_CACHE_HOME="${ROOT_DIR}/tmp/cache"
 
-PYTHON_BIN="${PYTHON_BIN:-python3}"
-if [ -x /opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 ]; then
+if [ -n "${PYTHON_BIN:-}" ]; then
+  PYTHON_BIN="${PYTHON_BIN}"
+elif [ -x /opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 ]; then
   PYTHON_BIN="/opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3"
+else
+  PYTHON_BIN="python3"
 fi
 
+run_python_module() {
+  "${PYTHON_BIN}" -m "$@"
+}
+
+require_artifact() {
+  local artifact="$1"
+  local hint="$2"
+  if [ ! -s "${artifact}" ]; then
+    echo "Required artifact is missing or empty: ${artifact}" >&2
+    echo "${hint}" >&2
+    exit 1
+  fi
+}
+
 "${PYTHON_BIN}" -m src.pipeline.clean_data
+
+if [ "${FULL_REBUILD:-0}" = "1" ]; then
+  echo "FULL_REBUILD=1: rebuilding baseline, short-term dynamic model, and calibration outputs."
+  run_python_module src.models.baseline_supply_demand
+  run_python_module src.models.dynamic_short_term
+  run_python_module src.calibration.calibrate_dynamic_model
+else
+  require_artifact "output/calibration/动态模型校准后路径.csv" \
+    "Run FULL_REBUILD=1 scripts/build/build_final_paper.sh, or run python3 -m src.calibration.calibrate_dynamic_model first."
+  require_artifact "output/calibration/动态模型最优参数.csv" \
+    "Run FULL_REBUILD=1 scripts/build/build_final_paper.sh, or run python3 -m src.calibration.calibrate_dynamic_model first."
+  require_artifact "output/calibration/动态模型分段误差.csv" \
+    "Run FULL_REBUILD=1 scripts/build/build_final_paper.sh, or run python3 -m src.calibration.calibrate_dynamic_model first."
+  require_artifact "output/calibration/动态模型候选参数前10.csv" \
+    "Run FULL_REBUILD=1 scripts/build/build_final_paper.sh, or run python3 -m src.calibration.calibrate_dynamic_model first."
+  require_artifact "figures/baseline_vs_actual.png" \
+    "Run FULL_REBUILD=1 scripts/build/build_final_paper.sh, or run python3 -m src.models.baseline_supply_demand first."
+fi
+
 "${PYTHON_BIN}" -m src.data.fetch_opec_balance
 "${PYTHON_BIN}" -m src.analysis.market_risk_variables
 "${PYTHON_BIN}" -m src.scenarios.scenario_forecast

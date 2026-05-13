@@ -221,7 +221,7 @@ def build_report(stress: pd.DataFrame, baseline_sensitivity: pd.DataFrame, hardc
         for row in hardcode.to_dict("records")
     )
 
-    return f"""# 短期模型致命质疑补充防御报告
+    return rf"""# 短期模型致命质疑补充防御报告
 
 ## 总体态度
 

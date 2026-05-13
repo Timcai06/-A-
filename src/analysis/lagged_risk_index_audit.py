@@ -279,7 +279,7 @@ def build_report(sample: pd.DataFrame, metrics: pd.DataFrame) -> str:
         f"| {row['指标']} | {float(row['数值']):.4f} | {row['解释']} |" for row in metrics.to_dict("records")
     )
 
-    return f"""# 滞后地缘风险指数审计报告
+    return rf"""# 滞后地缘风险指数审计报告
 
 ## 运行结论
 
