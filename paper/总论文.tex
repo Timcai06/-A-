@@ -22,6 +22,7 @@
 \usepackage{xcolor}
 \usepackage{listings}
 \usepackage{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage{microtype}
@@ -43,7 +44,17 @@
 \definecolor{OilRed}{HTML}{0095F2}
 \definecolor{OilBorder}{HTML}{CBD5E1}
 \definecolor{OilAmber}{HTML}{00CFAE}
-\definecolor{CodeBack}{HTML}{FAFAFA}
+\definecolor{CodeBack}{HTML}{FFFFFF}
+\definecolor{CodeText}{HTML}{24292F}
+\definecolor{CodeKeyword}{HTML}{0000FF}
+\definecolor{CodeString}{HTML}{A31515}
+\definecolor{CodeComment}{HTML}{008000}
+\definecolor{CodeNumber}{HTML}{6E7781}
+\definecolor{CodeBuiltin}{HTML}{267F99}
+\definecolor{CodeFunction}{HTML}{795E26}
+\definecolor{CodeConstant}{HTML}{AF00DB}
+\definecolor{CodeTitleBack}{HTML}{F6F8FA}
+\definecolor{CodeFrame}{HTML}{D0D7DE}
 
 \newtcblisting[auto counter]{paperlisting}[3]{
   enhanced,
@@ -51,9 +62,10 @@
   listing only,
   listing engine=listings,
   listing options={
-    basicstyle=\ttfamily\scriptsize,
+    language=#2,
+    basicstyle=\ttfamily\scriptsize\color{CodeText},
     numbers=left,
-    numberstyle=\tiny\color{OilGray},
+    numberstyle=\tiny\color{CodeNumber},
     numbersep=8pt,
     breaklines=true,
     breakatwhitespace=false,
@@ -61,23 +73,34 @@
     keepspaces=true,
     showstringspaces=false,
     tabsize=4,
-    frame=none
+    frame=none,
+    keywordstyle=\bfseries\color{CodeKeyword},
+    keywordstyle={[2]\color{CodeConstant}},
+    commentstyle=\color{CodeComment},
+    stringstyle=\color{CodeString},
+    identifierstyle=\color{CodeText},
+    emphstyle=\color{CodeBuiltin},
+    emphstyle={[2]\color{CodeFunction}},
+    morekeywords={return,with,as,from,import,def,class,for,while,if,elif,else,try,except,finally,lambda,yield,break,continue,mutate,filter,arrange,read_csv},
+    morekeywords={[2]self,True,False,None,TRUE,FALSE,NULL},
+    emph={pd,np,plt,sns,Path,DataFrame,Series},
+    emph={[2]differential_evolution,simulate_dynamic_model,evaluate_simulation,refine_with_continuous_search,decode_continuous_parameters,adaptive_spr_release,buffer_confirmation_discount,expectation_relief_discount,transition_probabilities,sample_next_state,simulate_path}
   },
   title={代码~\thetcbcounter\quad #3},
   label={#1},
   colback=CodeBack,
-  colframe=OilBorder,
-  colbacktitle=OilTint,
-  coltitle=OilBlue,
+  colframe=CodeFrame,
+  colbacktitle=CodeTitleBack,
+  coltitle=OilDark,
   fonttitle=\small\bfseries\sffamily,
-  coltext=OilDark,
-  boxrule=0.45pt,
-  arc=1.5pt,
-  outer arc=1.5pt,
-  left=1.8mm,
-  right=1.8mm,
-  top=1.2mm,
-  bottom=1.2mm,
+  coltext=CodeText,
+  boxrule=0.55pt,
+  arc=2pt,
+  outer arc=2pt,
+  left=2.2mm,
+  right=2.0mm,
+  top=1.5mm,
+  bottom=1.5mm,
   boxed title style={
     boxrule=0pt,
     arc=1.5pt,
@@ -99,6 +122,12 @@
   pdftitle={霍尔木兹海峡封锁对国际原油价格影响的动态建模与情景预测},
   pdfauthor={数学建模 A 题项目组}
 }
+\crefname{figure}{图}{图}
+\Crefname{figure}{图}{图}
+\crefname{table}{表}{表}
+\Crefname{table}{表}{表}
+\crefname{equation}{式}{式}
+\Crefname{equation}{式}{式}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -129,15 +158,15 @@
 \renewcommand{\textfraction}{0.08}
 \renewcommand{\floatpagefraction}{0.76}
 \captionsetup{
-  font=small,
-  labelfont={bf,color=OilBlue},
+  font=footnotesize,
+  labelfont={bf,color=OilDark},
   labelsep=quad,
-  justification=justified,
+  justification=raggedright,
   singlelinecheck=false,
-  width=0.92\linewidth
+  width=0.90\linewidth
 }
-\captionsetup[table]{position=top,skip=0.45em}
-\captionsetup[figure]{position=bottom,skip=0.5em}
+\captionsetup[table]{position=top,skip=0.4em}
+\captionsetup[figure]{position=bottom,skip=0.45em}
 \AtBeginEnvironment{tabular}{\small}
 \AtBeginEnvironment{tabularx}{\small}
 \AtBeginEnvironment{longtable}{\small}
@@ -222,11 +251,11 @@
 
 \input{paper/sections/05-传统供需基准模型}
 
-\input{paper/sections/06-综合机制递推模型}
+\input{paper/sections/06-短期冲击模型}
 
 \input{paper/sections/07-参数校准与模型检验}
 
-\input{paper/sections/08-三情景预测}
+\input{paper/sections/08-中长期油价调节模型}
 
 \input{paper/sections/09-敏感性分析}
 

@@ -80,6 +80,7 @@ fi
 "${PYTHON_BIN}" -m src.analysis.short_term_parameter_event_audit
 "${PYTHON_BIN}" -m src.analysis.short_term_ml_features
 "${PYTHON_BIN}" -m src.analysis.short_term_ml_residual_model
+"${PYTHON_BIN}" -m src.analysis.short_term_error_attribution
 "${PYTHON_BIN}" -m src.analysis.short_term_rolling_validation
 "${PYTHON_BIN}" -m src.analysis.short_term_final_quality_gate
 "${PYTHON_BIN}" -m src.experiments.run_model_suite
@@ -94,10 +95,10 @@ fi
 
 mkdir -p paper/figures
 if [ "${RENDER_MERMAID:-0}" = "1" ] && command -v mmdc >/dev/null 2>&1; then
-  mmdc -p paper/diagrams/puppeteer-config.json -i paper/diagrams/综合机制递推模型结构图.mmd -o paper/figures/综合机制递推模型结构图.png -b white -s 2 \
+  mmdc -p paper/diagrams/puppeteer-config.json -i paper/diagrams/短期冲击模型结构图.mmd -o paper/figures/短期冲击模型结构图.png -b white -s 2 \
     || echo "Mermaid mechanism diagram render failed; using existing rendered figure." >&2
-  mmdc -p paper/diagrams/puppeteer-config.json -i paper/diagrams/评审质疑防御框架图.mmd -o paper/figures/评审质疑防御框架图.png -b white -s 2 \
-    || echo "Mermaid defense diagram render failed; using existing rendered figure." >&2
+  mmdc -p paper/diagrams/puppeteer-config.json -i paper/diagrams/模型鲁棒性检验框架图.mmd -o paper/figures/模型鲁棒性检验框架图.png -b white -s 2 \
+    || echo "Mermaid robustness diagram render failed; using existing rendered figure." >&2
 elif [ "${RENDER_MERMAID:-0}" = "1" ]; then
   echo "mmdc not found; using existing Mermaid-rendered figures if present." >&2
 else
@@ -123,8 +124,8 @@ cp figures/R短期误差学术诊断.png paper/figures/R短期误差学术诊断
 cp figures/R长期状态转移扇形图.png paper/figures/R长期状态转移扇形图.png
 cp figures/R历史基准误差分布图.png paper/figures/R历史基准误差分布图.png
 cp figures/短期模型统计审计.png paper/figures/短期模型统计审计.png
+cp figures/短期模型误差归因.png paper/figures/短期模型误差归因.png
 cp output/candidate_figures/Python长期敏感性热力候选图.png paper/figures/长期敏感性扰动热力图.png
-cp output/candidate_figures/Python候选模型权衡气泡候选图.png paper/figures/候选模型权衡气泡图.png
 
 "${PYTHON_BIN}" -m src.analysis.paper_visual_audit
 

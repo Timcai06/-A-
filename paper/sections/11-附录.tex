@@ -3,33 +3,9 @@
 
 \keypoint{附录只保留复现路径、核心模型实现和关键检验代码。完整 Python/R 程序随项目文件提交，避免大段源码削弱论文主体可读性。}
 
-\subsection*{A 代码复现说明}
+\subsection*{A 项目材料说明}
 
-本文的建模、校验、绘图和论文生成均保存在同一项目目录中。Python 环境采用 \texttt{python=3.11}，主要依赖包括 \texttt{pandas}、\texttt{numpy}、\texttt{scipy}、\texttt{matplotlib}、\texttt{statsmodels}、\texttt{scikit-learn}、\texttt{plotly} 和 \texttt{pyyaml}。核心运行顺序如下。
-
-\begin{paperlisting}{lst:reproduce-flow}{python}{论文结果复现主流程}
-# 1. 清洗赛题附件数据
-python -m src.pipeline.clean_data
-
-# 2. 建立短期动态递推模型
-python -m src.models.dynamic_short_term
-
-# 3. 校准综合机制参数
-python -m src.calibration.calibrate_dynamic_model
-
-# 4. 生成 60--180 天三情景预测
-python -m src.scenarios.scenario_forecast
-
-# 5. 运行蒙特卡洛情景树与统计审计
-python -m src.analysis.monte_carlo_scenario_tree
-python -m src.analysis.statistical_audit
-
-# 6. 生成论文图表并构建最终论文
-python -m src.visualization.final_paper_figures
-./scripts/build_final_paper.sh
-\end{paperlisting}
-
-项目核心结构如下。未列出的缓存文件、临时渲染文件和历史实验文件不影响最终复现。
+本文的建模、校验、绘图和论文生成均保存在同一项目目录中。附录只列出与论文结果直接相关的核心目录和关键代码；完整程序、配置文件和中间结果随项目文件提交。项目核心结构如下。
 
 {\footnotesize
 \begin{verbatim}
@@ -37,7 +13,7 @@ python -m src.visualization.final_paper_figures
 |-- data/                 原始数据、清洗数据和外部校验数据
 |-- src/
 |   |-- pipeline/         数据清洗与校验
-|   |-- models/           传统供需基准与短期动态模型
+|   |-- models/           传统供需基准与短期冲击模型
 |   |-- calibration/      短期模型参数搜索与评价
 |   |-- scenarios/        60--180 天长期三情景预测
 |   |-- analysis/         敏感性、稳健性、GPR、OVX 与统计检验
@@ -52,11 +28,11 @@ python -m src.visualization.final_paper_figures
 
 本文真实价格数据只来自赛题附件，并经清洗后形成中文命名数据文件。短期拟合使用附件中 2026 年 3 月 3 日至 2026 年 5 月 5 日的冲突窗口；2017--2026 年完整价格序列仅用于历史同长度窗口、基准模型分布和事件极端性检验。EIA 周度 SPR、商业库存和原油产量数据、JODI 多国月度产量、库存、进出口、需求和炼厂数据、OPEC 全球供需平衡表、GPR 月度指数和 OVX 隐含波动率用于外部合理性校验，不反向替代附件真实价格。
 
-\subsection*{C 综合机制递推模型核心代码}
+\subsection*{C 短期冲击模型核心代码}
 
-代码~\ref{lst:dynamic-recursion} 展示短期综合机制递推模型的核心实现。模型逐日计算有效需求、有效供应、剩余缺口、风险溢价和缓冲折价，并由目标价格递推得到模拟价格。
+代码~\ref{lst:dynamic-recursion} 展示短期冲击模型的核心实现。模型逐日计算有效需求、有效供应、剩余缺口、风险溢价和缓冲折价，并由目标价格递推得到模拟价格。
 
-\begin{paperlisting}{lst:dynamic-recursion}{python}{综合机制递推模型核心实现}
+\begin{paperlisting}{lst:dynamic-recursion}{python}{短期冲击模型核心实现}
 def simulate_dynamic_model(event_df, assumptions, behavior):
     base_price = float(event_df.iloc[0]["pre_close"])
     previous_price = base_price
@@ -171,11 +147,11 @@ def calibrate(event_df, base_assumptions):
     return select_representative_candidates(rows, simulations, final)
 \end{paperlisting}
 
-\subsection*{E 长期情景递推与政策缓冲}
+\subsection*{E 中长期油价调节模型递推与政策缓冲}
 
 代码~\ref{lst:future-recursion} 展示长期外推中 SPR 自适应释放与供需再平衡的处理。该模块避免把战略储备释放机械设为满额，而是根据剩余缺口、价格压力和时间衰减动态收缩释放强度。
 
-\begin{paperlisting}{lst:future-recursion}{python}{长期情景递推中的 SPR 自适应释放}
+\begin{paperlisting}{lst:future-recursion}{python}{中长期油价调节模型中的 SPR 自适应释放}
 def adaptive_spr_release(day_index, scheduled_spr, gross_gap_before_spr,
                          previous_price, base_price, assumptions):
     if scheduled_spr <= 0:
@@ -204,7 +180,82 @@ def adaptive_spr_release(day_index, scheduled_spr, gross_gap_before_spr,
     return actual_release, actual_release / scheduled_spr
 \end{paperlisting}
 
-\subsection*{F 蒙特卡洛情景预测}
+\subsection*{F 长期状态转移递推}
+
+代码~\ref{lst:state-transition-probability} 展示长期预测中状态转移概率的递推方式。基础矩阵先给出缓和、维持、升级三类状态之间的常规切换概率，再由 GPR 和 OVX 形成的综合风险压力对升级概率进行温和修正，并在后期加入风险缓和项。
+
+\begin{paperlisting}{lst:state-transition-probability}{python}{长期状态转移概率递推}
+def transition_probabilities(current_state, day_index, risk_constraints):
+    probs = TRANSITION_MATRIX[STATE_INDEX[current_state]].copy()
+
+    # GPR/OVX 风险主要影响外推早中期；随封锁持续和缓冲证据积累而衰减
+    early_risk_decay = np.clip(1.0 - max(day_index - 60, 0) / 140.0,
+                               0.18, 1.0)
+    risk_shift = risk_constraints.combined_pressure * early_risk_decay
+    probs[STATE_INDEX["escalation"]] += 0.020 * risk_shift
+    probs[STATE_INDEX["easing"]] -= 0.014 * risk_shift
+
+    if current_state == "escalation":
+        probs[STATE_INDEX["escalation"]] += 0.010 * risk_shift
+        probs[STATE_INDEX["neutral"]] -= 0.004 * risk_shift
+    elif current_state == "easing":
+        probs[STATE_INDEX["neutral"]] += 0.006 * risk_shift
+
+    # 后期政策缓冲和替代运输逐渐被市场确认，状态概率向缓和侧移动
+    if day_index >= 120:
+        probs[STATE_INDEX["easing"]] += 0.04
+        probs[STATE_INDEX["escalation"]] -= 0.04
+    if day_index >= 150:
+        probs[STATE_INDEX["easing"]] += 0.03
+        probs[STATE_INDEX["neutral"]] -= 0.02
+        probs[STATE_INDEX["escalation"]] -= 0.01
+
+    probs = np.clip(probs, 0.01, 0.98)
+    return probs / probs.sum()
+\end{paperlisting}
+
+代码~\ref{lst:state-transition-path} 展示状态转移路径的价格递推。每条样本路径先抽取下一期市场状态，再根据状态选择对应中心情景，并叠加历史波动率约束下的扰动和状态切换跳跃，由此得到长期条件区间和尾部风险。
+
+\begin{paperlisting}{lst:state-transition-path}{python}{状态转移路径价格递推}
+def simulate_path(rng, sample_id, centers, start_price, daily_sigma,
+                  transition_jump_sigma_scale, risk_constraints):
+    state = "neutral"
+    previous_price = start_price
+    previous_noise = 0.0
+    rows = []
+    dates = centers["neutral"][["day_index", "trade_date"]]
+
+    for _, base_row in dates.iterrows():
+        day_index = int(base_row["day_index"])
+        next_state = sample_next_state(rng, state, day_index, risk_constraints)
+        spec = STATES[STATE_INDEX[next_state]]
+        center_row = centers[spec.center_scenario]
+        target_price = float(center_row.loc[
+            center_row["day_index"] == day_index, "forecast_price"
+        ].iloc[0])
+
+        noise_scale = max(previous_price * daily_sigma
+                          * spec.volatility_multiplier, 0.15)
+        innovation = rng.normal(0.0, noise_scale)
+        previous_noise = 0.30 * previous_noise + innovation
+        transition_jump = 0.0
+        if next_state != state:
+            transition_jump = rng.normal(spec.transition_jump_mean,
+                                         spec.transition_jump_sigma
+                                         * transition_jump_sigma_scale)
+
+        price = 0.82 * previous_price + 0.18 * target_price
+        price = np.clip(price + previous_noise + transition_jump, 70.0, 145.0)
+        rows.append({"sample_id": sample_id, "day_index": day_index,
+                     "trade_date": base_row["trade_date"], "状态": spec.label,
+                     "forecast_price": price})
+        state = next_state
+        previous_price = price
+
+    return pd.DataFrame(rows)
+\end{paperlisting}
+
+\subsection*{G 蒙特卡洛情景预测}
 
 代码~\ref{lst:monte-carlo} 展示长期蒙特卡洛情景树的核心思想。模型以压力指数为主轴，同时扰动供应中断、SPR 释放、绕道能力、需求弹性、风险权重和不确定性溢价，由此得到长期价格区间和尾部风险概率。
 
@@ -254,7 +305,7 @@ def run_monte_carlo(n_samples):
     return metrics, build_quantiles(paths), build_tail_risk(metrics)
 \end{paperlisting}
 
-\subsection*{G 机制消融与统计检验}
+\subsection*{H 机制消融与统计检验}
 
 代码~\ref{lst:ablation} 用于逐项关闭模型机制，检验主结论是否依赖某一个单独设定。若去除风险溢价、缓冲折价或预期修复后误差显著上升，则说明这些机制对解释价格平台具有实质贡献。
 
@@ -286,7 +337,7 @@ def run_ablation(event_df, base_assumptions, base_behavior):
     return pd.DataFrame(rows)
 \end{paperlisting}
 
-\subsection*{H 关键结果核查表}
+\subsection*{I 关键结果核查表}
 
 \begin{table}[htbp]
 \centering
@@ -308,41 +359,9 @@ def run_ablation(event_df, base_assumptions, base_behavior):
 \end{tabularx}
 \end{table}
 
-\subsection*{I 一键构建与独立审计补充}
+\subsection*{J 独立计量检验补充}
 
-代码~\ref{lst:build-pipeline} 展示最终论文的自动构建入口。该脚本将数据清洗、外部数据校验、情景预测、敏感性分析、蒙特卡洛、统计审计、图表生成和 PDF/DOCX 导出串联为统一流水线，用于避免手工复制结果造成口径不一致。
-
-\begin{paperlisting}{lst:build-pipeline}{bash}{最终论文一键复现脚本核心流程}
-#!/usr/bin/env bash
-set -euo pipefail
-
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-cd "${ROOT_DIR}"
-
-if [ -x /opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3 ]; then
-  PYTHON_BIN="/opt/homebrew/Caskroom/miniconda/base/envs/mathmodel-oil/bin/python3"
-else
-  PYTHON_BIN="python3"
-fi
-
-require_artifact "output/calibration/动态模型校准后路径.csv" "Run FULL_REBUILD=1 first."
-
-"${PYTHON_BIN}" -m src.pipeline.clean_data
-"${PYTHON_BIN}" -m src.scenarios.scenario_forecast
-"${PYTHON_BIN}" -m src.analysis.sensitivity_analysis
-"${PYTHON_BIN}" -m src.analysis.monte_carlo_scenario_tree
-"${PYTHON_BIN}" -m src.analysis.statistical_audit
-"${PYTHON_BIN}" -m src.visualization.final_paper_figures
-
-if command -v Rscript >/dev/null 2>&1; then
-  Rscript scripts/audit/r_econometric_audit.R || true
-fi
-
-xelatex -shell-escape -interaction=nonstopmode -halt-on-error -output-directory=output/build/latex paper/总论文.tex
-pandoc --from=latex --to=docx --toc --output=output/final/论文.docx paper/总论文.tex
-\end{paperlisting}
-
-代码~\ref{lst:r-audit} 给出 R 语言独立计量审计的核心逻辑。Python 负责机制递推和情景生成，R 侧用于复核主模型相对朴素基准的误差优势、残差相关性和稳健标准误结果，从而降低单一语言实现自证的风险。
+代码~\ref{lst:r-audit} 给出 R 语言独立计量检验的核心逻辑。Python 负责机制递推和情景生成，R 侧用于复核主模型相对朴素基准的误差优势、残差相关性和稳健标准误结果，从而降低单一实现口径带来的偏差风险。
 
 \begin{paperlisting}{lst:r-audit}{r}{R 语言计量审计核心代码}
 model_df <- read_csv(calibrated_path, show_col_types = FALSE) %>%
@@ -402,6 +421,6 @@ SENSITIVITY_SPECS = [
 ]
 \end{paperlisting}
 
-\subsection*{J 程序材料说明}
+\subsection*{K 程序材料说明}
 
-本文不在正文附录中展开完整 Python 或 R 源代码。原因是完整源程序较长，直接粘贴会削弱论文主体的可读性；同时，数学建模论文更应突出模型假设、递推公式、参数解释和结果检验。若比赛提交系统要求源程序，完整代码可作为独立附件提交，正文附录仅保留复现路径、核心算法代码和关键结果核查。
+本文附录只列出项目关键目录和少量核心程序片段，用于说明数据、模型、图表和论文生成材料的组织方式。完整 Python、R 与构建脚本随项目文件一并提交，不在论文附录中整段展开。
