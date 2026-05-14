@@ -70,6 +70,7 @@ fi
 "${PYTHON_BIN}" -m src.analysis.calibration_weight_sensitivity
 "${PYTHON_BIN}" -m src.analysis.historical_volatility_calibration
 "${PYTHON_BIN}" -m src.analysis.monte_carlo_scenario_tree
+"${PYTHON_BIN}" -m src.analysis.long_term_historical_state_calibration
 "${PYTHON_BIN}" -m src.analysis.long_term_state_transition
 "${PYTHON_BIN}" -m src.analysis.lagged_risk_index_audit
 "${PYTHON_BIN}" -m src.analysis.historical_robustness_audit

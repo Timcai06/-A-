@@ -35,8 +35,12 @@ STATE_RISK_CONSTRAINT_CSV = OUTPUT_DIR / "长期状态转移风险约束.csv"
 STATE_TRANSITION_MATRIX_CSV = OUTPUT_DIR / "长期状态转移基础矩阵.csv"
 STATE_TRANSITION_SNAPSHOT_CSV = OUTPUT_DIR / "长期状态转移时变矩阵快照.csv"
 STATE_RISK_ABLATION_CSV = OUTPUT_DIR / "长期状态转移风险约束消融.csv"
+HISTORICAL_STATE_MATRIX_CSV = OUTPUT_DIR / "长期历史状态转移校准矩阵.csv"
 REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "长期状态转移预测增强报告.md"
 FAN_FIGURE = PROJECT_ROOT / "figures" / "long_term_state_transition_fan.png"
+TRANSITION_MATRIX_POLICY = "历史全样本矩阵"
+TRANSITION_RISK_SCALE = 0.75
+LATE_EASING_SCALE = 0.75
 
 
 @dataclass(frozen=True)
@@ -66,8 +70,9 @@ STATES: tuple[StateSpec, ...] = (
     StateSpec("escalation", "升级", "pessimistic", 1.05, 0.75, 0.45),
 )
 STATE_INDEX = {spec.state: i for i, spec in enumerate(STATES)}
+STATE_LABELS = [spec.label for spec in STATES]
 
-TRANSITION_MATRIX = np.array(
+DEFAULT_TRANSITION_MATRIX = np.array(
     [
         [0.90, 0.09, 0.01],
         [0.16, 0.78, 0.06],
@@ -78,6 +83,35 @@ TRANSITION_MATRIX = np.array(
 
 MARKER_DAYS = [90, 120, 150, 180]
 MATRIX_SNAPSHOT_DAYS = [60, 90, 120, 150, 180]
+
+
+def load_transition_matrix() -> tuple[np.ndarray, str]:
+    """Load the official state matrix, falling back to the original prior."""
+    if not HISTORICAL_STATE_MATRIX_CSV.exists():
+        return DEFAULT_TRANSITION_MATRIX.copy(), "原始人工基础矩阵（未找到历史校准矩阵）"
+
+    frame = pd.read_csv(HISTORICAL_STATE_MATRIX_CSV)
+    required = {"矩阵", "当前状态", "转为缓和", "转为维持", "转为升级"}
+    if not required.issubset(frame.columns):
+        return DEFAULT_TRANSITION_MATRIX.copy(), "原始人工基础矩阵（历史校准矩阵字段不完整）"
+
+    selected = frame[frame["矩阵"].astype(str) == TRANSITION_MATRIX_POLICY].copy()
+    if selected.empty:
+        return DEFAULT_TRANSITION_MATRIX.copy(), f"原始人工基础矩阵（未找到{TRANSITION_MATRIX_POLICY}）"
+
+    selected = selected.set_index("当前状态").reindex(STATE_LABELS)
+    matrix = selected[["转为缓和", "转为维持", "转为升级"]].apply(pd.to_numeric, errors="coerce").to_numpy()
+    if matrix.shape != DEFAULT_TRANSITION_MATRIX.shape or np.isnan(matrix).any():
+        return DEFAULT_TRANSITION_MATRIX.copy(), "原始人工基础矩阵（历史校准矩阵含缺失值）"
+
+    for idx, row_sum in enumerate(matrix.sum(axis=1)):
+        if row_sum <= 0:
+            matrix[idx] = DEFAULT_TRANSITION_MATRIX[idx]
+    matrix = matrix / matrix.sum(axis=1, keepdims=True)
+    return matrix, f"{TRANSITION_MATRIX_POLICY}（2017-2025历史价格状态转移校准）"
+
+
+TRANSITION_MATRIX, TRANSITION_MATRIX_SOURCE = load_transition_matrix()
 
 
 def _load_metric_frame(path: Path) -> pd.DataFrame:
@@ -151,9 +185,11 @@ def write_state_risk_constraints(constraints: StateRiskConstraints) -> None:
 
 def write_transition_matrix() -> None:
     ensure_parent(STATE_TRANSITION_MATRIX_CSV)
-    labels = [spec.label for spec in STATES]
-    frame = pd.DataFrame(TRANSITION_MATRIX, columns=[f"转为{label}" for label in labels])
-    frame.insert(0, "当前状态", labels)
+    frame = pd.DataFrame(TRANSITION_MATRIX, columns=[f"转为{label}" for label in STATE_LABELS])
+    frame.insert(0, "当前状态", STATE_LABELS)
+    frame.insert(0, "矩阵来源", TRANSITION_MATRIX_SOURCE)
+    frame["风险扰动倍率"] = TRANSITION_RISK_SCALE
+    frame["后期缓和倍率"] = LATE_EASING_SCALE
     frame.to_csv(STATE_TRANSITION_MATRIX_CSV, index=False)
 
 
@@ -168,32 +204,30 @@ def transition_probabilities(
     # Market-priced and geopolitical risk should mostly affect the early and
     # middle extrapolation window. The effect decays as the blockade persists
     # and physical recovery evidence accumulates.
-    early_risk_decay = float(np.clip(1.0 - max(day_index - 60, 0) / 140.0, 0.18, 1.0))
-    risk_shift = risk_constraints.combined_pressure * early_risk_decay
-    escalation_boost = 0.020 * risk_shift
-    easing_discount = 0.014 * risk_shift
+    early_risk_decay = float(np.clip(1.0 - max(day_index - 60, 0) / 150.0, 0.25, 1.0))
+    risk_shift = risk_constraints.combined_pressure * early_risk_decay * TRANSITION_RISK_SCALE
+    escalation_boost = 0.014 * risk_shift
+    easing_discount = 0.010 * risk_shift
     probs[STATE_INDEX["escalation"]] += escalation_boost
     probs[STATE_INDEX["easing"]] -= easing_discount
     if current_state == "escalation":
-        probs[STATE_INDEX["escalation"]] += 0.010 * risk_shift
-        probs[STATE_INDEX["neutral"]] -= 0.004 * risk_shift
+        probs[STATE_INDEX["escalation"]] += 0.006 * risk_shift
     elif current_state == "easing":
-        probs[STATE_INDEX["neutral"]] += 0.006 * risk_shift
+        probs[STATE_INDEX["neutral"]] += 0.004 * risk_shift
 
     if day_index >= 120:
-        probs[STATE_INDEX["easing"]] += 0.04
-        probs[STATE_INDEX["escalation"]] -= 0.04
+        probs[STATE_INDEX["easing"]] += 0.04 * LATE_EASING_SCALE
+        probs[STATE_INDEX["escalation"]] -= 0.04 * LATE_EASING_SCALE
     if day_index >= 150:
-        probs[STATE_INDEX["easing"]] += 0.03
-        probs[STATE_INDEX["neutral"]] -= 0.02
-        probs[STATE_INDEX["escalation"]] -= 0.01
+        probs[STATE_INDEX["easing"]] += 0.03 * LATE_EASING_SCALE
+        probs[STATE_INDEX["neutral"]] -= 0.02 * LATE_EASING_SCALE
+        probs[STATE_INDEX["escalation"]] -= 0.01 * LATE_EASING_SCALE
     probs = np.clip(probs, 0.01, 0.98)
     return probs / probs.sum()
 
 
 def build_transition_snapshots(risk_constraints: StateRiskConstraints) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
-    labels = [spec.label for spec in STATES]
     for day in MATRIX_SNAPSHOT_DAYS:
         for spec in STATES:
             probs = transition_probabilities(spec.state, day, risk_constraints)
@@ -205,10 +239,10 @@ def build_transition_snapshots(risk_constraints: StateRiskConstraints) -> pd.Dat
                     "转为维持": float(probs[1]),
                     "转为升级": float(probs[2]),
                     "综合状态转移压力": risk_constraints.combined_pressure,
-                    "说明": "已加入GPR/OVX压力、时间衰减和后期缓和修正",
+                    "说明": f"{TRANSITION_MATRIX_SOURCE}，已加入GPR/OVX温和扰动和后期缓和修正",
                 }
             )
-    return pd.DataFrame(rows, columns=["day_index", "当前状态", *[f"转为{label}" for label in labels], "综合状态转移压力", "说明"])
+    return pd.DataFrame(rows, columns=["day_index", "当前状态", *[f"转为{label}" for label in STATE_LABELS], "综合状态转移压力", "说明"])
 
 
 def write_transition_snapshots(risk_constraints: StateRiskConstraints) -> pd.DataFrame:
@@ -433,6 +467,15 @@ def build_report(
 ) -> str:
     final_q = quantiles[quantiles["day_index"] == 180].iloc[0]
     peak_p95 = float(metrics["外推期最高价"].quantile(0.95))
+    base_matrix_rows = "\n".join(
+        "| {state} | {easing:.3f} | {neutral:.3f} | {escalation:.3f} |".format(
+            state=STATE_LABELS[idx],
+            easing=float(TRANSITION_MATRIX[idx, STATE_INDEX["easing"]]),
+            neutral=float(TRANSITION_MATRIX[idx, STATE_INDEX["neutral"]]),
+            escalation=float(TRANSITION_MATRIX[idx, STATE_INDEX["escalation"]]),
+        )
+        for idx in range(len(STATE_LABELS))
+    )
     neutral_rows = transition_snapshots[transition_snapshots["当前状态"] == "维持"]
     neutral_snapshot = "\n".join(
         "| {day} | {easing:.3f} | {neutral:.3f} | {escalation:.3f} |".format(
@@ -459,7 +502,7 @@ def build_report(
 
 本增强模型不替代三情景物理中心路径，而是在其上加入缓和、维持、升级三类状态的马尔可夫切换，并用附件历史价格估计日度波动扰动。它回答的是：如果未来事件状态会切换，长期价格可能围绕中心路径怎样波动。
 
-本轮使用 {len(metrics)} 条状态转移样本，日度扰动波动率由附件历史数据校准为 {daily_sigma:.4f}，状态切换跳变标准差乘数为 {transition_jump_sigma_scale:.2f}。状态转移概率进一步受到 GPR/OVX 风险约束，综合状态转移压力为 {risk_constraints.combined_pressure:.3f}。第 180 天价格中位数为 {final_q["p50"]:.2f} 美元/桶，5%-95% 区间为 {final_q["p05"]:.2f}--{final_q["p95"]:.2f} 美元/桶；外推期最高价 P95 为 {peak_p95:.2f} 美元/桶。突破 120 美元/桶的条件概率为 {metrics["突破120"].mean():.1%}，突破 130 美元/桶的条件概率为 {metrics["突破130"].mean():.1%}。
+本轮使用 {len(metrics)} 条状态转移样本，日度扰动波动率由附件历史数据校准为 {daily_sigma:.4f}，状态切换跳变标准差乘数为 {transition_jump_sigma_scale:.2f}。基础转移矩阵采用 {TRANSITION_MATRIX_SOURCE}，并进一步受到 GPR/OVX 风险约束，综合状态转移压力为 {risk_constraints.combined_pressure:.3f}。第 180 天价格中位数为 {final_q["p50"]:.2f} 美元/桶，5%-95% 区间为 {final_q["p05"]:.2f}--{final_q["p95"]:.2f} 美元/桶；外推期最高价 P95 为 {peak_p95:.2f} 美元/桶。突破 120 美元/桶的条件概率为 {metrics["突破120"].mean():.1%}，突破 130 美元/桶的条件概率为 {metrics["突破130"].mean():.1%}。
 
 ## 风险约束来源
 
@@ -472,15 +515,13 @@ def build_report(
 
 ## 基础转移矩阵
 
-行、列顺序均为“缓和、维持、升级”。基础矩阵为：
+行、列顺序均为“缓和、维持、升级”。本轮基础矩阵来源为：{TRANSITION_MATRIX_SOURCE}。
 
 | 当前状态 | 转为缓和 | 转为维持 | 转为升级 |
 |---|---:|---:|---:|
-| 缓和 | 0.90 | 0.09 | 0.01 |
-| 维持 | 0.16 | 0.78 | 0.06 |
-| 升级 | 0.07 | 0.24 | 0.69 |
+{base_matrix_rows}
 
-GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率，并在第 120 天和第 150 天后逐步提高缓和概率。所有行在扰动后重新归一化，因此每一日转移概率仍为合法概率分布。
+GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率，扰动倍率为 {TRANSITION_RISK_SCALE:.2f}；第 120 天和第 150 天后仍有缓和修正，但修正倍率降为 {LATE_EASING_SCALE:.2f}。所有行在扰动后重新归一化，因此每一日转移概率仍为合法概率分布。
 
 ## 时变转移矩阵快照
 
@@ -558,8 +599,8 @@ def build_risk_constraint_ablation(current_constraints: StateRiskConstraints) ->
         evidence_note="消融设定：保留基础转移矩阵和历史波动扰动，但不加入GPR/OVX风险压力。"
     )
     settings = [
-        ("仅基础矩阵", no_risk_constraints),
-        ("基础矩阵+GPR/OVX风险约束", current_constraints),
+        ("历史基础矩阵", no_risk_constraints),
+        ("历史基础矩阵+GPR/OVX风险约束", current_constraints),
     ]
     rows: list[dict[str, Any]] = []
     for label, constraints in settings:

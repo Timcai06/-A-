@@ -30,7 +30,7 @@
 
 \subsection*{C 短期冲击模型核心代码}
 
-代码~\ref{lst:dynamic-recursion} 展示短期冲击模型的核心实现。模型逐日计算有效需求、有效供应、剩余缺口、风险溢价和缓冲折价，并由目标价格递推得到模拟价格。
+代码~\ref{lst:dynamic-recursion} 展示短期冲击模型的核心实现。
 
 \begin{paperlisting}{lst:dynamic-recursion}{python}{短期冲击模型核心实现}
 def simulate_dynamic_model(event_df, assumptions, behavior):
@@ -100,7 +100,7 @@ def simulate_dynamic_model(event_df, assumptions, behavior):
 
 \subsection*{D 参数校准模块}
 
-代码~\ref{lst:calibration} 给出参数校准流程。本文不是手工指定最优参数，而是在固定机制结构下，综合使用差分进化、局部稳定性搜索和拟合质量精修选择代表性参数。
+代码~\ref{lst:calibration} 给出参数校准流程。本文在固定机制结构下，综合使用差分进化、局部稳定性搜索和拟合质量精修选择代表性参数。
 
 \begin{paperlisting}{lst:calibration}{python}{参数校准与局部稳健性搜索}
 def refine_with_continuous_search(event_df, base_assumptions):
@@ -307,7 +307,7 @@ def run_monte_carlo(n_samples):
 
 \subsection*{H 机制消融与统计检验}
 
-代码~\ref{lst:ablation} 用于逐项关闭模型机制，检验主结论是否依赖某一个单独设定。若去除风险溢价、缓冲折价或预期修复后误差显著上升，则说明这些机制对解释价格平台具有实质贡献。
+代码~\ref{lst:ablation} 用于逐项关闭模型机制，检验主结论是否依赖某一个单独设定。
 
 \begin{paperlisting}{lst:ablation}{python}{机制消融实验设计}
 VARIANTS = [
@@ -351,9 +351,9 @@ def run_ablation(event_df, base_assumptions, base_behavior):
 短期拟合误差 & RMSE = 3.38 美元/桶，MAE = 2.76 美元/桶，MAPE = 2.76\% \\
 峰值误差 & 模拟峰值 110.42 美元/桶，实际最高收盘价 114.06 美元/桶 \\
 基准对比 & 主模型优于朴素上一日基准和滚动 ARIMA 基准 \\
-长期中性结果 & 第 180 天价格约 94.15 美元/桶 \\
-长期悲观结果 & 第 180 天价格约 110.16 美元/桶，外推期保留二次跳涨风险 \\
-尾部风险 & 蒙特卡洛显示外推期最高价突破 120 美元/桶的条件概率约 16.3\% \\
+长期中性结果 & 第 180 天价格约 91.37 美元/桶 \\
+长期悲观结果 & 第 180 天价格约 107.89 美元/桶，外推期保留二次跳涨风险 \\
+尾部风险 & 历史状态转移矩阵与 GPR/OVX 约束显示外推期最高价突破 120 美元/桶的条件概率约 49.4\% \\
 最敏感因素 & 封锁风险衰减速度、地缘风险权重、不确定性与制度风险强度 \\
 \bottomrule
 \end{tabularx}
@@ -396,7 +396,7 @@ lb_sq_5 <- Box.test(model_error^2, lag = 5, type = "Ljung-Box")
 arch_test <- FinTS::ArchTest(model_error, lags = 5)
 \end{paperlisting}
 
-代码~\ref{lst:sensitivity-specs} 展示敏感性分析的扰动设置。扰动对象覆盖题面物理层、政策缓冲层、需求层、行为层和长期机制透明层，用于说明本文的稳健性检验不是只改变单个便利参数，而是围绕主要不确定来源系统展开。
+代码~\ref{lst:sensitivity-specs} 展示敏感性分析的扰动设置。扰动对象覆盖题面物理层、政策缓冲层、需求层、行为层和长期机制透明层
 
 \begin{paperlisting}{lst:sensitivity-specs}{python}{敏感性分析扰动参数设置}
 SENSITIVITY_SPECS = [
@@ -423,4 +423,4 @@ SENSITIVITY_SPECS = [
 
 \subsection*{K 程序材料说明}
 
-本文附录只列出项目关键目录和少量核心程序片段，用于说明数据、模型、图表和论文生成材料的组织方式。完整 Python、R 与构建脚本随项目文件一并提交，不在论文附录中整段展开。
+本文附录只列出项目关键目录和少量核心程序片段，用于说明数据、模型、图表和论文生成材料的组织方式。
