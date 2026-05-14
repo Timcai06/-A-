@@ -27,7 +27,18 @@ roles:
   band_outer: "band_light"
   band_inner: "band_mid"
 
+typography:
+  title_size: 13
+  axis_label_size: 10
+  tick_size: 9
+  legend_size: 8.5
+  annotation_size: 9
+  legend_frame: false
+  legend_alpha: 0.0
+  legend_border_alpha: 0.35
+
 usage_notes:
   - "真实价格保持深灰黑，保证论文可读性。"
   - "亮绿色只用于重点高亮或缓冲机制，不大面积铺底。"
   - "悲观与风险用深蓝/天蓝并配合虚线、阈值线和文字标注区分，避免整篇图表过度红色化。"
+  - "图例比坐标轴标签小一号，默认不加边框；必要时使用弱边框和白底，避免压过正文和曲线。"

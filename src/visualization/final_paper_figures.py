@@ -15,7 +15,7 @@ PAPER_FIGURES_DIR = PROJECT_ROOT / "paper" / "figures"
 
 def configure_plot_style() -> None:
     apply_plot_style(savefig_dpi=280, figure_dpi=150, title_size=14)
-    plt.rcParams.update({"axes.labelsize": 11, "xtick.labelsize": 9, "ytick.labelsize": 9})
+    plt.rcParams.update({"axes.labelsize": 11, "xtick.labelsize": 9, "ytick.labelsize": 9, "legend.fontsize": 8.5})
 
 
 def load_frames() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -134,7 +134,7 @@ def save_integrated_forecast_figure(short_term: pd.DataFrame, scenarios: pd.Data
         dy=12,
         size=9.2,
     )
-    ax.legend(loc="lower left", ncol=2, frameon=True)
+    ax.legend(loc="lower left", ncol=2, frameon=False)
     fig.autofmt_xdate()
     fig.tight_layout()
     fig.savefig(path)
@@ -153,7 +153,7 @@ def save_method_route_figure() -> Path:
         ("附件数据清洗", "统一日期、价格口径\n截取冲突窗口", 0.65, 4.65, PAPER_COLORS["band_light"], PAPER_COLORS["sky"]),
         ("传统供需基准", "低短期弹性\n估计反事实上界", 3.10, 4.65, "#f8fafc", PAPER_COLORS["muted"]),
         ("短期动态递推", "SPR、库存、绕道\n恐慌与预期修复", 5.55, 4.65, "#E8FFF8", PAPER_COLORS["teal"]),
-        ("模型检验防御", "基准对比、滞后检验\n消融与压力测试", 8.00, 4.65, "#E8FBFF", PAPER_COLORS["blue"]),
+        ("模型稳健检验", "基准对比、滞后检验\n消融与压力测试", 8.00, 4.65, "#E8FBFF", PAPER_COLORS["blue"]),
         ("长期情景预测", "60-180 天\n乐观/中性/悲观", 3.10, 1.55, "#EAF7FF", PAPER_COLORS["cyan"]),
         ("敏感性分析", "识别关键参数\n解释政策含义", 5.55, 1.55, "#ECFFF1", PAPER_COLORS["green"]),
         ("最终结论", "短期平台机制\n长期尾部风险", 8.00, 1.55, "#F4FFE8", PAPER_COLORS["lime"]),
@@ -209,7 +209,7 @@ def save_method_route_figure() -> Path:
     ax.text(
         6,
         0.72,
-        "检验逻辑贯穿全流程：不编造数据、不把未来当拟合、不把价格平台写成硬编码上限",
+        "检验逻辑贯穿全流程：真实价格来自附件，长期结果以情景区间和尾部风险表达",
         ha="center",
         va="center",
         fontsize=11.5,

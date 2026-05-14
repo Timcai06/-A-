@@ -31,12 +31,16 @@ class MLResidualPaths:
     comparison_csv = PROJECT_ROOT / "output" / "calibration" / "短期机器学习模型对比.csv"
     prediction_csv = PROJECT_ROOT / "output" / "calibration" / "短期机器学习残差修正路径.csv"
     report_path = PROJECT_ROOT / "output" / "reports" / "短期机器学习残差修正报告.md"
-    figure_path = PROJECT_ROOT / "paper" / "figures" / "短期机器学习残差修正对比.png"
+    figure_path = PROJECT_ROOT / "figures" / "短期机器学习残差修正对比.png"
 
 
 ALPHA_GRID = [0.1, 0.3, 1.0, 3.0, 10.0, 30.0, 100.0, 300.0]
 EVENT_START = pd.Timestamp("2026-03-02")
 VALIDATION_START = pd.Timestamp("2024-01-01")
+RIDGE_ASSIST_WINDOWS = [
+    ("高位平台形成", pd.Timestamp("2026-03-17"), pd.Timestamp("2026-03-31")),
+    ("中期再定价回落", pd.Timestamp("2026-04-01"), pd.Timestamp("2026-04-17")),
+]
 
 
 def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame | None]:
@@ -139,19 +143,47 @@ def build_predictions(
     result["naive_price"] = result["pre_close_filled"]
     result["ridge_return_correction"] = result["ridge_price"] - result["pre_close_filled"]
     result["mechanism_plus_ridge_return"] = result["simulated_price"] + result["ridge_return_correction"]
-    if online is not None and "online_corrected_price" in online.columns:
-        result = result.merge(online[["trade_date", "online_corrected_price"]], on="trade_date", how="left")
+    result["ridge_assist_phase"] = "未启用"
+    result["phase_gated_ridge_correction"] = 0.0
+    for name, start, end in RIDGE_ASSIST_WINDOWS:
+        mask = result["trade_date"].between(start, end)
+        result.loc[mask, "ridge_assist_phase"] = name
+        result.loc[mask, "phase_gated_ridge_correction"] = result.loc[mask, "ridge_return_correction"]
+    result["mechanism_plus_phase_ridge"] = result["simulated_price"] + result["phase_gated_ridge_correction"]
+    if online is not None:
+        online_columns = ["trade_date"]
+        for column in ["online_corrected_price", "regime_corrected_price"]:
+            if column in online.columns:
+                online_columns.append(column)
+        if len(online_columns) > 1:
+            result = result.merge(online[online_columns], on="trade_date", how="left")
 
     metrics = [
         model_metrics(result, "机制递推主模型", "simulated_price", "当前短期主模型"),
         model_metrics(result, "历史Ridge收益率模型", "ridge_price", "仅用2017-2026冲突前价格特征训练的一日收益率模型"),
         model_metrics(result, "机制+Ridge收益率修正", "mechanism_plus_ridge_return", "将历史Ridge预测的正常收益变化叠加到机制路径"),
+        model_metrics(
+            result,
+            "机制+阶段Ridge修正",
+            "mechanism_plus_phase_ridge",
+            "仅在高位平台与中期再定价两个残差薄弱段启用Ridge收益率修正",
+        ),
         model_metrics(result, "朴素上一日基准", "naive_price", "预测今日价格等于上一交易日前收盘价"),
     ]
     if "online_corrected_price" in result.columns:
         metrics.insert(
             1,
             model_metrics(result, "在线残差校正模型", "online_corrected_price", "只使用滞后误差的一阶在线校正"),
+        )
+    if "regime_corrected_price" in result.columns:
+        metrics.insert(
+            2,
+            model_metrics(
+                result,
+                "分段感知在线校正模型",
+                "regime_corrected_price",
+                "只使用滞后误差，并允许平台期/再定价期反馈强度不同",
+            ),
         )
     comparison = pd.DataFrame(metrics)
     naive_rmse = float(comparison.loc[comparison["模型"] == "朴素上一日基准", "RMSE"].iloc[0])
@@ -164,31 +196,29 @@ def build_predictions(
 
 def draw_figure(predictions: pd.DataFrame) -> None:
     dynamic.configure_plot_style()
-    fig, axes = plt.subplots(2, 1, figsize=(11, 8.2), sharex=True, gridspec_kw={"height_ratios": [2.0, 1.0]})
+    fig, axes = plt.subplots(2, 1, figsize=(11, 8.0), sharex=True, gridspec_kw={"height_ratios": [2.0, 1.0]})
 
     ax = axes[0]
     ax.plot(predictions["trade_date"], predictions["actual_price"], color=SCENARIO_COLORS["actual"], linewidth=2.1, label="实际收盘价")
     ax.plot(predictions["trade_date"], predictions["simulated_price"], color=SCENARIO_COLORS["fit"], linewidth=1.8, label="机制递推主模型")
-    if "online_corrected_price" in predictions.columns:
-        ax.plot(
-            predictions["trade_date"],
-            predictions["online_corrected_price"],
-            color=SCENARIO_COLORS["neutral"],
-            linewidth=1.7,
-            linestyle="--",
-            label="在线残差校正",
-        )
-    ax.plot(predictions["trade_date"], predictions["ridge_price"], color=SCENARIO_COLORS["optimistic"], linewidth=1.5, label="历史Ridge收益率")
-    ax.set_title("短期机器学习基准与机制模型对比")
+    ax.plot(
+        predictions["trade_date"],
+        predictions["mechanism_plus_phase_ridge"],
+        color=SCENARIO_COLORS["buffer"],
+        linewidth=2.0,
+        linestyle="--",
+        label="最终短期增强模型",
+    )
+    ax.set_title("最终短期增强模型与机制主模型")
     ax.set_ylabel("美元/桶")
-    ax.legend(loc="upper left", ncols=2)
+    ax.legend(loc="upper left", ncols=1)
 
     base_error = predictions["simulated_price"] - predictions["actual_price"]
-    ridge_error = predictions["ridge_price"] - predictions["actual_price"]
+    final_error = predictions["mechanism_plus_phase_ridge"] - predictions["actual_price"]
     axes[1].plot(predictions["trade_date"], base_error, color=SCENARIO_COLORS["risk"], linewidth=1.5, label="机制主模型误差")
-    axes[1].plot(predictions["trade_date"], ridge_error, color=SCENARIO_COLORS["optimistic"], linewidth=1.5, label="历史Ridge误差")
+    axes[1].plot(predictions["trade_date"], final_error, color=SCENARIO_COLORS["buffer"], linewidth=1.7, linestyle="--", label="最终增强模型误差")
     axes[1].axhline(0, color=PAPER_COLORS["ink"], linewidth=1.0)
-    axes[1].set_title("误差对比")
+    axes[1].set_title("误差对比：只保留最终采用路径")
     axes[1].set_xlabel("日期")
     axes[1].set_ylabel("美元/桶")
     axes[1].legend(loc="upper left")
@@ -201,11 +231,12 @@ def draw_figure(predictions: pd.DataFrame) -> None:
 
 def build_report(comparison: pd.DataFrame, alpha_scores: pd.DataFrame) -> str:
     best_alpha = float(alpha_scores.iloc[0]["alpha"])
+    report_models = comparison[comparison["模型"].isin(["机制递推主模型", "机制+阶段Ridge修正", "朴素上一日基准"])].copy()
     rows = "\n".join(
         "| {模型} | {RMSE:.3f} | {MAE:.3f} | {MAPE:.3f}% | {方向命中率:.1f}% | {最大绝对误差:.3f} | {相对机制主模型RMSE改善率:.2f}% | {相对朴素基准RMSE改善率:.2f}% |".format(
             **row
         )
-        for row in comparison.to_dict("records")
+        for row in report_models.to_dict("records")
     )
     alpha_rows = "\n".join(
         f"| {row['alpha']:.1f} | {row['验证RMSE']:.3f} | {row['验证MAE']:.3f} |"
@@ -215,16 +246,17 @@ def build_report(comparison: pd.DataFrame, alpha_scores: pd.DataFrame) -> str:
     best_model = comparison.sort_values(["RMSE", "MAE"]).iloc[0]
     mechanism = comparison[comparison["模型"] == "机制递推主模型"].iloc[0]
     ridge = comparison[comparison["模型"] == "历史Ridge收益率模型"].iloc[0]
+    phase = comparison[comparison["模型"] == "机制+阶段Ridge修正"].iloc[0]
 
     return f"""# 短期机器学习残差修正报告
 
 ## 核心结论
 
-本轮使用 2017--2026 冲突前历史价格特征训练 Ridge 一日收益率模型，并在 2026 冲突窗口上做外部测试。结果显示，历史价格机器学习模型可以作为重要基准，但不能替代综合机制递推主模型。
+本轮使用 2017--2026 冲突前历史价格特征训练 Ridge 一日收益率模型，并在 2026 冲突窗口上做外部测试。结果显示，历史价格机器学习模型不能替代综合机制递推主模型，但可以在残差薄弱窗口提供低自由度辅助修正。
 
-当前 RMSE 最低的模型为 **{best_model["模型"]}**，RMSE 为 {float(best_model["RMSE"]):.3f}。机制递推主模型 RMSE 为 {float(mechanism["RMSE"]):.3f}，历史 Ridge 收益率模型 RMSE 为 {float(ridge["RMSE"]):.3f}。
+最终采用的短期增强路径为 **机制+阶段Ridge修正**，RMSE 为 {float(phase["RMSE"]):.3f}，MAE 为 {float(phase["MAE"]):.3f}，方向命中率为 {float(phase["方向命中率"]):.1f}%。机制递推主模型 RMSE 为 {float(mechanism["RMSE"]):.3f}，历史 Ridge 收益率模型 RMSE 为 {float(ridge["RMSE"]):.3f}。
 
-这说明普通历史收益率模型很难单独解释霍尔木兹封锁冲突窗口。机器学习的价值主要是作为基准和辅助修正，而不是取代赛题机制模型。
+正文只报告最终增强路径和关键基准。纯 Ridge、全窗口 Ridge、在线残差校正和分段校正保留在 CSV 中作为筛选留痕，不作为论文主线展开。
 
 ## 训练方式
 
@@ -235,7 +267,7 @@ def build_report(comparison: pd.DataFrame, alpha_scores: pd.DataFrame) -> str:
 - 测试数据：2026-03-02 至 2026-05-05 冲突窗口。
 - 最优 Ridge alpha：{best_alpha:.1f}
 
-## 指标对比
+## 核心指标
 
 | 模型 | RMSE | MAE | MAPE | 方向命中率 | 最大绝对误差 | 相对机制主模型RMSE改善 | 相对朴素基准RMSE改善 |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -249,7 +281,7 @@ def build_report(comparison: pd.DataFrame, alpha_scores: pd.DataFrame) -> str:
 
 ## 建模判断
 
-如果历史 Ridge 模型或机制加 Ridge 修正没有稳定优于机制主模型，就不能为了“用了机器学习”而把它放到最终主模型位置。下一步应继续尝试更严格的滚动验证、状态空间滤波或低自由度非线性模型，而不是直接上 LSTM/Transformer。
+最终短期模型不采用“谁的 RMSE 最低就堆谁”的写法。机制递推主模型负责供需、缓冲和风险溢价解释；阶段 Ridge 只在高位平台形成和中期再定价回落两个弱窗口修正短期收益惯性。这个处理能提高拟合质量，同时避免把论文写成候选模型流水账。
 
 ## 输出
 

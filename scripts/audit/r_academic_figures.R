@@ -74,7 +74,11 @@ paper_theme <- function(base_size = 12) {
       panel.grid.major = element_line(colour = grid, linewidth = 0.35),
       legend.position = "top",
       legend.title = element_blank(),
-      legend.text = element_text(family = chinese_font),
+      legend.text = element_text(family = chinese_font, colour = muted, size = base_size - 3),
+      legend.key.size = unit(0.42, "lines"),
+      legend.spacing.x = unit(0.25, "lines"),
+      legend.box.margin = margin(0, 0, 2, 0),
+      legend.background = element_blank(),
       plot.caption = element_text(family = chinese_font, colour = muted, size = base_size - 3)
     )
 }

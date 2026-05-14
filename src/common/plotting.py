@@ -54,6 +54,7 @@ def _resolve_palette(config: dict[str, Any]) -> dict[str, str]:
 _STYLE_CONFIG = _load_style_config()
 _COLORS = _resolve_palette(_STYLE_CONFIG)
 _ROLES = _STYLE_CONFIG.get("roles", {})
+_TYPOGRAPHY = _STYLE_CONFIG.get("typography", {})
 
 PAPER_COLORS = {
     "ink": _COLORS["ink"],
@@ -110,8 +111,22 @@ SEABORN_PALETTE = [
 ]
 
 
-def configure_plot_style(savefig_dpi: int = 180, figure_dpi: int = 150, title_size: int = 13) -> None:
+def _style_number(key: str, default: float) -> float:
+    value = _TYPOGRAPHY.get(key, default)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def configure_plot_style(savefig_dpi: int = 180, figure_dpi: int = 150, title_size: int | None = None) -> None:
     """Apply a consistent Chinese-compatible Matplotlib style."""
+    resolved_title_size = title_size if title_size is not None else int(_style_number("title_size", 13))
+    axis_label_size = _style_number("axis_label_size", 10)
+    tick_size = _style_number("tick_size", 9)
+    legend_size = _style_number("legend_size", 8.5)
+    legend_frame = bool(_TYPOGRAPHY.get("legend_frame", False))
+    legend_alpha = _style_number("legend_alpha", 0.0)
     plt.style.use("seaborn-v0_8-whitegrid")
     plt.rcParams.update(
         {
@@ -121,31 +136,40 @@ def configure_plot_style(savefig_dpi: int = 180, figure_dpi: int = 150, title_si
             "savefig.dpi": savefig_dpi,
             "savefig.facecolor": "white",
             "figure.facecolor": "white",
-            "axes.titlesize": title_size,
+            "axes.titlesize": resolved_title_size,
             "axes.titleweight": "bold",
             "axes.titlecolor": PAPER_COLORS["ink"],
-            "axes.labelsize": 10,
+            "axes.labelsize": axis_label_size,
             "axes.labelcolor": PAPER_COLORS["muted"],
             "axes.edgecolor": PAPER_COLORS["border"],
             "axes.linewidth": 0.8,
+            "xtick.labelsize": tick_size,
+            "ytick.labelsize": tick_size,
             "xtick.color": PAPER_COLORS["muted"],
             "ytick.color": PAPER_COLORS["muted"],
             "grid.color": PAPER_COLORS["grid"],
             "grid.linewidth": 0.7,
             "grid.alpha": 0.85,
             "lines.linewidth": 2.0,
-            "legend.fontsize": 9,
-            "legend.frameon": True,
-            "legend.framealpha": 0.88,
+            "legend.fontsize": legend_size,
+            "legend.title_fontsize": legend_size,
+            "legend.frameon": legend_frame,
+            "legend.framealpha": legend_alpha,
             "legend.edgecolor": PAPER_COLORS["border"],
             "legend.facecolor": "white",
+            "legend.labelcolor": PAPER_COLORS["muted"],
+            "legend.handlelength": 1.6,
+            "legend.handletextpad": 0.45,
+            "legend.borderpad": 0.35,
+            "legend.columnspacing": 0.85,
             "patch.edgecolor": "white",
         }
     )
 
 
-def direct_label(ax, x, y, text: str, color: str, *, dx: float = 0.0, dy: float = 0.0, size: float = 9.2) -> None:
+def direct_label(ax, x, y, text: str, color: str, *, dx: float = 0.0, dy: float = 0.0, size: float | None = None) -> None:
     """Place a small same-color label near a plotted line."""
+    label_size = size if size is not None else _style_number("annotation_size", 9)
     ax.annotate(
         text,
         xy=(x, y),
@@ -153,7 +177,7 @@ def direct_label(ax, x, y, text: str, color: str, *, dx: float = 0.0, dy: float 
         textcoords="offset points",
         ha="left",
         va="center",
-        fontsize=size,
+        fontsize=label_size,
         color=color,
         fontweight="bold",
         bbox={"boxstyle": "round,pad=0.18", "facecolor": "white", "edgecolor": "none", "alpha": 0.72},

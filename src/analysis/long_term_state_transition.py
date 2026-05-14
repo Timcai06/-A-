@@ -33,6 +33,8 @@ SAMPLE_METRICS_CSV = OUTPUT_DIR / "长期状态转移样本指标.csv"
 STATE_SHARE_CSV = OUTPUT_DIR / "长期状态转移状态占比.csv"
 STATE_RISK_CONSTRAINT_CSV = OUTPUT_DIR / "长期状态转移风险约束.csv"
 STATE_TRANSITION_MATRIX_CSV = OUTPUT_DIR / "长期状态转移基础矩阵.csv"
+STATE_TRANSITION_SNAPSHOT_CSV = OUTPUT_DIR / "长期状态转移时变矩阵快照.csv"
+STATE_RISK_ABLATION_CSV = OUTPUT_DIR / "长期状态转移风险约束消融.csv"
 REPORT_PATH = PROJECT_ROOT / "output" / "reports" / "长期状态转移预测增强报告.md"
 FAN_FIGURE = PROJECT_ROOT / "figures" / "long_term_state_transition_fan.png"
 
@@ -75,6 +77,7 @@ TRANSITION_MATRIX = np.array(
 )
 
 MARKER_DAYS = [90, 120, 150, 180]
+MATRIX_SNAPSHOT_DAYS = [60, 90, 120, 150, 180]
 
 
 def _load_metric_frame(path: Path) -> pd.DataFrame:
@@ -154,6 +157,67 @@ def write_transition_matrix() -> None:
     frame.to_csv(STATE_TRANSITION_MATRIX_CSV, index=False)
 
 
+def transition_probabilities(
+    current_state: str,
+    day_index: int,
+    risk_constraints: StateRiskConstraints,
+) -> np.ndarray:
+    """Return the normalized transition probabilities for a day/state pair."""
+    probs = TRANSITION_MATRIX[STATE_INDEX[current_state]].copy()
+
+    # Market-priced and geopolitical risk should mostly affect the early and
+    # middle extrapolation window. The effect decays as the blockade persists
+    # and physical recovery evidence accumulates.
+    early_risk_decay = float(np.clip(1.0 - max(day_index - 60, 0) / 140.0, 0.18, 1.0))
+    risk_shift = risk_constraints.combined_pressure * early_risk_decay
+    escalation_boost = 0.020 * risk_shift
+    easing_discount = 0.014 * risk_shift
+    probs[STATE_INDEX["escalation"]] += escalation_boost
+    probs[STATE_INDEX["easing"]] -= easing_discount
+    if current_state == "escalation":
+        probs[STATE_INDEX["escalation"]] += 0.010 * risk_shift
+        probs[STATE_INDEX["neutral"]] -= 0.004 * risk_shift
+    elif current_state == "easing":
+        probs[STATE_INDEX["neutral"]] += 0.006 * risk_shift
+
+    if day_index >= 120:
+        probs[STATE_INDEX["easing"]] += 0.04
+        probs[STATE_INDEX["escalation"]] -= 0.04
+    if day_index >= 150:
+        probs[STATE_INDEX["easing"]] += 0.03
+        probs[STATE_INDEX["neutral"]] -= 0.02
+        probs[STATE_INDEX["escalation"]] -= 0.01
+    probs = np.clip(probs, 0.01, 0.98)
+    return probs / probs.sum()
+
+
+def build_transition_snapshots(risk_constraints: StateRiskConstraints) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    labels = [spec.label for spec in STATES]
+    for day in MATRIX_SNAPSHOT_DAYS:
+        for spec in STATES:
+            probs = transition_probabilities(spec.state, day, risk_constraints)
+            rows.append(
+                {
+                    "day_index": day,
+                    "当前状态": spec.label,
+                    "转为缓和": float(probs[0]),
+                    "转为维持": float(probs[1]),
+                    "转为升级": float(probs[2]),
+                    "综合状态转移压力": risk_constraints.combined_pressure,
+                    "说明": "已加入GPR/OVX压力、时间衰减和后期缓和修正",
+                }
+            )
+    return pd.DataFrame(rows, columns=["day_index", "当前状态", *[f"转为{label}" for label in labels], "综合状态转移压力", "说明"])
+
+
+def write_transition_snapshots(risk_constraints: StateRiskConstraints) -> pd.DataFrame:
+    frame = build_transition_snapshots(risk_constraints)
+    ensure_parent(STATE_TRANSITION_SNAPSHOT_CSV)
+    frame.to_csv(STATE_TRANSITION_SNAPSHOT_CSV, index=False)
+    return frame
+
+
 def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     scenario_result = pd.read_csv(scenario.SCENARIO_RESULT_CSV, parse_dates=["trade_date"])
     short_path = pd.read_csv(
@@ -196,32 +260,7 @@ def sample_next_state(
     day_index: int,
     risk_constraints: StateRiskConstraints,
 ) -> str:
-    probs = TRANSITION_MATRIX[STATE_INDEX[current_state]].copy()
-
-    # Market-priced and geopolitical risk should mostly affect the early and
-    # middle extrapolation window. The effect decays as the blockade persists
-    # and physical recovery evidence accumulates.
-    early_risk_decay = float(np.clip(1.0 - max(day_index - 60, 0) / 140.0, 0.18, 1.0))
-    risk_shift = risk_constraints.combined_pressure * early_risk_decay
-    escalation_boost = 0.020 * risk_shift
-    easing_discount = 0.014 * risk_shift
-    probs[STATE_INDEX["escalation"]] += escalation_boost
-    probs[STATE_INDEX["easing"]] -= easing_discount
-    if current_state == "escalation":
-        probs[STATE_INDEX["escalation"]] += 0.010 * risk_shift
-        probs[STATE_INDEX["neutral"]] -= 0.004 * risk_shift
-    elif current_state == "easing":
-        probs[STATE_INDEX["neutral"]] += 0.006 * risk_shift
-
-    if day_index >= 120:
-        probs[STATE_INDEX["easing"]] += 0.04
-        probs[STATE_INDEX["escalation"]] -= 0.04
-    if day_index >= 150:
-        probs[STATE_INDEX["easing"]] += 0.03
-        probs[STATE_INDEX["neutral"]] -= 0.02
-        probs[STATE_INDEX["escalation"]] -= 0.01
-    probs = np.clip(probs, 0.01, 0.98)
-    probs = probs / probs.sum()
+    probs = transition_probabilities(current_state, day_index, risk_constraints)
     return str(rng.choice([spec.state for spec in STATES], p=probs))
 
 
@@ -389,9 +428,31 @@ def build_report(
     daily_sigma: float,
     transition_jump_sigma_scale: float,
     risk_constraints: StateRiskConstraints,
+    transition_snapshots: pd.DataFrame,
+    risk_ablation: pd.DataFrame,
 ) -> str:
     final_q = quantiles[quantiles["day_index"] == 180].iloc[0]
     peak_p95 = float(metrics["外推期最高价"].quantile(0.95))
+    neutral_rows = transition_snapshots[transition_snapshots["当前状态"] == "维持"]
+    neutral_snapshot = "\n".join(
+        "| {day} | {easing:.3f} | {neutral:.3f} | {escalation:.3f} |".format(
+            day=int(row["day_index"]),
+            easing=float(row["转为缓和"]),
+            neutral=float(row["转为维持"]),
+            escalation=float(row["转为升级"]),
+        )
+        for _, row in neutral_rows.iterrows()
+    )
+    risk_ablation_rows = "\n".join(
+        "| {name} | {p120:.1%} | {p130:.1%} | {peak:.2f} | {final_p95:.2f} |".format(
+            name=str(row["模型设定"]),
+            p120=float(row["突破120概率"]),
+            p130=float(row["突破130概率"]),
+            peak=float(row["外推期最高价P95"]),
+            final_p95=float(row["第180天价格P95"]),
+        )
+        for _, row in risk_ablation.iterrows()
+    )
     return f"""# 长期状态转移预测增强报告
 
 ## 核心结论
@@ -421,6 +482,22 @@ def build_report(
 
 GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率，并在第 120 天和第 150 天后逐步提高缓和概率。所有行在扰动后重新归一化，因此每一日转移概率仍为合法概率分布。
 
+## 时变转移矩阵快照
+
+以下表格展示从“维持”状态出发时，在关键外推日的修正后转移概率。完整三状态快照见 `{STATE_TRANSITION_SNAPSHOT_CSV.relative_to(PROJECT_ROOT)}`。
+
+| 外推日 | 转为缓和 | 转为维持 | 转为升级 |
+|---:|---:|---:|---:|
+{neutral_snapshot}
+
+## GPR/OVX 风险约束消融
+
+为检查外部风险变量是否只是装饰项，本文比较“仅基础矩阵”和“基础矩阵+GPR/OVX风险约束”两种状态转移设定。完整结果见 `{STATE_RISK_ABLATION_CSV.relative_to(PROJECT_ROOT)}`。
+
+| 模型设定 | 突破120概率 | 突破130概率 | 外推期最高价P95 | 第180天价格P95 |
+|---|---:|---:|---:|---:|
+{risk_ablation_rows}
+
 ## 为什么它比单条线更可信
 
 - 原三情景线保留为物理中心路径，用来表达供应恢复、SPR 收缩、需求弹性和风险溢价衰减的慢变量。
@@ -435,16 +512,20 @@ GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率
 - `{STATE_SHARE_CSV.relative_to(PROJECT_ROOT)}`
 - `{STATE_RISK_CONSTRAINT_CSV.relative_to(PROJECT_ROOT)}`
 - `{STATE_TRANSITION_MATRIX_CSV.relative_to(PROJECT_ROOT)}`
+- `{STATE_TRANSITION_SNAPSHOT_CSV.relative_to(PROJECT_ROOT)}`
+- `{STATE_RISK_ABLATION_CSV.relative_to(PROJECT_ROOT)}`
 - `{FAN_FIGURE.relative_to(PROJECT_ROOT)}`
 """
 
 
-def run_state_transition(n_samples: int = N_SAMPLES) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, float]:
+def _run_state_transition_with_constraints(
+    risk_constraints: StateRiskConstraints,
+    n_samples: int = N_SAMPLES,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, float]:
     scenario_result, short_path, history = load_inputs()
     centers = center_lookup(scenario_result)
     cutoff_price = float(short_path.sort_values("trade_date").iloc[-1]["simulated_price"])
     factors = load_historical_model_factors()
-    risk_constraints = load_state_risk_constraints()
     daily_sigma = estimate_event_volatility(short_path, history)
     rng = np.random.default_rng(RANDOM_SEED)
     paths = pd.concat(
@@ -468,6 +549,40 @@ def run_state_transition(n_samples: int = N_SAMPLES) -> tuple[pd.DataFrame, pd.D
     return metrics, quantiles, state_share, daily_sigma
 
 
+def run_state_transition(n_samples: int = N_SAMPLES) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, float]:
+    return _run_state_transition_with_constraints(load_state_risk_constraints(), n_samples=n_samples)
+
+
+def build_risk_constraint_ablation(current_constraints: StateRiskConstraints) -> pd.DataFrame:
+    no_risk_constraints = StateRiskConstraints(
+        evidence_note="消融设定：保留基础转移矩阵和历史波动扰动，但不加入GPR/OVX风险压力。"
+    )
+    settings = [
+        ("仅基础矩阵", no_risk_constraints),
+        ("基础矩阵+GPR/OVX风险约束", current_constraints),
+    ]
+    rows: list[dict[str, Any]] = []
+    for label, constraints in settings:
+        metrics, quantiles, _, _ = _run_state_transition_with_constraints(constraints, n_samples=N_SAMPLES)
+        final_q = quantiles[quantiles["day_index"] == 180].iloc[0]
+        rows.append(
+            {
+                "模型设定": label,
+                "综合状态转移压力": constraints.combined_pressure,
+                "突破120概率": float(metrics["突破120"].mean()),
+                "突破130概率": float(metrics["突破130"].mean()),
+                "外推期最高价P95": float(metrics["外推期最高价"].quantile(0.95)),
+                "第180天价格P50": float(final_q["p50"]),
+                "第180天价格P95": float(final_q["p95"]),
+                "升级状态平均占比": float(metrics["升级占比"].mean()),
+            }
+        )
+    frame = pd.DataFrame(rows)
+    ensure_parent(STATE_RISK_ABLATION_CSV)
+    frame.to_csv(STATE_RISK_ABLATION_CSV, index=False)
+    return frame
+
+
 def write_outputs(metrics: pd.DataFrame, quantiles: pd.DataFrame, state_share: pd.DataFrame, daily_sigma: float) -> None:
     ensure_parent(PATH_QUANTILE_CSV)
     ensure_parent(SAMPLE_METRICS_CSV)
@@ -477,12 +592,22 @@ def write_outputs(metrics: pd.DataFrame, quantiles: pd.DataFrame, state_share: p
     quantiles.to_csv(PATH_QUANTILE_CSV, index=False)
     state_share.to_csv(STATE_SHARE_CSV, index=False)
     write_transition_matrix()
+    risk_constraints = load_state_risk_constraints()
+    transition_snapshots = write_transition_snapshots(risk_constraints)
+    risk_ablation = build_risk_constraint_ablation(risk_constraints)
     scenario_result, _, _ = load_inputs()
     save_figure(quantiles, state_share, scenario_result)
     factors = load_historical_model_factors()
-    risk_constraints = load_state_risk_constraints()
     REPORT_PATH.write_text(
-        build_report(metrics, quantiles, daily_sigma, factors.transition_jump_sigma_scale, risk_constraints),
+        build_report(
+            metrics,
+            quantiles,
+            daily_sigma,
+            factors.transition_jump_sigma_scale,
+            risk_constraints,
+            transition_snapshots,
+            risk_ablation,
+        ),
         encoding="utf-8",
     )
 
