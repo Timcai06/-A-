@@ -2,17 +2,29 @@
 
 \subsection{分析方法}
 
-敏感性分析以中性情景为基准，对 16 个关键参数进行单因素扰动，观察第 180 天价格、外推期最高价、剩余供需缺口和二次跳涨风险变化。除题面物理量和行为参数外，本阶段还把长期机制强度参数单独纳入检验，使长期结论的关键常数透明化。综合敏感度定义为
+敏感性分析以中性情景为基准，对 16 个关键参数进行单因素扰动，观察第 180 天价格、外推期最高价、剩余供需缺口和二次跳涨风险变化。除题面物理量和行为参数外，本阶段还把长期机制强度参数单独纳入检验，使长期结论的关键常数透明化。
+
+设参数 \(\theta_j\) 在扰动集合 \(\Omega_j=\{\theta_j^{(1)},\ldots,\theta_j^{(m)}\}\) 上取值，其他参数固定为中性情景。记由长期递推模型得到的第 180 天价格、外推期最高价和第 180 天剩余缺口分别为 \(P_{180}(\theta_j^{(r)})\)、\(P_{\max}(\theta_j^{(r)})\) 和 \(G_{180}(\theta_j^{(r)})\)，则三类响应幅度定义为
 
 \begin{equation}
-  \mathcal S
-  =
-  \Delta P_{180}
-  +0.45\Delta P_{\max}
-  +0.002\Delta G_{180},
+\begin{aligned}
+  \Delta P_{180}^{(j)}&=\max_{r}P_{180}(\theta_j^{(r)})-\min_{r}P_{180}(\theta_j^{(r)}),\\
+  \Delta P_{\max}^{(j)}&=\max_{r}P_{\max}(\theta_j^{(r)})-\min_{r}P_{\max}(\theta_j^{(r)}),\\
+  \Delta G_{180}^{(j)}&=\max_{r}G_{180}(\theta_j^{(r)})-\min_{r}G_{180}(\theta_j^{(r)}).
+\end{aligned}
 \end{equation}
 
-其中 $\Delta P_{180}$ 是第 180 天价格波动范围，$\Delta P_{\max}$ 是外推期最高价波动范围，$\Delta G_{180}$ 是第 180 天剩余缺口波动范围。该指标兼顾终点价格、阶段峰值和供需风险。
+综合敏感度定义为
+
+\begin{equation}
+  \mathcal S_j
+  =
+  \Delta P_{180}^{(j)}
+  +0.45\Delta P_{\max}^{(j)}
+  +0.002\Delta G_{180}^{(j)},
+\end{equation}
+
+该指标兼顾终点价格、阶段峰值和供需风险；系数 \(0.45\) 和 \(0.002\) 用于把峰值风险和供需缺口映射到与终点价格同一数量级，使排序反映“对长期结论的综合影响”而非单一终点误差。
 
 \subsection{参数重要性排序}
 
@@ -46,14 +58,14 @@
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{参数敏感性龙卷风图.png}
-\caption{关键参数综合敏感度排序。封锁风险衰减速度、地缘风险权重和制度风险强度排名靠前，说明长期结论主要受市场吸收封锁风险的速度控制。}
+\caption{关键参数综合敏感度排序}
 \label{fig:sensitivity-tornado}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.90\linewidth]{长期敏感性扰动热力图.png}
-\caption{长期敏感性扰动热力图。颜色表示不同参数扰动档位下第 180 天价格相对中性基准的变化方向和幅度，深蓝代表终点价格上升，绿色代表终点价格下降。相比单一排序图，该图进一步展示同一参数在不同扰动档位下是否呈现稳定方向，说明长期结论主要受封锁风险衰减速度、地缘风险权重和制度风险强度共同控制。}
+\caption{长期敏感性扰动热力图}
 \label{fig:sensitivity-heatmap}
 \end{figure}
 
@@ -75,13 +87,13 @@
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.86\linewidth]{历史波动参数校准.png}
-\caption{历史波动参数校准。2017--2025 同长度窗口为长期蒙特卡洛和状态转移扰动提供历史尺度。}
+\caption{历史波动参数校准}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{传统蒙特卡洛路径云图.png}
-\caption{传统蒙特卡洛路径云图。图中从 2000 条模拟路径中分层抽取代表路径，黑线为中位数路径，青蓝虚线为 P05/P95 条件边界，亮蓝虚线为 120 美元/桶风险线。}
+\caption{传统蒙特卡洛路径云图}
 \label{fig:mc-path-cloud}
 \end{figure}
 
@@ -107,7 +119,7 @@
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.78\linewidth]{蒙特卡洛尾部风险概率.png}
-\caption{蒙特卡洛尾部风险概率。突破阈值概率随外推时间变化，说明中长期油价调节模型应报告条件尾部风险，而不是只给单条中性预测线。}
+\caption{蒙特卡洛尾部风险概率}
 \end{figure}
 
 结果表明，蒙特卡洛路径的第 180 天中位数价格为 96.69 美元/桶，与接入官方外生约束和 OVX 后的中性情景 94.15 美元/桶处在同一数量级，说明中性路径不是孤立的单点调参结果。与此同时，外推期最高价突破 120 美元/桶的概率为 16.3\%，突破 130 美元/桶的概率为 3.9\%。这说明长期风险的重点不是中性点预测本身，而是多因素联动恶化下的尾部组合风险；OVX 接入后，模型对市场隐含波动率给出的尾部定价更加敏感。
@@ -134,7 +146,7 @@
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{R长期状态转移扇形图.png}
-\caption{R/ggplot2 长期状态转移区间预测。双层阴影分别表示 5\%--95\% 和 25\%--75\% 条件区间，虚线为原中性中心路径；该图展示长期预测中的区间表达和状态切换风险。}
+\caption{R/ggplot2 长期状态转移区间预测}
 \end{figure}
 
 \subsection{滞后地缘风险指数检验}
@@ -161,13 +173,13 @@
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{地缘风险指数滞后审计.png}
-\caption{地缘风险指数滞后检验。该图用于区分描述性同步关系和预测时可用的滞后风险信息。}
+\caption{地缘风险指数滞后检验}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.84\linewidth]{滞后GPR与布伦特收益关系.png}
-\caption{滞后 1 月 GPR 与布伦特月度收益关系。散点关系较弱，说明 GPR 更适合作为风险溢价外部校验，而非单独点预测模型。}
+\caption{滞后 1 月 GPR 与布伦特月度收益关系}
 \end{figure}
 
 该结果对本文有两层含义。第一，2026 年 3--4 月 GPR 处于历史高分位，说明模型中的地缘风险溢价具有外部风险指数支撑。第二，滞后 GPR 对月度收益的解释力有限，因此本文将其用于风险校验和长期状态压力约束，而不作为短期点预测变量。
@@ -196,7 +208,7 @@ GPR 侧重地缘政治风险叙事，OVX 则更接近期权市场对未来波动
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{OVX隐含波动率滞后检验.png}
-\caption{OVX 隐含波动率滞后检验。冲突窗口内 OVX 明显升高，说明期权市场也对原油尾部风险重新定价。}
+\caption{OVX 隐含波动率滞后检验}
 \end{figure}
 
 OVX 只作为长期风险权重和不确定性强度的附加乘数，而不进入短期同日拟合。具体而言，OVX 冲突窗口历史分位数和滞后 1 日 OVX 与实现波动率相关性共同生成市场风险压力，进而得到 OVX 市场风险权重附加乘数 1.0275 和 OVX 不确定性强度附加乘数 1.0433。这样既利用了期权市场对风险的定价信息，也保持了方向预测与波动约束之间的区分。
@@ -218,7 +230,7 @@ OVX 只作为长期风险权重和不确定性强度的附加乘数，而不进�
 最大单日绝对收益 & 11.9\% & 91.4\% & 局部跳变强度 \\
 价格区间比例 & 36.1\% & 93.2\% & 窗口内价格振幅 \\
 朴素上一日基准 RMSE & 4.52 & 98.5\% & 随机游走基准在该窗口是否变难 \\
-本文机制模型 RMSE & 3.44 & 97.4\% & 对比历史朴素误差分布 \\
+本文机制模型 RMSE & 3.38 & 97.4\% & 对比历史朴素误差分布 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -226,13 +238,13 @@ OVX 只作为长期风险权重和不确定性强度的附加乘数，而不进�
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{历史窗口极端性检验.png}
-\caption{2026 冲突窗口在历史同长度窗口中的极端性。累计涨幅、波动率和朴素基准误差均处于历史高分位。}
+\caption{2026 冲突窗口在历史同长度窗口中的极端性}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.90\linewidth]{R历史基准误差分布图.png}
-\caption{R/ggplot2 历史同长度窗口基准误差分布。蓝色区间表示历史分位带，亮蓝点表示 2026 冲突窗口，说明该窗口对普通基准模型显著更难。}
+\caption{R/ggplot2 历史同长度窗口基准误差分布}
 \end{figure}
 
 历史检验有两个作用。第一，它证明本文没有只盯着 46 个交易日做孤立拟合：与 2017--2026 年所有同长度窗口相比，2026 冲突窗口确实属于高涨幅、高波动和高预测难度样本。第二，它说明完整历史数据更适合作为背景分布和基准检验，而不应被用来把霍尔木兹机制参数强行拟合到所有普通时期。ADF 检验也支持这一点：收盘价水平和对数价格均不能拒绝单位根，而对数收益率可拒绝单位根，因此普通统计基准更适合在收益率或差分口径下使用。

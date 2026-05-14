@@ -10,8 +10,29 @@
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.96\linewidth]{论文总体技术路线图.png}
-\caption{本文总体技术路线。模型从附件真实数据出发，先用短期冲击模型解释价格平台，再用中长期油价调节模型外推情景风险。}
+\begin{tikzpicture}[
+  node distance=0.82cm and 0.72cm,
+  stage/.style={draw=OilBorder, fill=PaperNoteBack, rounded corners=1pt, align=center, minimum height=0.78cm, text width=2.85cm, font=\small\bfseries},
+  note/.style={draw=OilBorder, fill=white, rounded corners=1pt, align=center, minimum height=0.62cm, text width=2.85cm, font=\scriptsize},
+  arrow/.style={-{Latex[length=2.2mm]}, line width=0.45pt, draw=OilGray}
+]
+\node[stage] (data) {附件价格数据};
+\node[stage, right=of data] (base) {传统供需基准};
+\node[stage, right=of base] (short) {短期冲击模型};
+\node[stage, right=of short] (long) {中长期油价调节模型};
+\node[note, below=of base] (counter) {低弹性反事实压力};
+\node[note, below=of short] (check) {基准对比\\消融与稳健性};
+\node[note, below=of long] (risk) {三情景\\蒙特卡洛与状态转移};
+\draw[arrow] (data) -- (base);
+\draw[arrow] (base) -- (short);
+\draw[arrow] (short) -- (long);
+\draw[arrow] (base) -- (counter);
+\draw[arrow] (short) -- (check);
+\draw[arrow] (long) -- (risk);
+\draw[arrow] (counter.east) -- (check.west);
+\draw[arrow] (check.east) -- (risk.west);
+\end{tikzpicture}
+\caption{本文总体技术路线}
 \label{fig:paper-roadmap}
 \end{figure}
 

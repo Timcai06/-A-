@@ -184,14 +184,14 @@ SPR 释放上限可信度 & 0.9672 & EIA 美国 SPR 实际释放较温和，因�
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.98\linewidth]{蒙特卡洛情景树高级组合图.png}
-\caption{中长期油价调节模型主图：蒙特卡洛情景树高级组合图。左侧展示中心路径、抽样路径云和 5\%--95\% / 25\%--75\% 条件区间，右上展示第 180 天终点分布，右下展示外推期突破 120、130 美元/桶的累计概率曲线；该图表明中长期结论应结合条件区间和尾部概率阅读。}
+\caption{中长期油价调节模型蒙特卡洛情景树}
 \label{fig:long-term-fan}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.94\linewidth]{短期拟合与长期预测总览.png}
-\caption{短期冲击模型与中长期油价调节模型总览。竖线左侧为附件真实数据与短期冲击模型拟合，竖线右侧为 60--180 天条件情景外推。}
+\caption{短期冲击模型与中长期油价调节模型总览}
 \end{figure}
 
 \cref{fig:long-term-fan} 给出中长期油价调节模型的主图。为刻画中心路径之外的事件状态不确定性，本文额外建立状态转移扰动层。该层不改变三情景物理中心路径，而是让未来状态在缓和、维持和升级之间随机切换：缓和状态向乐观中心靠近，维持状态围绕中性中心，升级状态向悲观中心和跳涨方向移动；扰动强度由附件历史价格波动估计后进行保守折扣。进一步地，本文用 GPR 事件月历史分位数、OVX 冲突窗口历史分位数以及滞后 OVX 与实现波动率相关性生成综合状态转移压力，用于温和提高早中期升级概率。这样得到的中长期图由中心路径、状态概率和尾部区间共同构成。
@@ -278,7 +278,7 @@ d_t=\mathrm{clip}\left(1-\frac{t-60}{140},0.18,1\right),
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.94\linewidth]{长期状态转移情景树.png}
-\caption{长期状态转移情景树。上图为状态转移后的价格扇形区间，下图为缓和、维持、升级三类状态的样本占比；该图用于回应长期中性线过平的问题，并展示二次升级风险如何进入尾部区间。}
+\caption{长期状态转移情景树}
 \label{fig:state-transition-fan}
 \end{figure}
 
@@ -307,5 +307,5 @@ d_t=\mathrm{clip}\left(1-\frac{t-60}{140},0.18,1\right),
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.92\linewidth]{库存与供需缺口风险.png}
-\caption{商业库存剩余量与剩余供需缺口变化。悲观情景下缓冲能力下降、剩余缺口更难闭合，因此二次跳涨风险主要来自库存约束与制度风险叠加。}
+\caption{商业库存剩余量与剩余供需缺口变化}
 \end{figure}

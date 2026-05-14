@@ -122,7 +122,7 @@ def build_report(figures: pd.DataFrame, tables: pd.DataFrame) -> str:
         "蒙特卡洛情景树高级组合图.png",
         "长期状态转移情景树.png",
         "参数敏感性龙卷风图.png",
-        "短期模型最终质量雷达图.png",
+        "短期模型参数剖面图.png",
     ]
     main_status = []
     for figure in main_figures:

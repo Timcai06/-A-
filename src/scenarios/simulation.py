@@ -255,6 +255,7 @@ def simulate_future_from_prefix(
     previous_price = float(prefix.iloc[-1]["simulated_price"])
     previous_day = int(prefix.iloc[-1]["day_index"])
     previous_fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * previous_day)
+    previous_buffer_coverage_ratio = float(prefix.iloc[-1].get("buffer_coverage_ratio", 0.0))
     inventory_remaining = float(prefix.iloc[-1]["inventory_remaining"])
     gap_closure_day = infer_gap_closure_day(prefix, assumptions)
     rows: list[dict[str, Any]] = []
@@ -287,6 +288,7 @@ def simulate_future_from_prefix(
             assumptions.route_max_capacity,
         )
         supply_before_spr = assumptions.base_supply - assumptions.supply_interruption + route_supply
+        gross_shortage = max(effective_demand - (assumptions.base_supply - assumptions.supply_interruption), 0.0)
         gross_gap_before_spr = max(effective_demand - supply_before_spr, 0.0)
         spr_release, spr_taper_ratio = adaptive_spr_release(
             day_index,
@@ -310,6 +312,10 @@ def simulate_future_from_prefix(
         supply_balance = effective_supply - effective_demand
         residual_gap = max(-supply_balance, 0.0)
         oversupply = max(supply_balance, 0.0)
+        total_buffer_supply = spr_release + route_supply + inventory_buffer
+        buffer_coverage_ratio = total_buffer_supply / max(gross_shortage, 1.0)
+        buffer_coverage_ratio = float(np.clip(buffer_coverage_ratio, 0.0, 1.5))
+        coverage_momentum = buffer_coverage_ratio - previous_buffer_coverage_ratio
         if gap_closure_day is None and residual_gap <= assumptions.base_demand * GAP_CLOSURE_SHARE:
             gap_closure_day = day_index
 
@@ -337,8 +343,20 @@ def simulate_future_from_prefix(
             demand_decline,
         )
         panic_premium = base_price * PANIC_PRICE_MULTIPLIER * fear_excess
-        buffer_discount = dynamic.buffer_confirmation_discount(day_index, gap_closure_day, base_price, behavior)
-        relief_discount = dynamic.expectation_relief_discount(day_index, base_price, behavior)
+        buffer_discount = dynamic.buffer_confirmation_discount(
+            day_index,
+            gap_closure_day,
+            base_price,
+            behavior,
+            buffer_coverage_ratio,
+        )
+        relief_discount = dynamic.expectation_relief_discount(
+            day_index,
+            base_price,
+            behavior,
+            buffer_coverage_ratio,
+            coverage_momentum,
+        )
         excess_supply_discount = oversupply_discount(oversupply, base_price, elasticity, assumptions, behavior)
         target_price = (
             base_price
@@ -371,6 +389,9 @@ def simulate_future_from_prefix(
                 "spr_taper_ratio": spr_taper_ratio,
                 "route_supply": route_supply,
                 "inventory_buffer": inventory_buffer,
+                "total_buffer_supply": total_buffer_supply,
+                "buffer_coverage_ratio": buffer_coverage_ratio,
+                "buffer_coverage_momentum": coverage_momentum,
                 "inventory_remaining": inventory_remaining,
                 "demand_decline": demand_decline,
                 "demand_elasticity": elasticity,
@@ -391,6 +412,7 @@ def simulate_future_from_prefix(
         )
         previous_price = simulated_price
         previous_fear_excess = fear_excess
+        previous_buffer_coverage_ratio = buffer_coverage_ratio
 
     return pd.DataFrame(rows)
 

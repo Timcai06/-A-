@@ -72,7 +72,7 @@
 | 初稿图11 | `paper/figures/短期模型拐点局部检验.png` | 2026-03-02 至 2026-03-14；2026-04-22 至 2026-05-05 | 放大暴涨和反转窗口，验证主要拐点不是马后炮跟随 | `output/calibration/短期模型拐点检验.csv` | 已生成 |
 | 初稿图12 | `paper/figures/短期模型过拟合压力测试.png` | 2026-03-02 至 2026-05-05 | 用 \(\pm 15\%\) 参数扰动检查价格平台是否依赖单一参数点 | `output/calibration/短期模型过拟合压力测试.csv` | 已生成 |
 | 初稿图13 | `paper/figures/短期模型残差诊断增强.png` | 2026-03-02 至 2026-05-05 | 检查残差分布、滚动误差和自相关 | `output/calibration/动态模型校准后路径.csv`、`output/calibration/短期模型滚动误差.csv` | 已生成 |
-| 初稿图14 | `paper/figures/短期模型稳健性带.png` | 2026-03-02 至 2026-05-05 | 展示优秀局部扰动样本形成的稳定价格带 | `output/calibration/短期模型稳健性区间.csv` | 已生成 |
+| 初稿图14 | `paper/figures/短期模型稳健性带.png` | 2026-03-02 至 2026-05-05 | 展示通过局部扰动阈值样本形成的稳定价格带 | `output/calibration/短期模型稳健性区间.csv` | 已生成 |
 | 在线校正图 | `figures/短期模型在线残差校正效果.png` | 2026-03-02 至 2026-05-05 | 过程留痕：只使用滞后误差的在线校正能降低价格水平误差，但方向命中率不足，正文已不展开 | `output/calibration/短期模型在线残差校正路径.csv`、`output/calibration/短期模型在线残差校正指标.csv` | 备用 |
 | 时间轴稳健图 | `paper/figures/短期模型时间轴与删块稳健性.png` | 2026-03-02 至 2026-05-05 | 对比日历日与交易日序号时间轴，并展示同参删块误差 | `output/calibration/短期模型时间轴对比.csv`、`output/calibration/短期模型删块稳健性.csv` | 正式使用 |
 | 总览图 | `paper/figures/短期拟合与长期预测总览.png` | 2026-03-02 至 2026-08-29 | 连接短期拟合与 60--180 天三情景外推，明确真实数据截止点 | `output/calibration/动态模型校准后路径.csv`、`output/scenarios/三情景预测结果.csv` | 已生成 |

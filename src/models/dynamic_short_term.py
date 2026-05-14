@@ -157,15 +157,29 @@ def interpolate_elasticity(day: float, assumptions: PhysicalAssumptions, horizon
     return assumptions.base_elasticity + (assumptions.long_elasticity - assumptions.base_elasticity) * weight
 
 
-def expectation_relief_discount(day: float, base_price: float, behavior: BehavioralParameters) -> float:
-    """Temporary discount after markets observe buffers and rerouting taking effect."""
+def coverage_activation(coverage_ratio: float, center: float = 0.55, slope: float = 9.0) -> float:
+    """Smooth confidence signal from the share of gross shortage covered by buffers."""
+    bounded = float(np.clip(coverage_ratio, 0.0, 1.5))
+    return float(1.0 / (1.0 + np.exp(-slope * (bounded - center))))
+
+
+def expectation_relief_discount(
+    day: float,
+    base_price: float,
+    behavior: BehavioralParameters,
+    buffer_coverage_ratio: float,
+    coverage_momentum: float,
+) -> float:
+    """Discount after observable buffers and rerouting reduce the gross shortage."""
     if behavior.relief_discount_strength <= 0 or day < behavior.relief_start_day:
         return 0.0
 
     ramp_days = max(behavior.relief_peak_day - behavior.relief_start_day, 1)
     buildup = min((day - behavior.relief_start_day) / ramp_days, 1.0)
     fade = np.exp(-max(day - behavior.relief_peak_day, 0) / max(behavior.relief_decay_days, 1))
-    return float(base_price * behavior.relief_discount_strength * buildup * fade)
+    confidence = coverage_activation(buffer_coverage_ratio, center=0.48, slope=8.0)
+    momentum_boost = 1.0 + 0.35 * max(coverage_momentum, 0.0)
+    return float(base_price * behavior.relief_discount_strength * buildup * fade * confidence * momentum_boost)
 
 
 def buffer_confirmation_discount(
@@ -173,15 +187,17 @@ def buffer_confirmation_discount(
     gap_closure_day: float | None,
     base_price: float,
     behavior: BehavioralParameters,
+    buffer_coverage_ratio: float,
 ) -> float:
-    """Short-lived discount after the residual supply gap is visibly buffered."""
+    """Short-lived discount after policy and logistical buffers visibly cover the shortage."""
     if behavior.buffer_relief_strength <= 0 or gap_closure_day is None or day < gap_closure_day:
         return 0.0
 
     days_since_closure = day - gap_closure_day
     buildup = 1 - np.exp(-days_since_closure / 3)
     fade = np.exp(-days_since_closure / max(behavior.buffer_relief_decay_days, 1))
-    return float(base_price * behavior.buffer_relief_strength * buildup * fade)
+    confidence = coverage_activation(buffer_coverage_ratio, center=0.62, slope=10.0)
+    return float(base_price * behavior.buffer_relief_strength * buildup * fade * confidence)
 
 
 def simulate_dynamic_model(
@@ -194,6 +210,7 @@ def simulate_dynamic_model(
     base_price = float(event_df.iloc[0]["pre_close"])
     previous_price = base_price
     previous_fear_excess = assumptions.fear_initial
+    previous_buffer_coverage_ratio = 0.0
     inventory_remaining = assumptions.commercial_inventory
     gap_closure_day: int | None = None
     rows: list[dict[str, Any]] = []
@@ -225,6 +242,7 @@ def simulate_dynamic_model(
             assumptions.route_ramp_days,
             assumptions.route_max_capacity,
         )
+        gross_shortage = max(effective_demand - (assumptions.base_supply - assumptions.supply_interruption), 0.0)
         supply_without_inventory = assumptions.base_supply - assumptions.supply_interruption + spr_release + route_supply
         raw_gap = max(effective_demand - supply_without_inventory, 0.0)
 
@@ -236,6 +254,10 @@ def simulate_dynamic_model(
         inventory_remaining -= inventory_buffer
         effective_supply = supply_without_inventory + inventory_buffer
         residual_gap = max(effective_demand - effective_supply, 0.0)
+        total_buffer_supply = spr_release + route_supply + inventory_buffer
+        buffer_coverage_ratio = total_buffer_supply / max(gross_shortage, 1.0)
+        buffer_coverage_ratio = float(np.clip(buffer_coverage_ratio, 0.0, 1.5))
+        coverage_momentum = buffer_coverage_ratio - previous_buffer_coverage_ratio
         if gap_closure_day is None and residual_gap <= assumptions.base_demand * 0.005:
             gap_closure_day = day_index
 
@@ -255,8 +277,20 @@ def simulate_dynamic_model(
         )
         uncertainty_premium = base_price * behavior.uncertainty_floor * (1 - np.exp(-day_index / 18))
         panic_premium = base_price * 0.45 * fear_excess
-        buffer_discount = buffer_confirmation_discount(day_index, gap_closure_day, base_price, behavior)
-        relief_discount = expectation_relief_discount(day_index, base_price, behavior)
+        buffer_discount = buffer_confirmation_discount(
+            day_index,
+            gap_closure_day,
+            base_price,
+            behavior,
+            buffer_coverage_ratio,
+        )
+        relief_discount = expectation_relief_discount(
+            day_index,
+            base_price,
+            behavior,
+            buffer_coverage_ratio,
+            coverage_momentum,
+        )
         target_price = (
             base_price
             + shortage_pressure
@@ -281,10 +315,14 @@ def simulate_dynamic_model(
                 "simulated_price": simulated_price,
                 "effective_supply": effective_supply,
                 "effective_demand": effective_demand,
+                "gross_shortage": gross_shortage,
                 "supply_gap": residual_gap,
                 "spr_release": spr_release,
                 "route_supply": route_supply,
                 "inventory_buffer": inventory_buffer,
+                "total_buffer_supply": total_buffer_supply,
+                "buffer_coverage_ratio": buffer_coverage_ratio,
+                "buffer_coverage_momentum": coverage_momentum,
                 "inventory_remaining": inventory_remaining,
                 "demand_decline": demand_decline,
                 "demand_elasticity": elasticity,
@@ -299,6 +337,7 @@ def simulate_dynamic_model(
         )
         previous_price = simulated_price
         previous_fear_excess = fear_excess
+        previous_buffer_coverage_ratio = buffer_coverage_ratio
 
     return pd.DataFrame(rows)
 
@@ -457,7 +496,16 @@ def build_report(
     event_end = event_df["trade_date"].max().date()
     coverage_days = int((event_df["trade_date"].max() - event_df["trade_date"].min()).days)
     average_components = simulation[
-        ["spr_release", "route_supply", "inventory_buffer", "demand_decline", "supply_gap", "fear_factor"]
+        [
+            "spr_release",
+            "route_supply",
+            "inventory_buffer",
+            "total_buffer_supply",
+            "buffer_coverage_ratio",
+            "demand_decline",
+            "supply_gap",
+            "fear_factor",
+        ]
     ].mean()
 
     return f"""# 短期动态递推模型报告
@@ -517,6 +565,8 @@ selection_score = RMSE + 0.20 * abs(峰值误差) + 0.35 * abs(末日误差)
 | SPR 释放 | {average_components["spr_release"]:.2f} 万桶/日 |
 | 绕道运输 | {average_components["route_supply"]:.2f} 万桶/日 |
 | 库存缓冲 | {average_components["inventory_buffer"]:.2f} 万桶/日 |
+| 缓冲供给合计 | {average_components["total_buffer_supply"]:.2f} 万桶/日 |
+| 缓冲覆盖率 | {average_components["buffer_coverage_ratio"]:.3f} |
 | 需求收缩 | {average_components["demand_decline"]:.2f} 万桶/日 |
 | 剩余供需缺口 | {average_components["supply_gap"]:.2f} 万桶/日 |
 | 恐慌因子 | {average_components["fear_factor"]:.3f} |

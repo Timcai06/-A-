@@ -40,6 +40,10 @@
 \definecolor{OilGray}{HTML}{4B5563}
 \definecolor{OilLight}{HTML}{F5F7FA}
 \definecolor{OilTint}{HTML}{E8FBFF}
+\definecolor{PaperNoteBack}{HTML}{FAFAFA}
+\definecolor{PaperNoteRule}{HTML}{6B7280}
+\definecolor{PaperAlgBack}{HTML}{FFFFFF}
+\definecolor{PaperAlgTitle}{HTML}{F7F7F7}
 \definecolor{OilGreen}{HTML}{00E978}
 \definecolor{OilRed}{HTML}{0095F2}
 \definecolor{OilBorder}{HTML}{CBD5E1}
@@ -161,8 +165,8 @@
   font=footnotesize,
   labelfont={bf,color=OilDark},
   labelsep=quad,
-  justification=raggedright,
-  singlelinecheck=false,
+  justification=centering,
+  singlelinecheck=true,
   width=0.90\linewidth
 }
 \captionsetup[table]{position=top,skip=0.4em}
@@ -176,17 +180,17 @@
   enhanced,
   breakable,
   sharp corners,
-  arc=1.2pt,
-  colback=OilTint,
+  arc=0pt,
+  colback=PaperNoteBack,
   colframe=OilBorder,
-  boxrule=0.45pt,
-  leftrule=2.4pt,
-  left=8pt,
-  right=8pt,
-  top=6pt,
-  bottom=6pt,
-  before skip=0.72em,
-  after skip=0.72em,
+  boxrule=0.35pt,
+  leftrule=1.8pt,
+  left=7pt,
+  right=7pt,
+  top=5pt,
+  bottom=5pt,
+  before skip=0.62em,
+  after skip=0.62em,
   fontupper=\small,
 }
 
@@ -194,28 +198,28 @@
   enhanced,
   breakable,
   sharp corners,
-  arc=1.2pt,
-  colback=white,
+  arc=0pt,
+  colback=PaperAlgBack,
   colframe=OilBorder,
-  boxrule=0.45pt,
-  leftrule=2.4pt,
-  left=8pt,
-  right=8pt,
-  top=6pt,
-  bottom=6pt,
+  boxrule=0.35pt,
+  leftrule=1.8pt,
+  left=7pt,
+  right=7pt,
+  top=5pt,
+  bottom=5pt,
   before skip=0.8em,
   after skip=0.8em,
   title={#1},
-  fonttitle=\small\bfseries\sffamily\color{OilBlue},
-  coltitle=OilBlue,
-  colbacktitle=OilTint,
+  fonttitle=\small\bfseries\sffamily\color{OilDark},
+  coltitle=OilDark,
+  colbacktitle=PaperAlgTitle,
   attach boxed title to top left={xshift=0pt,yshift=-1pt},
   boxed title style={
     sharp corners,
-    arc=1.2pt,
-    boxrule=0.45pt,
+    arc=0pt,
+    boxrule=0.35pt,
     colframe=OilBorder,
-    colback=OilTint
+    colback=PaperAlgTitle
   },
   fontupper=\small,
 }
@@ -223,7 +227,7 @@
 \newcommand{\keypoint}[1]{%
   \Needspace{4\baselineskip}
   \begin{paperkeypointbox}
-  \textbf{\sffamily\color{OilBlue}关键结论}\quad #1
+  \textbf{\sffamily\color{OilDark}结论}\quad #1
   \end{paperkeypointbox}
 }
 
