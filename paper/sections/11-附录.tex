@@ -270,40 +270,41 @@ def simulate_future_from_prefix(prefix, future_frame, assumptions, behavior, bas
 
 \subsection*{H 长期状态转移递推}
 
-代码~\ref{lst:state-transition-probability} 展示长期预测中状态转移概率的递推方式。基础矩阵先给出缓和、维持、升级三类状态之间的常规切换概率，再由物理压力和 GPR/OVX 综合风险压力对升级概率进行温和修正；后期缓和不再按日历时间机械触发，而由恢复证据门控。
+代码~\ref{lst:state-transition-probability} 展示长期预测中状态转移概率的递推方式。基础矩阵先给出缓和、维持、升级三类状态之间的常规切换概率，再映射到 logit 空间，由物理压力和 GPR/OVX 综合风险压力对升级倾向进行温和修正；后期缓和不再按日历时间机械触发，而由恢复证据门控。
 
 \begin{paperlisting}{lst:state-transition-probability}{python}{长期状态转移概率递推}
 def transition_probabilities(current_state, day_index, risk_constraints,
                              physical_pressure, recovery_evidence):
-    probs = TRANSITION_MATRIX[STATE_INDEX[current_state]].copy()
+    base_probs = TRANSITION_MATRIX[STATE_INDEX[current_state]].copy()
+    logits = np.log(np.clip(base_probs, 1e-6, 1.0))
 
     # 市场风险主要影响外推早中期；物理压力来自剩余缺口、SPR、库存和绕道
     early_risk_decay = np.clip(1.0 - max(day_index - 60, 0) / 150.0,
                                0.25, 1.0)
     risk_shift = risk_constraints.combined_pressure * early_risk_decay * 0.75
     physical_shift = np.clip(physical_pressure, 0.0, 1.0) * 0.80
-    probs[STATE_INDEX["escalation"]] += 0.014 * risk_shift + 0.022 * physical_shift
-    probs[STATE_INDEX["easing"]] -= 0.010 * risk_shift + 0.014 * physical_shift
+    logits[STATE_INDEX["escalation"]] += 0.16 * risk_shift + 0.24 * physical_shift
+    logits[STATE_INDEX["easing"]] -= 0.11 * risk_shift + 0.18 * physical_shift
 
     if current_state == "escalation":
-        probs[STATE_INDEX["escalation"]] += 0.006 * risk_shift + 0.010 * physical_shift
+        logits[STATE_INDEX["escalation"]] += 0.07 * risk_shift + 0.11 * physical_shift
     elif current_state == "easing":
-        probs[STATE_INDEX["neutral"]] += 0.004 * risk_shift
+        logits[STATE_INDEX["neutral"]] += 0.04 * risk_shift
 
     # 后期缓和由恢复证据门控，而不是只由日期触发
     recovery_gate = np.clip((recovery_evidence - 0.45) / 0.35, 0.0, 1.0)
     stress_brake = np.clip(1.0 - 0.75 * physical_shift, 0.0, 1.0)
     conditional_easing = 0.75 * recovery_gate * stress_brake
     if day_index >= 120:
-        probs[STATE_INDEX["easing"]] += 0.04 * conditional_easing
-        probs[STATE_INDEX["escalation"]] -= 0.04 * conditional_easing
+        logits[STATE_INDEX["easing"]] += 0.26 * conditional_easing
+        logits[STATE_INDEX["escalation"]] -= 0.24 * conditional_easing
     if day_index >= 150:
-        probs[STATE_INDEX["easing"]] += 0.03 * conditional_easing
-        probs[STATE_INDEX["neutral"]] -= 0.02 * conditional_easing
-        probs[STATE_INDEX["escalation"]] -= 0.01 * conditional_easing
+        logits[STATE_INDEX["easing"]] += 0.18 * conditional_easing
+        logits[STATE_INDEX["neutral"]] -= 0.07 * conditional_easing
+        logits[STATE_INDEX["escalation"]] -= 0.11 * conditional_easing
 
-    probs = np.clip(probs, 0.01, 0.98)
-    return probs / probs.sum()
+    exp_values = np.exp(logits - np.max(logits))
+    return exp_values / exp_values.sum()
 \end{paperlisting}
 
 代码~\ref{lst:state-transition-path} 展示状态转移路径的价格递推。每条样本路径先抽取下一期市场状态，再根据状态选择对应中心情景，并叠加历史波动率约束下的扰动和状态切换跳跃，由此得到长期条件区间和尾部风险。
@@ -516,7 +517,7 @@ SENSITIVITY_SPECS = [
 基准对比 & 主模型优于朴素上一日基准和滚动 ARIMA 基准 \\
 长期中性结果 & 第 180 天价格约 93.26 美元/桶 \\
 长期悲观结果 & 第 180 天价格约 111.71 美元/桶，外推期保留二次跳涨风险 \\
-尾部风险 & 状态转移情景树显示外推期最高价突破 120 美元/桶的条件概率约 44.0\% \\
+尾部风险 & 状态转移情景树显示外推期最高价突破 120 美元/桶的条件概率约 47.9\% \\
 最敏感因素 & 封锁风险衰减速度、地缘风险权重、供应中断量、不确定性与制度风险强度 \\
 \bottomrule
 \end{tabularx}

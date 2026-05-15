@@ -45,6 +45,19 @@ LATE_EASING_SCALE = 0.75
 PHYSICAL_PRESSURE_SCALE = 0.80
 RECOVERY_EASING_THRESHOLD = 0.45
 RECOVERY_EASING_WIDTH = 0.35
+LOGIT_PROBABILITY_FLOOR = 1e-6
+LOGIT_RISK_TO_ESCALATION = 0.16
+LOGIT_PHYSICAL_TO_ESCALATION = 0.24
+LOGIT_RISK_FROM_EASING = 0.11
+LOGIT_PHYSICAL_FROM_EASING = 0.18
+LOGIT_ESCALATION_INERTIA_RISK = 0.07
+LOGIT_ESCALATION_INERTIA_PHYSICAL = 0.11
+LOGIT_EASING_TO_NEUTRAL_RISK = 0.04
+LOGIT_LATE_EASING_DAY120 = 0.26
+LOGIT_LATE_ESCALATION_DAY120 = 0.24
+LOGIT_LATE_EASING_DAY150 = 0.18
+LOGIT_LATE_NEUTRAL_DAY150 = 0.07
+LOGIT_LATE_ESCALATION_DAY150 = 0.11
 
 
 @dataclass(frozen=True)
@@ -192,11 +205,25 @@ def write_transition_matrix() -> None:
     frame = pd.DataFrame(TRANSITION_MATRIX, columns=[f"转为{label}" for label in STATE_LABELS])
     frame.insert(0, "当前状态", STATE_LABELS)
     frame.insert(0, "矩阵来源", TRANSITION_MATRIX_SOURCE)
+    frame["概率修正方式"] = "logit-softmax"
+    frame["logit概率下限"] = LOGIT_PROBABILITY_FLOOR
     frame["风险扰动倍率"] = TRANSITION_RISK_SCALE
     frame["后期缓和倍率"] = LATE_EASING_SCALE
     frame["缓和触发恢复证据阈值"] = RECOVERY_EASING_THRESHOLD
     frame["缓和触发恢复证据宽度"] = RECOVERY_EASING_WIDTH
     frame.to_csv(STATE_TRANSITION_MATRIX_CSV, index=False)
+
+
+def _probabilities_to_logits(probs: np.ndarray) -> np.ndarray:
+    """Convert a probability row to log space without changing state ordering."""
+    return np.log(np.clip(probs, LOGIT_PROBABILITY_FLOOR, 1.0))
+
+
+def _softmax(logits: np.ndarray) -> np.ndarray:
+    """Map adjusted logits back to a valid probability simplex."""
+    centered = logits - np.max(logits)
+    exp_values = np.exp(centered)
+    return exp_values / exp_values.sum()
 
 
 def transition_probabilities(
@@ -206,8 +233,9 @@ def transition_probabilities(
     physical_pressure: float = 0.0,
     recovery_evidence: float = 0.0,
 ) -> np.ndarray:
-    """Return the normalized transition probabilities for a day/state pair."""
-    probs = TRANSITION_MATRIX[STATE_INDEX[current_state]].copy()
+    """Return transition probabilities after logit-space risk/recovery tilts."""
+    base_probs = TRANSITION_MATRIX[STATE_INDEX[current_state]].copy()
+    logits = _probabilities_to_logits(base_probs)
 
     # Market-priced and geopolitical risk should mostly affect the early and
     # middle extrapolation window. The effect decays as the blockade persists
@@ -215,16 +243,21 @@ def transition_probabilities(
     early_risk_decay = float(np.clip(1.0 - max(day_index - 60, 0) / 150.0, 0.25, 1.0))
     risk_shift = risk_constraints.combined_pressure * early_risk_decay * TRANSITION_RISK_SCALE
     physical_shift = float(np.clip(physical_pressure, 0.0, 1.0) * PHYSICAL_PRESSURE_SCALE)
-    escalation_boost = 0.014 * risk_shift
-    easing_discount = 0.010 * risk_shift
-    escalation_boost += 0.022 * physical_shift
-    easing_discount += 0.014 * physical_shift
-    probs[STATE_INDEX["escalation"]] += escalation_boost
-    probs[STATE_INDEX["easing"]] -= easing_discount
+    logits[STATE_INDEX["escalation"]] += (
+        LOGIT_RISK_TO_ESCALATION * risk_shift
+        + LOGIT_PHYSICAL_TO_ESCALATION * physical_shift
+    )
+    logits[STATE_INDEX["easing"]] -= (
+        LOGIT_RISK_FROM_EASING * risk_shift
+        + LOGIT_PHYSICAL_FROM_EASING * physical_shift
+    )
     if current_state == "escalation":
-        probs[STATE_INDEX["escalation"]] += 0.006 * risk_shift + 0.010 * physical_shift
+        logits[STATE_INDEX["escalation"]] += (
+            LOGIT_ESCALATION_INERTIA_RISK * risk_shift
+            + LOGIT_ESCALATION_INERTIA_PHYSICAL * physical_shift
+        )
     elif current_state == "easing":
-        probs[STATE_INDEX["neutral"]] += 0.004 * risk_shift
+        logits[STATE_INDEX["neutral"]] += LOGIT_EASING_TO_NEUTRAL_RISK * risk_shift
 
     recovery_gate = float(
         np.clip(
@@ -236,14 +269,13 @@ def transition_probabilities(
     stress_brake = float(np.clip(1.0 - 0.75 * physical_shift, 0.0, 1.0))
     conditional_easing = LATE_EASING_SCALE * recovery_gate * stress_brake
     if day_index >= 120:
-        probs[STATE_INDEX["easing"]] += 0.04 * conditional_easing
-        probs[STATE_INDEX["escalation"]] -= 0.04 * conditional_easing
+        logits[STATE_INDEX["easing"]] += LOGIT_LATE_EASING_DAY120 * conditional_easing
+        logits[STATE_INDEX["escalation"]] -= LOGIT_LATE_ESCALATION_DAY120 * conditional_easing
     if day_index >= 150:
-        probs[STATE_INDEX["easing"]] += 0.03 * conditional_easing
-        probs[STATE_INDEX["neutral"]] -= 0.02 * conditional_easing
-        probs[STATE_INDEX["escalation"]] -= 0.01 * conditional_easing
-    probs = np.clip(probs, 0.01, 0.98)
-    return probs / probs.sum()
+        logits[STATE_INDEX["easing"]] += LOGIT_LATE_EASING_DAY150 * conditional_easing
+        logits[STATE_INDEX["neutral"]] -= LOGIT_LATE_NEUTRAL_DAY150 * conditional_easing
+        logits[STATE_INDEX["escalation"]] -= LOGIT_LATE_ESCALATION_DAY150 * conditional_easing
+    return _softmax(logits)
 
 
 def build_physical_pressure_series(scenario_result: pd.DataFrame, write_output: bool = True) -> pd.DataFrame:
@@ -388,7 +420,7 @@ def build_transition_snapshots(
                     "综合状态转移压力": risk_constraints.combined_pressure,
                     "物理压力": day_physical_pressure,
                     "恢复证据": day_recovery_evidence,
-                    "说明": f"{TRANSITION_MATRIX_SOURCE}，已加入物理压力、恢复证据门控和GPR/OVX温和扰动",
+                    "说明": f"{TRANSITION_MATRIX_SOURCE}，在logit空间加入物理压力、恢复证据门控和GPR/OVX扰动后经softmax归一",
                 }
             )
     return pd.DataFrame(
@@ -704,7 +736,7 @@ def build_report(
 |---|---:|---:|---:|
 {base_matrix_rows}
 
-GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率，扰动倍率为 {TRANSITION_RISK_SCALE:.2f}；SPR 剩余、库存消耗、剩余缺口、绕道恢复和高价压力共同形成物理压力，扰动倍率为 {PHYSICAL_PRESSURE_SCALE:.2f}。第 120 天和第 150 天后的缓和不再由日历时间机械触发，而是由恢复证据门控：当剩余缺口下降、SPR 与库存仍有余量、高价压力回落且耗尽压力较低时，缓和概率才明显提高。所有行在扰动后重新归一化，因此每一日转移概率仍为合法概率分布。
+GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级倾向，扰动倍率为 {TRANSITION_RISK_SCALE:.2f}；SPR 剩余、库存消耗、剩余缺口、绕道恢复和高价压力共同形成物理压力，扰动倍率为 {PHYSICAL_PRESSURE_SCALE:.2f}。第 120 天和第 150 天后的缓和不再由日历时间机械触发，而是由恢复证据门控：当剩余缺口下降、SPR 与库存仍有余量、高价压力回落且耗尽压力较低时，缓和倾向才明显提高。实现上先将基础概率行映射到 logit 空间，在 logit 中叠加风险与恢复证据偏移，再通过 softmax 映射回概率单纯形；因此不再对概率本身做线性加减和事后裁剪。
 
 ## 时变转移矩阵快照
 
