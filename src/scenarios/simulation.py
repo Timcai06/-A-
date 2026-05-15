@@ -70,6 +70,7 @@ INVENTORY_MIN_DAILY_CAP_SHARE = 0.55
 INVENTORY_STOCK_CAP_SHARE = 0.45
 INVENTORY_LOW_STRESS_RELEASE_SHARE = 0.28
 INVENTORY_HIGH_STRESS_RELEASE_SHARE = 0.72
+PRESSURE_RESPONSE_SMOOTHNESS = 6.0
 
 
 @dataclass(frozen=True)
@@ -196,6 +197,24 @@ def infer_gap_closure_day(prefix: pd.DataFrame, assumptions: dynamic.PhysicalAss
     return int(closed.iloc[0]["day_index"])
 
 
+def bounded_unit(value: float) -> float:
+    """Physical share bound used for stocks, budgets and probability-like ratios."""
+    return float(np.clip(value, 0.0, 1.0))
+
+
+def smooth_unit_response(value: float, smoothness: float = PRESSURE_RESPONSE_SMOOTHNESS) -> float:
+    """Smoothly map a normalized stress signal into [0, 1].
+
+    This keeps physical upper/lower bounds, but avoids the piecewise-linear
+    kink produced by directly clipping stress ratios.
+    """
+    x = bounded_unit(value)
+    lower = 1.0 / (1.0 + np.exp(smoothness * 0.5))
+    upper = 1.0 / (1.0 + np.exp(-smoothness * 0.5))
+    raw = 1.0 / (1.0 + np.exp(-smoothness * (x - 0.5)))
+    return float((raw - lower) / max(upper - lower, 1e-9))
+
+
 def adaptive_spr_release(
     day_index: int,
     scheduled_spr: float,
@@ -216,11 +235,9 @@ def adaptive_spr_release(
     coverage_need = max(gross_gap_before_spr + reserve_buffer, 0.0)
     demand_based_release = min(scheduled_spr, coverage_need)
 
-    stress_ratio = np.clip(gross_gap_before_spr / max(assumptions.supply_interruption, 1.0), 0.0, 1.0)
-    price_stress = np.clip(
+    stress_ratio = smooth_unit_response(gross_gap_before_spr / max(assumptions.supply_interruption, 1.0))
+    price_stress = smooth_unit_response(
         (previous_price / base_price - SPR_PRICE_STRESS_START_RATIO) / SPR_PRICE_STRESS_WIDTH,
-        0.0,
-        1.0,
     )
     minimum_policy_share = SPR_MIN_POLICY_SHARE + SPR_PRICE_POLICY_SHARE * price_stress
     stress_share = max(minimum_policy_share, stress_ratio)
@@ -263,13 +280,11 @@ def spr_exhaustion_premium(
     if future_budget <= 0:
         remaining_share = 0.0
     else:
-        remaining_share = float(np.clip(spr_remaining / future_budget, 0.0, 1.0))
-    low_budget_pressure = np.clip(
+        remaining_share = bounded_unit(spr_remaining / future_budget)
+    low_budget_pressure = smooth_unit_response(
         (SPR_EXHAUSTION_WARNING_SHARE - remaining_share) / SPR_EXHAUSTION_WARNING_SHARE,
-        0.0,
-        1.0,
     )
-    shortage_pressure = np.clip(residual_gap / max(assumptions.supply_interruption, 1.0), 0.0, 1.0)
+    shortage_pressure = smooth_unit_response(residual_gap / max(assumptions.supply_interruption, 1.0))
     pressure = float(low_budget_pressure * shortage_pressure)
     premium = float(base_price * SPR_EXHAUSTION_PREMIUM_SCALE * pressure)
     return premium, pressure
@@ -281,7 +296,7 @@ def normalized_smooth_ramp(day: float, start_day: float, ramp_days: float, max_v
         return 0.0
     if ramp_days <= 0:
         return float(max_value)
-    x = np.clip((day - start_day + 1) / ramp_days, 0.0, 1.0)
+    x = bounded_unit((day - start_day + 1) / ramp_days)
     lower = 1.0 / (1.0 + np.exp(ROUTE_SMOOTHNESS * 0.5))
     upper = 1.0 / (1.0 + np.exp(-ROUTE_SMOOTHNESS * 0.5))
     raw = 1.0 / (1.0 + np.exp(-ROUTE_SMOOTHNESS * (x - 0.5)))
@@ -296,11 +311,9 @@ def adaptive_long_elasticity(day_index: int, previous_price: float, base_price: 
         assumptions,
         horizon_days=LONG_ELASTICITY_TRANSITION_DAYS,
     )
-    price_activation = np.clip(
+    price_activation = smooth_unit_response(
         (previous_price / base_price - LONG_ELASTICITY_PRICE_ACTIVATION_START)
         / LONG_ELASTICITY_PRICE_ACTIVATION_WIDTH,
-        0.0,
-        1.0,
     )
     return float(time_elasticity + (assumptions.long_elasticity - time_elasticity) * 0.35 * price_activation)
 
@@ -343,11 +356,9 @@ def adaptive_route_supply(
         assumptions.route_ramp_days,
         assumptions.route_max_capacity,
     )
-    shortage_stress = np.clip(gross_shortage_before_route / max(assumptions.supply_interruption, 1.0), 0.0, 1.0)
-    price_stress = np.clip(
+    shortage_stress = smooth_unit_response(gross_shortage_before_route / max(assumptions.supply_interruption, 1.0))
+    price_stress = smooth_unit_response(
         (previous_price / base_price - ROUTE_PRICE_STRESS_START_RATIO) / ROUTE_PRICE_STRESS_WIDTH,
-        0.0,
-        1.0,
     )
     utilization = ROUTE_BASE_UTILIZATION + ROUTE_STRESS_UTILIZATION * shortage_stress + ROUTE_PRICE_UTILIZATION * price_stress
     return float(np.clip(base_capacity * utilization, 0.0, assumptions.route_max_capacity))
@@ -364,14 +375,12 @@ def adaptive_inventory_buffer(
     """Release commercial inventory as an endogenous buffer, not a fixed drain."""
     if raw_gap <= 0 or inventory_remaining <= 0:
         return 0.0, 0.0
-    remaining_share = np.clip(inventory_remaining / max(assumptions.commercial_inventory, 1.0), 0.0, 1.0)
-    shortage_stress = np.clip(raw_gap / max(assumptions.supply_interruption, 1.0), 0.0, 1.0)
-    price_stress = np.clip(
+    remaining_share = bounded_unit(inventory_remaining / max(assumptions.commercial_inventory, 1.0))
+    shortage_stress = smooth_unit_response(raw_gap / max(assumptions.supply_interruption, 1.0))
+    price_stress = smooth_unit_response(
         (previous_price / base_price - INVENTORY_PRICE_STRESS_START_RATIO) / INVENTORY_PRICE_STRESS_WIDTH,
-        0.0,
-        1.0,
     )
-    release_pressure = float(np.clip(0.70 * shortage_stress + 0.30 * price_stress, 0.0, 1.0))
+    release_pressure = bounded_unit(0.70 * shortage_stress + 0.30 * price_stress)
     daily_cap = assumptions.inventory_daily_cap * (
         INVENTORY_MIN_DAILY_CAP_SHARE + INVENTORY_STOCK_CAP_SHARE * remaining_share
     ) * (
@@ -407,7 +416,7 @@ def uncertainty_components(
         - route_supply
         - demand_decline
     ) / max(assumptions.supply_interruption, 1.0)
-    regime_share = REGIME_BASE_SHARE + REGIME_STRESS_SHARE * np.clip(unresolved_stress, 0.0, 1.0)
+    regime_share = REGIME_BASE_SHARE + REGIME_STRESS_SHARE * smooth_unit_response(unresolved_stress)
     confidence_decay = 1.0
     if day_index > REGIME_CONFIDENCE_DECAY_START_DAY:
         confidence_decay = REGIME_CONFIDENCE_DECAY_FLOOR + (1 - REGIME_CONFIDENCE_DECAY_FLOOR) * np.exp(
@@ -460,8 +469,12 @@ def simulate_future_from_prefix(
         price_ratio = max(previous_price / base_price, 0.1)
 
         price_adjusted_demand = assumptions.base_demand * (price_ratio**elasticity)
-        demand_decline = adaptive_demand_decline(day_index, previous_price, base_price, assumptions)
-        effective_demand = max(price_adjusted_demand - demand_decline, assumptions.base_demand * 0.70)
+        observed_demand_decline = adaptive_demand_decline(day_index, previous_price, base_price, assumptions)
+        effective_demand, demand_decline, price_elasticity_demand_loss = dynamic.effective_demand_after_adjustments(
+            assumptions.base_demand,
+            price_adjusted_demand,
+            observed_demand_decline,
+        )
 
         scheduled_spr_release = dynamic.ramp(
             day_index,
@@ -611,6 +624,8 @@ def simulate_future_from_prefix(
                 "buffer_coverage_momentum": coverage_momentum,
                 "inventory_remaining": inventory_remaining,
                 "demand_decline": demand_decline,
+                "observed_demand_decline": observed_demand_decline,
+                "price_elasticity_demand_loss": price_elasticity_demand_loss,
                 "demand_elasticity": elasticity,
                 "fear_factor": 1 + fear_excess,
                 "shortage_pressure": shortage_pressure,

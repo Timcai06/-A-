@@ -110,10 +110,12 @@ def simulate_dynamic_model(event_df, assumptions, behavior):
         elasticity = interpolate_elasticity(day_index, assumptions)
         price_ratio = max(previous_price / base_price, 0.1)
 
-        # 需求侧：价格弹性与高油价需求收缩共同作用
+        # 需求侧：价格弹性先解释一部分需求下降，题面需求收缩只扣除净额
         price_adjusted_demand = assumptions.base_demand * (price_ratio ** elasticity)
-        demand_decline = ramp(day_index, 0, assumptions.demand_decline_ramp_days,
-                              assumptions.observed_demand_decline)
+        observed_decline = ramp(day_index, 0, assumptions.demand_decline_ramp_days,
+                                assumptions.observed_demand_decline)
+        elasticity_loss = max(assumptions.base_demand - price_adjusted_demand, 0.0)
+        demand_decline = max(observed_decline - 0.35 * elasticity_loss, 0.0)
         effective_demand = max(price_adjusted_demand - demand_decline,
                                assumptions.base_demand * 0.70)
 
@@ -512,12 +514,12 @@ SENSITIVITY_SPECS = [
 \midrule
 真实数据来源 & 真实价格来自赛题附件 CSV，外部数据只作数量级和风险约束 \\
 短期窗口 & 2026 年 3 月 3 日至 2026 年 5 月 5 日，共 46 个交易日 \\
-短期拟合误差 & RMSE = 3.38 美元/桶，MAE = 2.76 美元/桶，MAPE = 2.76\% \\
-峰值误差 & 模拟峰值 110.42 美元/桶，实际最高收盘价 114.06 美元/桶 \\
+短期拟合误差 & RMSE = 3.37 美元/桶，MAE = 2.74 美元/桶，MAPE = 2.73\% \\
+峰值误差 & 模拟峰值 110.49 美元/桶，实际最高收盘价 114.06 美元/桶 \\
 基准对比 & 主模型优于朴素上一日基准和滚动 ARIMA 基准 \\
-长期中性结果 & 第 180 天价格约 93.26 美元/桶 \\
-长期悲观结果 & 第 180 天价格约 111.71 美元/桶，外推期保留二次跳涨风险 \\
-尾部风险 & 状态转移情景树显示外推期最高价突破 120 美元/桶的条件概率约 47.9\% \\
+长期中性结果 & 第 180 天价格约 94.47 美元/桶 \\
+长期悲观结果 & 第 180 天价格约 115.90 美元/桶，外推期保留二次跳涨风险 \\
+尾部风险 & 状态转移情景树显示外推期最高价突破 120 美元/桶的条件概率约 76.3\% \\
 最敏感因素 & 封锁风险衰减速度、地缘风险权重、供应中断量、不确定性与制度风险强度 \\
 \bottomrule
 \end{tabularx}

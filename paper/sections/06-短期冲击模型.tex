@@ -72,13 +72,15 @@
 本文首先构造题面物理供需层。第 $t$ 日有效需求为
 
 \begin{equation}
-  D_t
-  =
-  D_0\left(\frac{\hat P_{t-1}}{P_0}\right)^{\varepsilon_t}
-  - C_t,
+  \begin{aligned}
+  \tilde D_t &= D_0\left(\frac{\hat P_{t-1}}{P_0}\right)^{\varepsilon_t},\\
+  L_t &= \max(D_0-\tilde D_t,0),\\
+  C_t &= \max(C_t^{\mathrm{obs}}-\rho L_t,0),\quad \rho=0.35,\\
+  D_t &= \max(\tilde D_t-C_t,0.70D_0).
+  \end{aligned}
 \end{equation}
 
-其中 $C_t$ 表示高价下需求收缩量。第 $t$ 日不含库存的有效供给为
+其中 \(\tilde D_t\) 为价格弹性调整后的需求，\(L_t\) 为价格弹性已解释的需求下降，\(C_t^{\mathrm{obs}}\) 为题面给出的需求下降量递推值。为避免价格弹性和题面需求下降重复全额扣减，本文仅将 \(35\%\) 的价格弹性下降视作与观测需求下降重叠，其余部分表示非价格行为调整和强制消费削减。第 $t$ 日不含库存的有效供给为
 
 \begin{equation}
   S_t^{(0)}

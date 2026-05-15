@@ -31,6 +31,8 @@ PROBLEM_PARAMETERS_PATH = PROJECT_ROOT / "data" / "metadata" / "题面参数表.
 # calibrated risk weight so sensitivity analysis can audit whether the long-run
 # price path depends on one hidden exponential constant.
 BLOCKADE_RISK_DECAY = 0.004
+DEMAND_FLOOR_SHARE = 0.70
+DEMAND_ELASTICITY_OVERLAP_SHARE = 0.35
 
 
 @dataclass(frozen=True)
@@ -157,6 +159,29 @@ def interpolate_elasticity(day: float, assumptions: PhysicalAssumptions, horizon
     return assumptions.base_elasticity + (assumptions.long_elasticity - assumptions.base_elasticity) * weight
 
 
+def effective_demand_after_adjustments(
+    base_demand: float,
+    price_adjusted_demand: float,
+    observed_demand_decline: float,
+    floor_share: float = DEMAND_FLOOR_SHARE,
+    overlap_share: float = DEMAND_ELASTICITY_OVERLAP_SHARE,
+) -> tuple[float, float, float]:
+    """Combine price elasticity and observed demand loss without double counting.
+
+    The contest parameter for demand decline is treated as an observed total
+    stress response. The price-elasticity channel is applied first; only a
+    calibrated share of the price-elasticity loss is treated as overlapping
+    with the observed decline, while the remaining observed decline represents
+    non-price behavioral adjustment and forced consumption reduction.
+    """
+    price_elasticity_loss = max(base_demand - price_adjusted_demand, 0.0)
+    overlap_loss = max(overlap_share, 0.0) * price_elasticity_loss
+    net_observed_decline = max(observed_demand_decline - overlap_loss, 0.0)
+    demand_floor = base_demand * floor_share
+    effective_demand = max(price_adjusted_demand - net_observed_decline, demand_floor)
+    return float(effective_demand), float(net_observed_decline), float(price_elasticity_loss)
+
+
 def coverage_activation(coverage_ratio: float, center: float = 0.55, slope: float = 9.0) -> float:
     """Smooth confidence signal from the share of gross shortage covered by buffers."""
     bounded = float(np.clip(coverage_ratio, 0.0, 1.5))
@@ -227,8 +252,17 @@ def simulate_dynamic_model(
         price_ratio = max(previous_price / base_price, 0.1)
 
         price_adjusted_demand = assumptions.base_demand * (price_ratio**elasticity)
-        demand_decline = ramp(day_index, 0, assumptions.demand_decline_ramp_days, assumptions.observed_demand_decline)
-        effective_demand = max(price_adjusted_demand - demand_decline, assumptions.base_demand * 0.70)
+        observed_demand_decline = ramp(
+            day_index,
+            0,
+            assumptions.demand_decline_ramp_days,
+            assumptions.observed_demand_decline,
+        )
+        effective_demand, demand_decline, price_elasticity_demand_loss = effective_demand_after_adjustments(
+            assumptions.base_demand,
+            price_adjusted_demand,
+            observed_demand_decline,
+        )
 
         spr_release = ramp(
             day_index,
@@ -325,6 +359,8 @@ def simulate_dynamic_model(
                 "buffer_coverage_momentum": coverage_momentum,
                 "inventory_remaining": inventory_remaining,
                 "demand_decline": demand_decline,
+                "observed_demand_decline": observed_demand_decline,
+                "price_elasticity_demand_loss": price_elasticity_demand_loss,
                 "demand_elasticity": elasticity,
                 "fear_factor": 1 + fear_excess,
                 "shortage_pressure": shortage_pressure,
