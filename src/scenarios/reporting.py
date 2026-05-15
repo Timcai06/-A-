@@ -68,22 +68,80 @@ def save_figures(result: pd.DataFrame) -> None:
     fig.savefig(SCENARIO_PRICE_FIGURE, dpi=190)
     plt.close(fig)
 
-    fig, axes = plt.subplots(2, 1, figsize=(11.5, 8.0), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(10.8, 9.2), sharex=True, gridspec_kw={"height_ratios": [1.05, 0.95]})
     for key, label in SCENARIO_NAMES.items():
         sub = result[result["scenario"] == key]
-        plot_sub = sub[sub["trade_date"] >= observed_end]
-        axes[0].plot(plot_sub["trade_date"], plot_sub["inventory_remaining"], color=colors[key], linewidth=2.0, label=label)
-        axes[1].plot(plot_sub["trade_date"], plot_sub["supply_gap"], color=colors[key], linewidth=2.0, label=label)
-    axes[0].set_title("商业库存剩余量")
-    axes[0].set_ylabel("万桶")
-    axes[0].legend(loc="upper right")
-    axes[1].set_title("剩余供需缺口")
+        plot_sub = sub[sub["trade_date"] >= observed_end].copy()
+        if plot_sub.empty:
+            continue
+        base_inventory = max(float(plot_sub["inventory_remaining"].iloc[0]), 1.0)
+        plot_sub["inventory_remaining_rate"] = plot_sub["inventory_remaining"] / base_inventory * 100
+        axes[0].plot(
+            plot_sub["trade_date"],
+            plot_sub["inventory_remaining_rate"],
+            color=colors[key],
+            linewidth=2.2,
+            label=label,
+        )
+        direct_label(
+            axes[0],
+            plot_sub["trade_date"].iloc[-1],
+            plot_sub["inventory_remaining_rate"].iloc[-1],
+            f"{label} {plot_sub['inventory_remaining_rate'].iloc[-1]:.1f}%",
+            colors[key],
+            dx=8,
+        )
+
+    pess = result[(result["scenario"] == "pessimistic") & (result["trade_date"] >= observed_end)].copy()
+    if not pess.empty:
+        axes[1].fill_between(
+            pess["trade_date"],
+            pess["supply_gap"],
+            color=colors["pessimistic"],
+            alpha=0.13,
+            linewidth=0,
+        )
+        axes[1].plot(
+            pess["trade_date"],
+            pess["supply_gap"],
+            color=colors["pessimistic"],
+            linewidth=2.3,
+            label="悲观情景剩余缺口",
+        )
+        direct_label(
+            axes[1],
+            pess["trade_date"].iloc[-1],
+            pess["supply_gap"].iloc[-1],
+            f"悲观情景 {pess['supply_gap'].iloc[-1]:.0f}万桶/日",
+            colors["pessimistic"],
+            dx=8,
+        )
+
+    axes[1].axhline(0, color=colors["neutral"], linewidth=1.6, linestyle="-")
+    axes[1].annotate(
+        "乐观/中性情景：剩余缺口闭合",
+        xy=(observed_end, 0),
+        xytext=(16, 14),
+        textcoords="offset points",
+        fontsize=9,
+        color=colors["neutral"],
+        fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.22", "facecolor": "white", "edgecolor": "none", "alpha": 0.78},
+    )
+
+    axes[0].set_title("商业库存剩余率")
+    axes[0].set_ylabel("相对附件截止日 (%)")
+    axes[0].set_ylim(60, 102)
+    axes[1].set_title("剩余供需缺口风险")
     axes[1].set_xlabel("日期")
     axes[1].set_ylabel("万桶/日")
+    axes[1].set_ylim(-45, max(850, float(pess["supply_gap"].max()) * 1.10 if not pess.empty else 850))
     for ax in axes:
         ax.axvline(observed_end, color="#6b7280", linestyle="--", linewidth=1.0)
+        ax.margins(x=0.02)
+    axes[0].legend(loc="lower left", ncol=3)
     fig.autofmt_xdate()
-    fig.tight_layout()
+    fig.tight_layout(pad=1.2)
     fig.savefig(BUFFER_FIGURE, dpi=190)
     plt.close(fig)
 

@@ -1,7 +1,19 @@
 \section*{附录}
 \addcontentsline{toc}{section}{附录}
 
-\keypoint{附录只保留核心模型实现和关键检验代码。}
+\keypoint{附录保留核心模型实现、关键检验代码和正文未展开的补充证据。}
+
+\newcommand{\appendixfigunit}[7]{%
+  \Needspace{#1}%
+  \noindent\begin{minipage}{\linewidth}
+    \noindent\textbf{#2。}#3
+    \par\vspace{0.25em}
+    \centering
+    \includegraphics[width=#4\linewidth,height=#5,keepaspectratio]{#6}
+    \captionof*{figure}{#7}
+  \end{minipage}
+  \vspace{0.45em}
+}
 
 \subsection*{A 项目材料说明}
 
@@ -28,7 +40,59 @@
 
 真实价格数据仅来自赛题附件，并经清洗后形成中文命名数据文件。短期拟合使用附件中 2026 年 3 月 3 日至 2026 年 5 月 5 日的冲突窗口；2017--2026 年完整价格序列仅用于历史同长度窗口、基准模型分布和事件极端性检验。EIA 周度 SPR、商业库存和原油产量数据、JODI 多国月度产量、库存、进出口、需求和炼厂数据、OPEC 全球供需平衡表、GPR 月度指数和 OVX 隐含波动率用于外部合理性校验，不反向替代附件真实价格。
 
-\subsection*{C 短期冲击模型核心代码}
+\clearpage
+
+\subsection*{C 短期冲击模型补充检验}
+
+正文第七章保留校准、基准对比和鲁棒性摘要。附录补充给出短期模型的机制贡献、参数剖面、事件窗口、滞后平移、残差分布和局部扰动稳健性图。
+
+\appendixfigunit{0.39\textheight}{机制贡献分解}{短期价格平台不是由单一变量决定，而是物理缺口、风险溢价、政策缓冲和预期修复共同作用。该图用于说明各机制在不同日期上的方向和相对强度。}{0.96}{0.29\textheight}{短期模型机制贡献.png}{附图 1 机制贡献分解}
+
+\appendixfigunit{0.39\textheight}{参数剖面检验}{参数剖面图观察关键参数在最优点附近扰动时误差函数是否平滑变化。若曲线只在某一点突然变好，就可能存在单点调参风险。}{0.96}{0.30\textheight}{短期模型参数剖面图.png}{附图 2 参数一维剖面}
+
+附图 1 和附图 2 分别回答“价格平台由哪些机制推动”和“参数是否只在单点有效”。前者给出机制方向，后者观察目标函数形态，二者共同支撑短期模型的解释性和稳定性。
+
+\appendixfigunit{0.39\textheight}{事件窗口检验}{短期冲击窗口内部并不均匀，初始冲击、高位平台、中期回落和后期二次抬升的拟合难度不同。该图把整体误差拆到事件阶段，避免只用总 RMSE 掩盖局部表现。}{0.84}{0.23\textheight}{短期模型事件窗口检验.png}{附图 3 事件窗口检验}
+
+\appendixfigunit{0.36\textheight}{滞后平移检验}{时间序列模型容易出现“把昨天当今天”的滞后拟合。该检验将预测曲线进行平移比较；原始位置误差最低，说明模型不是简单复制滞后价格路径。}{0.78}{0.21\textheight}{短期模型滞后平移检验.png}{附图 4 滞后平移检验}
+
+\appendixfigunit{0.39\textheight}{残差分段分布}{残差分布用于判断误差集中在哪些阶段。中期平台阶段残差更分散，说明平台震荡和情绪再定价仍是短期模型的主要误差来源。}{0.84}{0.23\textheight}{短期残差分段分布图.png}{附图 5 残差分段分布}
+
+\appendixfigunit{0.52\textheight}{局部扰动稳健性}{稳健性带展示当前参数邻域内的预测路径范围。若扰动后路径仍围绕真实价格平台展开，说明结论不依赖某一个极窄的参数组合。}{1.00}{0.43\textheight}{短期模型稳健性带.png}{附图 6 局部扰动稳健性}
+
+以上六组补充检验依次对应机制来源、参数形态、阶段误差、滞后排查、残差分布和局部扰动。它们共同把正文的短期拟合结论拆成可复核证据链，说明模型优势来自机制组合，而不是单点调参或滞后复制。
+
+\clearpage
+
+\subsection*{D 敏感性与外生风险补充检验}
+
+正文第九章只保留参数排序、尾部风险和外生风险摘要。附录在短期模型检验之后补充长期敏感性和外生风险证据，主要用于说明扰动尺度从何而来、外部风险变量如何进入解释，以及 2026 年冲突窗口相对历史窗口是否具有特殊性。
+
+\appendixfigunit{0.38\textheight}{历史波动参数校准}{长期蒙特卡洛扰动不应凭经验设置，因此先用 2017--2025 年同长度历史窗口估计波动、最大回撤和误差分布。该图给出扰动尺度的可追溯来源。}{0.96}{0.28\textheight}{历史波动参数校准.png}{附图 7 历史波动参数校准}
+
+附图 7 的作用是把长期随机扰动落回历史经验区间：模型并非任意扩大波动，而是用同长度窗口的收益波动和回撤分布约束后续情景树的扰动尺度。
+
+\appendixfigunit{0.41\textheight}{传统蒙特卡洛路径云}{该图展示不引入状态转移结构时，多参数联合扰动形成的价格路径云。它作为长期情景树的朴素随机模拟参照，用来区分普通参数扰动和状态切换风险。}{0.88}{0.24\textheight}{传统蒙特卡洛路径云图.png}{附图 8 传统蒙特卡洛路径云图}
+
+\appendixfigunit{0.40\textheight}{GPR 地缘风险指数滞后审计}{GPR 不直接替代附件价格，也不用于同日解释同日价格。这里检验滞后风险指数与布伦特收益的关系，确认其更适合作为风险环境变量。}{0.88}{0.23\textheight}{地缘风险指数滞后审计.png}{附图 9 地缘风险指数滞后检验}
+
+\appendixfigunit{0.36\textheight}{滞后 GPR 与月度收益}{该散点关系说明，滞后 1 月 GPR 与布伦特月度收益的线性解释力有限。因此正文只将 GPR 用作长期风险溢价和状态转移概率的约束变量。}{0.78}{0.21\textheight}{滞后GPR与布伦特收益关系.png}{附图 10 滞后 1 月 GPR 与布伦特月度收益关系}
+
+\appendixfigunit{0.40\textheight}{OVX 隐含波动率滞后检验}{OVX 反映市场对原油期权波动率的定价预期，适合刻画不确定性和尾部风险。该图用于确认 OVX 主要约束长期波动和风险状态，而不是直接给出油价涨跌方向。}{0.96}{0.29\textheight}{OVX隐含波动率滞后检验.png}{附图 11 OVX 隐含波动率滞后检验}
+
+\appendixfigunit{0.40\textheight}{历史同长度窗口极端性}{将 2026 年冲突窗口放回 2017--2025 年同长度窗口中比较，可以判断本题样本是否处于异常高涨幅、高波动或高预测难度区间。}{0.96}{0.31\textheight}{历史窗口极端性检验.png}{附图 12 冲突窗口历史极端性}
+
+附图 11 和附图 12 分别从市场定价风险与历史窗口位置说明同一件事：2026 年冲突窗口不是普通平稳波动段，因此长期模型需要显式保留状态切换和尾部区间，而不能只给一条确定性均值线。
+
+\appendixfigunit{0.42\textheight}{历史基准误差分布}{该图比较历史同长度窗口上的基准误差分布，用于说明 2026 年冲突窗口相对普通市场阶段的预测难度。}{0.96}{0.29\textheight}{R历史基准误差分布图.png}{附图 13 历史同长度窗口基准误差分布}
+
+\appendixfigunit{0.60\textheight}{库存与供需缺口风险}{该图展示中长期外推中商业库存剩余率和剩余缺口风险的同步变化，说明悲观路径的尾部风险主要来自 SPR 等效预算耗尽、库存缓冲下降和剩余缺口同时存在。}{1.00}{0.51\textheight}{库存与供需缺口风险.png}{附图 14 库存与供需缺口风险}
+
+上述补充图共同说明，长期外推中的随机扰动、风险变量与库存缺口并非孤立设定：历史窗口提供扰动尺度，GPR 与 OVX 提供外生风险约束，库存和剩余缺口则刻画尾部二次跳涨的物理来源。因此正文把长期结果写成条件路径、分位区间和尾部概率，而不是只给一条确定性均值预测线。
+
+\clearpage
+
+\subsection*{E 短期冲击模型核心代码}
 
 代码~\ref{lst:dynamic-recursion} 展示短期冲击模型的核心实现。
 
@@ -98,7 +162,9 @@ def simulate_dynamic_model(event_df, assumptions, behavior):
     return pd.DataFrame(rows)
 \end{paperlisting}
 
-\subsection*{D 参数校准模块}
+\clearpage
+
+\subsection*{F 参数校准模块}
 
 代码~\ref{lst:calibration} 给出参数校准流程。本文在固定机制结构下，综合使用差分进化、局部稳定性搜索和拟合质量精修选择代表性参数。
 
@@ -147,9 +213,11 @@ def calibrate(event_df, base_assumptions):
     return select_representative_candidates(rows, simulations, final)
 \end{paperlisting}
 
-\subsection*{E 中长期油价调节模型递推与政策缓冲}
+\clearpage
 
-代码~\ref{lst:future-recursion} 展示长期外推中 SPR 自适应释放与供需再平衡的处理。该模块避免把战略储备释放机械设为满额，而是根据剩余缺口、价格压力和时间衰减动态收缩释放强度。
+\subsection*{G 中长期油价调节模型递推与政策缓冲}
+
+代码~\ref{lst:future-recursion} 展示长期外推中 SPR 自适应释放与供需再平衡的处理。该模块避免把战略储备释放机械设为满额，而是根据剩余缺口、价格压力、时间衰减和剩余等效预算动态收缩释放强度。
 
 \begin{paperlisting}{lst:future-recursion}{python}{中长期油价调节模型中的 SPR 自适应释放}
 def adaptive_spr_release(day_index, scheduled_spr, gross_gap_before_spr,
@@ -178,37 +246,61 @@ def adaptive_spr_release(day_index, scheduled_spr, gross_gap_before_spr,
     actual_release = max(demand_based_release, scheduled_spr * stress_share * time_taper)
     actual_release = float(min(scheduled_spr, actual_release))
     return actual_release, actual_release / scheduled_spr
+
+def simulate_future_from_prefix(prefix, future_frame, assumptions, behavior, base_price):
+    spr_budget_total, spr_future_budget, spr_remaining = initialize_spr_budget(prefix, assumptions)
+    inventory_remaining = float(prefix.iloc[-1]["inventory_remaining"])
+
+    for _, row in future_frame.iterrows():
+        scheduled_spr = ramp(row["day_index"], assumptions.spr_delay_days,
+                             assumptions.spr_ramp_days, assumptions.spr_max_release)
+        spr_release, taper_ratio = adaptive_spr_release(...)
+        spr_release = min(spr_release, spr_remaining)
+        spr_remaining = max(spr_remaining - spr_release, 0.0)
+
+        # 当 SPR 接近耗尽且剩余缺口仍存在时，加入二次跳涨压力
+        exhaustion_premium, exhaustion_pressure = spr_exhaustion_premium(
+            spr_remaining, spr_future_budget, residual_gap, base_price, assumptions
+        )
+        target_price = base_price + shortage_pressure + risk_premium \
+            + exhaustion_premium - buffer_discount - relief_discount
 \end{paperlisting}
 
-\subsection*{F 长期状态转移递推}
+\clearpage
 
-代码~\ref{lst:state-transition-probability} 展示长期预测中状态转移概率的递推方式。基础矩阵先给出缓和、维持、升级三类状态之间的常规切换概率，再由 GPR 和 OVX 形成的综合风险压力对升级概率进行温和修正，并在后期加入风险缓和项。
+\subsection*{H 长期状态转移递推}
+
+代码~\ref{lst:state-transition-probability} 展示长期预测中状态转移概率的递推方式。基础矩阵先给出缓和、维持、升级三类状态之间的常规切换概率，再由物理压力和 GPR/OVX 综合风险压力对升级概率进行温和修正；后期缓和不再按日历时间机械触发，而由恢复证据门控。
 
 \begin{paperlisting}{lst:state-transition-probability}{python}{长期状态转移概率递推}
-def transition_probabilities(current_state, day_index, risk_constraints):
+def transition_probabilities(current_state, day_index, risk_constraints,
+                             physical_pressure, recovery_evidence):
     probs = TRANSITION_MATRIX[STATE_INDEX[current_state]].copy()
 
-    # GPR/OVX 风险主要影响外推早中期；随封锁持续和缓冲证据积累而衰减
-    early_risk_decay = np.clip(1.0 - max(day_index - 60, 0) / 140.0,
-                               0.18, 1.0)
-    risk_shift = risk_constraints.combined_pressure * early_risk_decay
-    probs[STATE_INDEX["escalation"]] += 0.020 * risk_shift
-    probs[STATE_INDEX["easing"]] -= 0.014 * risk_shift
+    # 市场风险主要影响外推早中期；物理压力来自剩余缺口、SPR、库存和绕道
+    early_risk_decay = np.clip(1.0 - max(day_index - 60, 0) / 150.0,
+                               0.25, 1.0)
+    risk_shift = risk_constraints.combined_pressure * early_risk_decay * 0.75
+    physical_shift = np.clip(physical_pressure, 0.0, 1.0) * 0.80
+    probs[STATE_INDEX["escalation"]] += 0.014 * risk_shift + 0.022 * physical_shift
+    probs[STATE_INDEX["easing"]] -= 0.010 * risk_shift + 0.014 * physical_shift
 
     if current_state == "escalation":
-        probs[STATE_INDEX["escalation"]] += 0.010 * risk_shift
-        probs[STATE_INDEX["neutral"]] -= 0.004 * risk_shift
+        probs[STATE_INDEX["escalation"]] += 0.006 * risk_shift + 0.010 * physical_shift
     elif current_state == "easing":
-        probs[STATE_INDEX["neutral"]] += 0.006 * risk_shift
+        probs[STATE_INDEX["neutral"]] += 0.004 * risk_shift
 
-    # 后期政策缓冲和替代运输逐渐被市场确认，状态概率向缓和侧移动
+    # 后期缓和由恢复证据门控，而不是只由日期触发
+    recovery_gate = np.clip((recovery_evidence - 0.45) / 0.35, 0.0, 1.0)
+    stress_brake = np.clip(1.0 - 0.75 * physical_shift, 0.0, 1.0)
+    conditional_easing = 0.75 * recovery_gate * stress_brake
     if day_index >= 120:
-        probs[STATE_INDEX["easing"]] += 0.04
-        probs[STATE_INDEX["escalation"]] -= 0.04
+        probs[STATE_INDEX["easing"]] += 0.04 * conditional_easing
+        probs[STATE_INDEX["escalation"]] -= 0.04 * conditional_easing
     if day_index >= 150:
-        probs[STATE_INDEX["easing"]] += 0.03
-        probs[STATE_INDEX["neutral"]] -= 0.02
-        probs[STATE_INDEX["escalation"]] -= 0.01
+        probs[STATE_INDEX["easing"]] += 0.03 * conditional_easing
+        probs[STATE_INDEX["neutral"]] -= 0.02 * conditional_easing
+        probs[STATE_INDEX["escalation"]] -= 0.01 * conditional_easing
 
     probs = np.clip(probs, 0.01, 0.98)
     return probs / probs.sum()
@@ -217,22 +309,23 @@ def transition_probabilities(current_state, day_index, risk_constraints):
 代码~\ref{lst:state-transition-path} 展示状态转移路径的价格递推。每条样本路径先抽取下一期市场状态，再根据状态选择对应中心情景，并叠加历史波动率约束下的扰动和状态切换跳跃，由此得到长期条件区间和尾部风险。
 
 \begin{paperlisting}{lst:state-transition-path}{python}{状态转移路径价格递推}
-def simulate_path(rng, sample_id, centers, start_price, daily_sigma,
-                  transition_jump_sigma_scale, risk_constraints):
+def simulate_path(rng, sample_id, dates, center_price_lookup, start_price,
+                  daily_sigma, transition_jump_sigma_scale, risk_constraints,
+                  physical_pressure_lookup, recovery_evidence_lookup):
     state = "neutral"
     previous_price = start_price
     previous_noise = 0.0
     rows = []
-    dates = centers["neutral"][["day_index", "trade_date"]]
 
     for _, base_row in dates.iterrows():
         day_index = int(base_row["day_index"])
-        next_state = sample_next_state(rng, state, day_index, risk_constraints)
+        physical_pressure = physical_pressure_lookup.get(day_index, 0.0)
+        recovery_evidence = recovery_evidence_lookup.get(day_index, 0.0)
+        next_state = sample_next_state(rng, state, day_index, risk_constraints,
+                                       physical_pressure_lookup,
+                                       recovery_evidence_lookup)
         spec = STATES[STATE_INDEX[next_state]]
-        center_row = centers[spec.center_scenario]
-        target_price = float(center_row.loc[
-            center_row["day_index"] == day_index, "forecast_price"
-        ].iloc[0])
+        target_price = center_price_lookup[spec.center_scenario][day_index]
 
         noise_scale = max(previous_price * daily_sigma
                           * spec.volatility_multiplier, 0.15)
@@ -255,7 +348,9 @@ def simulate_path(rng, sample_id, centers, start_price, daily_sigma,
     return pd.DataFrame(rows)
 \end{paperlisting}
 
-\subsection*{G 蒙特卡洛情景预测}
+\clearpage
+
+\subsection*{I 蒙特卡洛情景预测}
 
 代码~\ref{lst:monte-carlo} 展示长期蒙特卡洛情景树的核心思想。模型以压力指数为主轴，同时扰动供应中断、SPR 释放、绕道能力、需求弹性、风险权重和不确定性溢价，由此得到长期价格区间和尾部风险概率。
 
@@ -305,7 +400,9 @@ def run_monte_carlo(n_samples):
     return metrics, build_quantiles(paths), build_tail_risk(metrics)
 \end{paperlisting}
 
-\subsection*{H 机制消融与统计检验}
+\clearpage
+
+\subsection*{J 机制消融与统计检验}
 
 代码~\ref{lst:ablation} 用于逐项关闭模型机制，检验主结论是否依赖某一个单独设定。
 
@@ -337,29 +434,9 @@ def run_ablation(event_df, base_assumptions, base_behavior):
     return pd.DataFrame(rows)
 \end{paperlisting}
 
-\subsection*{I 关键结果核查表}
+\clearpage
 
-\begin{table}[htbp]
-\centering
-\caption*{附表 1：关键结果核查}
-\begin{tabularx}{\linewidth}{lX}
-\toprule
-项目 & 核查结果 \\
-\midrule
-真实数据来源 & 所有真实价格均来自赛题附件 CSV，外部数据只用于合理性校验 \\
-短期窗口 & 2026 年 3 月 3 日至 2026 年 5 月 5 日，共 46 个交易日 \\
-短期拟合误差 & RMSE = 3.38 美元/桶，MAE = 2.76 美元/桶，MAPE = 2.76\% \\
-峰值误差 & 模拟峰值 110.42 美元/桶，实际最高收盘价 114.06 美元/桶 \\
-基准对比 & 主模型优于朴素上一日基准和滚动 ARIMA 基准 \\
-长期中性结果 & 第 180 天价格约 91.37 美元/桶 \\
-长期悲观结果 & 第 180 天价格约 107.89 美元/桶，外推期保留二次跳涨风险 \\
-尾部风险 & 历史状态转移矩阵与 GPR/OVX 约束显示外推期最高价突破 120 美元/桶的条件概率约 49.4\% \\
-最敏感因素 & 封锁风险衰减速度、地缘风险权重、不确定性与制度风险强度 \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\subsection*{J 独立计量检验补充}
+\subsection*{K 独立计量检验补充}
 
 代码~\ref{lst:r-audit} 给出 R 语言独立计量检验的核心逻辑。Python 负责机制递推和情景生成，R 侧用于复核主模型相对朴素基准的误差优势、残差相关性和稳健标准误结果，从而降低单一实现口径带来的偏差风险。
 
@@ -421,6 +498,26 @@ SENSITIVITY_SPECS = [
 ]
 \end{paperlisting}
 
-\subsection*{K 程序材料说明}
+\clearpage
 
-本文附录只列出项目关键目录和少量核心程序片段，用于说明数据、模型、图表和论文生成材料的组织方式。
+\subsection*{L 关键结果核查表}
+
+\begin{table}[!htbp]
+\centering
+\caption*{附表 1：关键结果核查}
+\begin{tabularx}{\linewidth}{lX}
+\toprule
+项目 & 核查结果 \\
+\midrule
+真实数据来源 & 真实价格来自赛题附件 CSV，外部数据只作数量级和风险约束 \\
+短期窗口 & 2026 年 3 月 3 日至 2026 年 5 月 5 日，共 46 个交易日 \\
+短期拟合误差 & RMSE = 3.38 美元/桶，MAE = 2.76 美元/桶，MAPE = 2.76\% \\
+峰值误差 & 模拟峰值 110.42 美元/桶，实际最高收盘价 114.06 美元/桶 \\
+基准对比 & 主模型优于朴素上一日基准和滚动 ARIMA 基准 \\
+长期中性结果 & 第 180 天价格约 93.26 美元/桶 \\
+长期悲观结果 & 第 180 天价格约 111.71 美元/桶，外推期保留二次跳涨风险 \\
+尾部风险 & 状态转移情景树显示外推期最高价突破 120 美元/桶的条件概率约 44.0\% \\
+最敏感因素 & 封锁风险衰减速度、地缘风险权重、供应中断量、不确定性与制度风险强度 \\
+\bottomrule
+\end{tabularx}
+\end{table}

@@ -16,6 +16,8 @@
 
 ## 当前主线
 
+核心模型链路：
+
 1. `src/pipeline/clean_data.py`
 2. `src/models/baseline_supply_demand.py`
 3. `src/models/dynamic_short_term.py`
@@ -26,4 +28,19 @@
 8. `src/analysis/statistical_audit.py`
 9. `src/visualization/final_paper_figures.py`
 
-最终论文构建入口是 `scripts/build_final_paper.sh`。
+论文构建链路还会调用外部约束、市场风险、短期质量门和图表审计模块，包括：
+
+- `src/data/fetch_opec_balance.py`
+- `src/data/fetch_futures_term_structure.py`
+- `src/analysis/market_risk_variables.py`
+- `src/analysis/short_term_residual_correction.py`
+- `src/analysis/short_term_parameter_event_audit.py`
+- `src/analysis/short_term_ml_features.py`
+- `src/analysis/short_term_ml_residual_model.py`
+- `src/analysis/short_term_error_attribution.py`
+- `src/analysis/short_term_rolling_validation.py`
+- `src/analysis/short_term_final_quality_gate.py`
+- `src/analysis/paper_visual_audit.py`
+- `src/visualization/advanced_candidate_figures.py`
+
+最终论文构建入口是 `scripts/build/build_final_paper.sh`，根目录 `scripts/build_final_paper.sh` 仅作为兼容转发入口。

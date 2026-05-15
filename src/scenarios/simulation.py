@@ -27,6 +27,9 @@ SPR_PRICE_POLICY_SHARE = 0.16
 SPR_TAPER_START_DAY = 75
 SPR_TAPER_FLOOR = 0.25
 SPR_TAPER_DECAY_DAYS = 45
+SPR_FUTURE_BUDGET_DAYS = 85
+SPR_EXHAUSTION_WARNING_SHARE = 0.18
+SPR_EXHAUSTION_PREMIUM_SCALE = 0.08
 
 UNCERTAINTY_BUILDUP_DAYS = 18
 SHOCK_UNCERTAINTY_SHARE = 0.45
@@ -43,6 +46,30 @@ PANIC_PRICE_MULTIPLIER = 0.45
 FEAR_CHANGE_MOMENTUM = 2.5
 OVERSUPPLY_REVERSION_SCALE = 1.35
 BLOCKADE_RISK_DECAY = dynamic.BLOCKADE_RISK_DECAY
+
+LONG_ELASTICITY_TRANSITION_DAYS = 120
+LONG_ELASTICITY_PRICE_ACTIVATION_START = 1.15
+LONG_ELASTICITY_PRICE_ACTIVATION_WIDTH = 0.45
+
+ROUTE_SMOOTHNESS = 7.0
+ROUTE_BASE_UTILIZATION = 0.86
+ROUTE_STRESS_UTILIZATION = 0.12
+ROUTE_PRICE_UTILIZATION = 0.05
+ROUTE_PRICE_STRESS_START_RATIO = 1.05
+ROUTE_PRICE_STRESS_WIDTH = 0.35
+
+DEMAND_PRICE_RESPONSE = 0.035
+DEMAND_RECOVERY_START_DAY = 95
+DEMAND_RECOVERY_FLOOR = 0.74
+DEMAND_RECOVERY_DAYS = 100
+DEMAND_DECLINE_CAP_SHARE = 0.10
+
+INVENTORY_PRICE_STRESS_START_RATIO = 1.06
+INVENTORY_PRICE_STRESS_WIDTH = 0.35
+INVENTORY_MIN_DAILY_CAP_SHARE = 0.55
+INVENTORY_STOCK_CAP_SHARE = 0.45
+INVENTORY_LOW_STRESS_RELEASE_SHARE = 0.28
+INVENTORY_HIGH_STRESS_RELEASE_SHARE = 0.72
 
 
 @dataclass(frozen=True)
@@ -68,6 +95,13 @@ MECHANISM_CONSTANT_NOTES: tuple[MechanismConstantNote, ...] = (
         "长期仍保留的最低政策释放比例",
         "用于避免 SPR 在制度风险仍存在时立即归零，表示保守释放底座。",
         "暂作为机制设定",
+    ),
+    MechanismConstantNote(
+        "SPR_FUTURE_BUDGET_DAYS",
+        SPR_FUTURE_BUDGET_DAYS,
+        "附件观测期之后可持续动用的等效 SPR 天数",
+        "将 SPR 从单日释放能力扩展为有限资源池，避免长期封锁下无限释放。",
+        "纳入长期资源约束",
     ),
     MechanismConstantNote(
         "REGIME_CONFIDENCE_DECAY_FLOOR",
@@ -96,6 +130,20 @@ MECHANISM_CONSTANT_NOTES: tuple[MechanismConstantNote, ...] = (
         "封锁风险溢价的日度衰减速度",
         "刻画封锁风险从冲击确认到制度化吸收的衰减速度；不是题面物理常数。",
         "已纳入敏感性分析",
+    ),
+    MechanismConstantNote(
+        "LONG_ELASTICITY_TRANSITION_DAYS",
+        LONG_ELASTICITY_TRANSITION_DAYS,
+        "长期需求弹性由短期低弹性向长期情景弹性过渡的时间尺度",
+        "避免 60 天后弹性突然变成常数，体现高价需求调整需要逐步完成。",
+        "长期机制增强",
+    ),
+    MechanismConstantNote(
+        "DEMAND_PRICE_RESPONSE",
+        DEMAND_PRICE_RESPONSE,
+        "长期需求收缩对价格压力的附加响应强度",
+        "需求收缩不再只由日历时间决定，而是随价格高位持续程度内生变化。",
+        "长期机制增强",
     ),
 )
 
@@ -190,6 +238,150 @@ def adaptive_spr_release(
     return actual_release, taper_ratio
 
 
+def initialize_spr_budget(prefix: pd.DataFrame, assumptions: dynamic.PhysicalAssumptions) -> tuple[float, float, float]:
+    """Return total, remaining and already-used effective SPR budget.
+
+    The contest parameter is a daily release capacity. For a 60-180 day
+    extrapolation, capacity alone would allow unrealistically unlimited policy
+    support. We therefore convert the post-observation period into a finite
+    effective budget while preserving the calibrated prefix releases.
+    """
+    prefix_used = float(prefix.get("spr_release", pd.Series(dtype=float)).fillna(0.0).sum())
+    future_budget = float(max(assumptions.spr_max_release, 0.0) * SPR_FUTURE_BUDGET_DAYS)
+    total_budget = prefix_used + future_budget
+    return total_budget, future_budget, future_budget
+
+
+def spr_exhaustion_premium(
+    spr_remaining: float,
+    future_budget: float,
+    residual_gap: float,
+    base_price: float,
+    assumptions: dynamic.PhysicalAssumptions,
+) -> tuple[float, float]:
+    """Price premium when SPR is close to exhaustion and shortage remains."""
+    if future_budget <= 0:
+        remaining_share = 0.0
+    else:
+        remaining_share = float(np.clip(spr_remaining / future_budget, 0.0, 1.0))
+    low_budget_pressure = np.clip(
+        (SPR_EXHAUSTION_WARNING_SHARE - remaining_share) / SPR_EXHAUSTION_WARNING_SHARE,
+        0.0,
+        1.0,
+    )
+    shortage_pressure = np.clip(residual_gap / max(assumptions.supply_interruption, 1.0), 0.0, 1.0)
+    pressure = float(low_budget_pressure * shortage_pressure)
+    premium = float(base_price * SPR_EXHAUSTION_PREMIUM_SCALE * pressure)
+    return premium, pressure
+
+
+def normalized_smooth_ramp(day: float, start_day: float, ramp_days: float, max_value: float) -> float:
+    """S-shaped long-run capacity ramp normalized to hit zero and max_value."""
+    if day < start_day:
+        return 0.0
+    if ramp_days <= 0:
+        return float(max_value)
+    x = np.clip((day - start_day + 1) / ramp_days, 0.0, 1.0)
+    lower = 1.0 / (1.0 + np.exp(ROUTE_SMOOTHNESS * 0.5))
+    upper = 1.0 / (1.0 + np.exp(-ROUTE_SMOOTHNESS * 0.5))
+    raw = 1.0 / (1.0 + np.exp(-ROUTE_SMOOTHNESS * (x - 0.5)))
+    normalized = (raw - lower) / max(upper - lower, 1e-9)
+    return float(max_value * np.clip(normalized, 0.0, 1.0))
+
+
+def adaptive_long_elasticity(day_index: int, previous_price: float, base_price: float, assumptions: dynamic.PhysicalAssumptions) -> float:
+    """Let long-run elasticity approach its scenario target gradually."""
+    time_elasticity = dynamic.interpolate_elasticity(
+        day_index,
+        assumptions,
+        horizon_days=LONG_ELASTICITY_TRANSITION_DAYS,
+    )
+    price_activation = np.clip(
+        (previous_price / base_price - LONG_ELASTICITY_PRICE_ACTIVATION_START)
+        / LONG_ELASTICITY_PRICE_ACTIVATION_WIDTH,
+        0.0,
+        1.0,
+    )
+    return float(time_elasticity + (assumptions.long_elasticity - time_elasticity) * 0.35 * price_activation)
+
+
+def adaptive_demand_decline(
+    day_index: int,
+    previous_price: float,
+    base_price: float,
+    assumptions: dynamic.PhysicalAssumptions,
+) -> float:
+    """Demand destruction is partly calendar-driven and partly price-driven."""
+    base_decline = normalized_smooth_ramp(
+        day_index,
+        0,
+        assumptions.demand_decline_ramp_days,
+        assumptions.observed_demand_decline,
+    )
+    if day_index <= DEMAND_RECOVERY_START_DAY:
+        persistence = 1.0
+    else:
+        persistence = DEMAND_RECOVERY_FLOOR + (1 - DEMAND_RECOVERY_FLOOR) * np.exp(
+            -(day_index - DEMAND_RECOVERY_START_DAY) / DEMAND_RECOVERY_DAYS
+        )
+    price_response = assumptions.base_demand * DEMAND_PRICE_RESPONSE * max(np.log(max(previous_price / base_price, 1.0)), 0.0)
+    demand_cap = assumptions.base_demand * DEMAND_DECLINE_CAP_SHARE
+    return float(np.clip(base_decline * persistence + price_response, 0.0, demand_cap))
+
+
+def adaptive_route_supply(
+    day_index: int,
+    previous_price: float,
+    base_price: float,
+    gross_shortage_before_route: float,
+    assumptions: dynamic.PhysicalAssumptions,
+) -> float:
+    """Effective rerouting depends on logistics buildup and shortage pressure."""
+    base_capacity = normalized_smooth_ramp(
+        day_index,
+        assumptions.route_start_day,
+        assumptions.route_ramp_days,
+        assumptions.route_max_capacity,
+    )
+    shortage_stress = np.clip(gross_shortage_before_route / max(assumptions.supply_interruption, 1.0), 0.0, 1.0)
+    price_stress = np.clip(
+        (previous_price / base_price - ROUTE_PRICE_STRESS_START_RATIO) / ROUTE_PRICE_STRESS_WIDTH,
+        0.0,
+        1.0,
+    )
+    utilization = ROUTE_BASE_UTILIZATION + ROUTE_STRESS_UTILIZATION * shortage_stress + ROUTE_PRICE_UTILIZATION * price_stress
+    return float(np.clip(base_capacity * utilization, 0.0, assumptions.route_max_capacity))
+
+
+def adaptive_inventory_buffer(
+    raw_gap: float,
+    previous_price: float,
+    base_price: float,
+    inventory_remaining: float,
+    assumptions: dynamic.PhysicalAssumptions,
+    behavior: dynamic.BehavioralParameters,
+) -> tuple[float, float]:
+    """Release commercial inventory as an endogenous buffer, not a fixed drain."""
+    if raw_gap <= 0 or inventory_remaining <= 0:
+        return 0.0, 0.0
+    remaining_share = np.clip(inventory_remaining / max(assumptions.commercial_inventory, 1.0), 0.0, 1.0)
+    shortage_stress = np.clip(raw_gap / max(assumptions.supply_interruption, 1.0), 0.0, 1.0)
+    price_stress = np.clip(
+        (previous_price / base_price - INVENTORY_PRICE_STRESS_START_RATIO) / INVENTORY_PRICE_STRESS_WIDTH,
+        0.0,
+        1.0,
+    )
+    release_pressure = float(np.clip(0.70 * shortage_stress + 0.30 * price_stress, 0.0, 1.0))
+    daily_cap = assumptions.inventory_daily_cap * (
+        INVENTORY_MIN_DAILY_CAP_SHARE + INVENTORY_STOCK_CAP_SHARE * remaining_share
+    ) * (
+        INVENTORY_LOW_STRESS_RELEASE_SHARE + INVENTORY_HIGH_STRESS_RELEASE_SHARE * release_pressure
+    )
+    desired_release = raw_gap * behavior.inventory_response * (0.70 + 0.30 * release_pressure)
+    inventory_buffer = min(desired_release, daily_cap, inventory_remaining)
+    return float(max(inventory_buffer, 0.0)), release_pressure
+
+
 def uncertainty_components(
     day_index: int,
     base_price: float,
@@ -257,22 +449,18 @@ def simulate_future_from_prefix(
     previous_fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * previous_day)
     previous_buffer_coverage_ratio = float(prefix.iloc[-1].get("buffer_coverage_ratio", 0.0))
     inventory_remaining = float(prefix.iloc[-1]["inventory_remaining"])
+    spr_budget_total, spr_future_budget, spr_remaining = initialize_spr_budget(prefix, assumptions)
     gap_closure_day = infer_gap_closure_day(prefix, assumptions)
     rows: list[dict[str, Any]] = []
 
     for _, row in future_frame.iterrows():
         trade_date = row["trade_date"]
         day_index = int(row["day_index"])
-        elasticity = dynamic.interpolate_elasticity(day_index, assumptions)
+        elasticity = adaptive_long_elasticity(day_index, previous_price, base_price, assumptions)
         price_ratio = max(previous_price / base_price, 0.1)
 
         price_adjusted_demand = assumptions.base_demand * (price_ratio**elasticity)
-        demand_decline = dynamic.ramp(
-            day_index,
-            0,
-            assumptions.demand_decline_ramp_days,
-            assumptions.observed_demand_decline,
-        )
+        demand_decline = adaptive_demand_decline(day_index, previous_price, base_price, assumptions)
         effective_demand = max(price_adjusted_demand - demand_decline, assumptions.base_demand * 0.70)
 
         scheduled_spr_release = dynamic.ramp(
@@ -281,34 +469,48 @@ def simulate_future_from_prefix(
             assumptions.spr_ramp_days,
             assumptions.spr_max_release,
         )
-        route_supply = dynamic.ramp(
+        gross_shortage_before_route = max(
+            effective_demand - (assumptions.base_supply - assumptions.supply_interruption),
+            0.0,
+        )
+        scheduled_route_supply = normalized_smooth_ramp(
             day_index,
             assumptions.route_start_day,
             assumptions.route_ramp_days,
             assumptions.route_max_capacity,
         )
-        supply_before_spr = assumptions.base_supply - assumptions.supply_interruption + route_supply
+        route_supply = adaptive_route_supply(
+            day_index,
+            previous_price,
+            base_price,
+            gross_shortage_before_route,
+            assumptions,
+        )
+        supply_before_buffers = assumptions.base_supply - assumptions.supply_interruption + route_supply
         gross_shortage = max(effective_demand - (assumptions.base_supply - assumptions.supply_interruption), 0.0)
-        gross_gap_before_spr = max(effective_demand - supply_before_spr, 0.0)
+        gross_gap_before_spr = max(effective_demand - supply_before_buffers, 0.0)
+        inventory_buffer, inventory_release_pressure = adaptive_inventory_buffer(
+            gross_gap_before_spr,
+            previous_price,
+            base_price,
+            inventory_remaining,
+            assumptions,
+            behavior,
+        )
+        inventory_remaining -= inventory_buffer
+        gross_gap_after_inventory = max(gross_gap_before_spr - inventory_buffer, 0.0)
         spr_release, spr_taper_ratio = adaptive_spr_release(
             day_index,
             scheduled_spr_release,
-            gross_gap_before_spr,
+            gross_gap_after_inventory,
             previous_price,
             base_price,
             assumptions,
         )
-        supply_without_inventory = supply_before_spr + spr_release
-        raw_balance = effective_demand - supply_without_inventory
-        raw_gap = max(raw_balance, 0.0)
-
-        inventory_buffer = min(
-            raw_gap * behavior.inventory_response,
-            assumptions.inventory_daily_cap,
-            inventory_remaining,
-        )
-        inventory_remaining -= inventory_buffer
-        effective_supply = supply_without_inventory + inventory_buffer
+        spr_release = float(min(spr_release, spr_remaining))
+        spr_remaining = float(max(spr_remaining - spr_release, 0.0))
+        spr_taper_ratio = float(spr_release / scheduled_spr_release) if scheduled_spr_release > 0 else 0.0
+        effective_supply = supply_before_buffers + inventory_buffer + spr_release
         supply_balance = effective_supply - effective_demand
         residual_gap = max(-supply_balance, 0.0)
         oversupply = max(supply_balance, 0.0)
@@ -358,12 +560,20 @@ def simulate_future_from_prefix(
             coverage_momentum,
         )
         excess_supply_discount = oversupply_discount(oversupply, base_price, elasticity, assumptions, behavior)
+        exhaustion_premium, exhaustion_pressure = spr_exhaustion_premium(
+            spr_remaining,
+            spr_future_budget,
+            residual_gap,
+            base_price,
+            assumptions,
+        )
         target_price = (
             base_price
             + shortage_pressure
             + blockade_risk_premium
             + uncertainty_premium
             + panic_premium
+            + exhaustion_premium
             - buffer_discount
             - relief_discount
             - excess_supply_discount
@@ -386,9 +596,16 @@ def simulate_future_from_prefix(
                 "gross_supply_gap_before_spr": gross_gap_before_spr,
                 "scheduled_spr_release": scheduled_spr_release,
                 "spr_release": spr_release,
+                "spr_remaining": spr_remaining,
+                "spr_budget_total": spr_budget_total,
+                "spr_budget_used": spr_budget_total - spr_remaining,
+                "spr_future_budget": spr_future_budget,
+                "spr_exhaustion_pressure": exhaustion_pressure,
                 "spr_taper_ratio": spr_taper_ratio,
                 "route_supply": route_supply,
+                "scheduled_route_supply": scheduled_route_supply,
                 "inventory_buffer": inventory_buffer,
+                "inventory_release_pressure": inventory_release_pressure,
                 "total_buffer_supply": total_buffer_supply,
                 "buffer_coverage_ratio": buffer_coverage_ratio,
                 "buffer_coverage_momentum": coverage_momentum,
@@ -402,6 +619,7 @@ def simulate_future_from_prefix(
                 "shock_uncertainty_premium": shock_uncertainty_premium,
                 "regime_risk_premium": regime_risk_premium,
                 "panic_premium": panic_premium,
+                "spr_exhaustion_premium": exhaustion_premium,
                 "buffer_confirmation_discount": buffer_discount,
                 "expectation_relief_discount": relief_discount,
                 "oversupply_discount": excess_supply_discount,
@@ -445,6 +663,8 @@ def summarize_scenario(simulation: pd.DataFrame) -> dict[str, Any]:
     post_observed_min = float(forecast_period["forecast_price"].min())
     final_price = float(all_period.loc[all_period["day_index"] == FORECAST_END_DAY, "forecast_price"].iloc[0])
     final_inventory = float(all_period.loc[all_period["day_index"] == FORECAST_END_DAY, "inventory_remaining"].iloc[0])
+    final_spr_remaining = float(all_period.loc[all_period["day_index"] == FORECAST_END_DAY, "spr_remaining"].iloc[0])
+    max_spr_exhaustion_pressure = float(forecast_period["spr_exhaustion_pressure"].max())
     final_gap = float(all_period.loc[all_period["day_index"] == FORECAST_END_DAY, "supply_gap"].iloc[0])
     max_gap = float(forecast_period["supply_gap"].max())
     cutoff_price = float(all_period[all_period["阶段"] == "附件观测期"]["forecast_price"].iloc[-1])
@@ -464,6 +684,8 @@ def summarize_scenario(simulation: pd.DataFrame) -> dict[str, Any]:
         "第180天价格": final_price,
         "外推期均价": float(forecast_period["forecast_price"].mean()),
         "第180天剩余商业库存": final_inventory,
+        "第180天剩余SPR预算": final_spr_remaining,
+        "SPR耗尽压力峰值": max_spr_exhaustion_pressure,
         "第180天剩余供需缺口": final_gap,
         "外推期最大供需缺口": max_gap,
         "二次跳涨幅度": float(second_jump),

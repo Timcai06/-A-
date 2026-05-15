@@ -32,6 +32,7 @@ PATH_QUANTILE_CSV = OUTPUT_DIR / "长期状态转移路径分位数.csv"
 SAMPLE_METRICS_CSV = OUTPUT_DIR / "长期状态转移样本指标.csv"
 STATE_SHARE_CSV = OUTPUT_DIR / "长期状态转移状态占比.csv"
 STATE_RISK_CONSTRAINT_CSV = OUTPUT_DIR / "长期状态转移风险约束.csv"
+STATE_PHYSICAL_PRESSURE_CSV = OUTPUT_DIR / "长期状态转移物理压力.csv"
 STATE_TRANSITION_MATRIX_CSV = OUTPUT_DIR / "长期状态转移基础矩阵.csv"
 STATE_TRANSITION_SNAPSHOT_CSV = OUTPUT_DIR / "长期状态转移时变矩阵快照.csv"
 STATE_RISK_ABLATION_CSV = OUTPUT_DIR / "长期状态转移风险约束消融.csv"
@@ -41,6 +42,9 @@ FAN_FIGURE = PROJECT_ROOT / "figures" / "long_term_state_transition_fan.png"
 TRANSITION_MATRIX_POLICY = "历史全样本矩阵"
 TRANSITION_RISK_SCALE = 0.75
 LATE_EASING_SCALE = 0.75
+PHYSICAL_PRESSURE_SCALE = 0.80
+RECOVERY_EASING_THRESHOLD = 0.45
+RECOVERY_EASING_WIDTH = 0.35
 
 
 @dataclass(frozen=True)
@@ -190,6 +194,8 @@ def write_transition_matrix() -> None:
     frame.insert(0, "矩阵来源", TRANSITION_MATRIX_SOURCE)
     frame["风险扰动倍率"] = TRANSITION_RISK_SCALE
     frame["后期缓和倍率"] = LATE_EASING_SCALE
+    frame["缓和触发恢复证据阈值"] = RECOVERY_EASING_THRESHOLD
+    frame["缓和触发恢复证据宽度"] = RECOVERY_EASING_WIDTH
     frame.to_csv(STATE_TRANSITION_MATRIX_CSV, index=False)
 
 
@@ -197,6 +203,8 @@ def transition_probabilities(
     current_state: str,
     day_index: int,
     risk_constraints: StateRiskConstraints,
+    physical_pressure: float = 0.0,
+    recovery_evidence: float = 0.0,
 ) -> np.ndarray:
     """Return the normalized transition probabilities for a day/state pair."""
     probs = TRANSITION_MATRIX[STATE_INDEX[current_state]].copy()
@@ -206,31 +214,170 @@ def transition_probabilities(
     # and physical recovery evidence accumulates.
     early_risk_decay = float(np.clip(1.0 - max(day_index - 60, 0) / 150.0, 0.25, 1.0))
     risk_shift = risk_constraints.combined_pressure * early_risk_decay * TRANSITION_RISK_SCALE
+    physical_shift = float(np.clip(physical_pressure, 0.0, 1.0) * PHYSICAL_PRESSURE_SCALE)
     escalation_boost = 0.014 * risk_shift
     easing_discount = 0.010 * risk_shift
+    escalation_boost += 0.022 * physical_shift
+    easing_discount += 0.014 * physical_shift
     probs[STATE_INDEX["escalation"]] += escalation_boost
     probs[STATE_INDEX["easing"]] -= easing_discount
     if current_state == "escalation":
-        probs[STATE_INDEX["escalation"]] += 0.006 * risk_shift
+        probs[STATE_INDEX["escalation"]] += 0.006 * risk_shift + 0.010 * physical_shift
     elif current_state == "easing":
         probs[STATE_INDEX["neutral"]] += 0.004 * risk_shift
 
+    recovery_gate = float(
+        np.clip(
+            (recovery_evidence - RECOVERY_EASING_THRESHOLD) / RECOVERY_EASING_WIDTH,
+            0.0,
+            1.0,
+        )
+    )
+    stress_brake = float(np.clip(1.0 - 0.75 * physical_shift, 0.0, 1.0))
+    conditional_easing = LATE_EASING_SCALE * recovery_gate * stress_brake
     if day_index >= 120:
-        probs[STATE_INDEX["easing"]] += 0.04 * LATE_EASING_SCALE
-        probs[STATE_INDEX["escalation"]] -= 0.04 * LATE_EASING_SCALE
+        probs[STATE_INDEX["easing"]] += 0.04 * conditional_easing
+        probs[STATE_INDEX["escalation"]] -= 0.04 * conditional_easing
     if day_index >= 150:
-        probs[STATE_INDEX["easing"]] += 0.03 * LATE_EASING_SCALE
-        probs[STATE_INDEX["neutral"]] -= 0.02 * LATE_EASING_SCALE
-        probs[STATE_INDEX["escalation"]] -= 0.01 * LATE_EASING_SCALE
+        probs[STATE_INDEX["easing"]] += 0.03 * conditional_easing
+        probs[STATE_INDEX["neutral"]] -= 0.02 * conditional_easing
+        probs[STATE_INDEX["escalation"]] -= 0.01 * conditional_easing
     probs = np.clip(probs, 0.01, 0.98)
     return probs / probs.sum()
 
 
-def build_transition_snapshots(risk_constraints: StateRiskConstraints) -> pd.DataFrame:
+def build_physical_pressure_series(scenario_result: pd.DataFrame, write_output: bool = True) -> pd.DataFrame:
+    """Convert long-horizon physical stress into a daily transition pressure.
+
+    The state matrix should react not only to market-risk variables but also to
+    contest mechanisms: remaining shortage, SPR exhaustion, inventory depletion,
+    replacement-route bottlenecks and high-price stress. The same components
+    also form a recovery-evidence gate, so late easing is triggered by actual
+    mechanism improvement instead of calendar time alone. The pessimistic center
+    path is used as the tail-risk physical reference, while the neutral path
+    keeps the day grid and dates stable.
+    """
+    future = scenario_result[~scenario_result["is_observed_price"].astype(bool)].copy()
+    if future.empty:
+        return pd.DataFrame(columns=["day_index", "trade_date", "physical_pressure"])
+
+    pess = future[future["scenario"] == "pessimistic"].sort_values("day_index").copy()
+    neutral = future[future["scenario"] == "neutral"][["day_index", "trade_date"]].drop_duplicates()
+    if pess.empty:
+        pess = future.sort_values("day_index").drop_duplicates("day_index").copy()
+
+    base_demand = float(pd.to_numeric(pess.get("effective_demand", pd.Series([10_000])), errors="coerce").median())
+    base_demand = max(base_demand, 1.0)
+    initial_inventory = float(pd.to_numeric(pess["inventory_remaining"], errors="coerce").max())
+    initial_inventory = max(initial_inventory, 1.0)
+    future_budget = float(pd.to_numeric(pess.get("spr_future_budget", pd.Series([0.0])), errors="coerce").max())
+    route_max = float(pd.to_numeric(pess.get("route_supply", pd.Series([0.0])), errors="coerce").max())
+    route_max = max(route_max, 1.0)
+
+    frame = neutral.merge(
+        pess[
+            [
+                "day_index",
+                "forecast_price",
+                "supply_gap",
+                "inventory_remaining",
+                "spr_remaining",
+                "spr_exhaustion_pressure",
+                "route_supply",
+            ]
+        ],
+        on="day_index",
+        how="left",
+    )
+    frame["gap_pressure"] = np.clip(pd.to_numeric(frame["supply_gap"], errors="coerce").fillna(0.0) / base_demand / 0.08, 0.0, 1.0)
+    frame["inventory_depletion_pressure"] = np.clip(
+        1 - pd.to_numeric(frame["inventory_remaining"], errors="coerce").fillna(initial_inventory) / initial_inventory,
+        0.0,
+        1.0,
+    )
+    if future_budget > 0 and "spr_remaining" in frame.columns:
+        frame["spr_depletion_pressure"] = np.clip(
+            1 - pd.to_numeric(frame["spr_remaining"], errors="coerce").fillna(future_budget) / future_budget,
+            0.0,
+            1.0,
+        )
+    else:
+        frame["spr_depletion_pressure"] = 0.0
+    frame["spr_exhaustion_pressure"] = pd.to_numeric(frame.get("spr_exhaustion_pressure", 0.0), errors="coerce").fillna(0.0)
+    frame["price_pressure"] = np.clip((pd.to_numeric(frame["forecast_price"], errors="coerce").fillna(100.0) - 110.0) / 20.0, 0.0, 1.0)
+    frame["route_bottleneck_pressure"] = np.clip(1 - pd.to_numeric(frame["route_supply"], errors="coerce").fillna(route_max) / route_max, 0.0, 1.0)
+    frame["physical_pressure"] = (
+        0.30 * frame["gap_pressure"]
+        + 0.22 * frame["spr_depletion_pressure"]
+        + 0.18 * frame["inventory_depletion_pressure"]
+        + 0.16 * frame["price_pressure"]
+        + 0.08 * frame["route_bottleneck_pressure"]
+        + 0.06 * frame["spr_exhaustion_pressure"]
+    ).clip(0.0, 1.0)
+    frame["recovery_evidence"] = (
+        0.28 * (1 - frame["gap_pressure"])
+        + 0.20 * (1 - frame["spr_depletion_pressure"])
+        + 0.16 * (1 - frame["inventory_depletion_pressure"])
+        + 0.14 * (1 - frame["price_pressure"])
+        + 0.12 * (1 - frame["route_bottleneck_pressure"])
+        + 0.10 * (1 - frame["spr_exhaustion_pressure"])
+    ).clip(0.0, 1.0)
+    columns = [
+        "day_index",
+        "trade_date",
+        "physical_pressure",
+        "recovery_evidence",
+        "gap_pressure",
+        "spr_depletion_pressure",
+        "inventory_depletion_pressure",
+        "price_pressure",
+        "route_bottleneck_pressure",
+        "spr_exhaustion_pressure",
+    ]
+    frame = frame[columns].sort_values("day_index").reset_index(drop=True)
+    if write_output:
+        ensure_parent(STATE_PHYSICAL_PRESSURE_CSV)
+        frame.to_csv(STATE_PHYSICAL_PRESSURE_CSV, index=False)
+    return frame
+
+
+def physical_pressure_at(physical_pressure: pd.DataFrame, day_index: int) -> float:
+    if physical_pressure.empty:
+        return 0.0
+    row = physical_pressure[physical_pressure["day_index"] == day_index]
+    if row.empty:
+        return 0.0
+    value = pd.to_numeric(row.iloc[0].get("physical_pressure", 0.0), errors="coerce")
+    return 0.0 if pd.isna(value) else float(value)
+
+
+def recovery_evidence_at(physical_pressure: pd.DataFrame, day_index: int) -> float:
+    if physical_pressure.empty:
+        return 0.0
+    row = physical_pressure[physical_pressure["day_index"] == day_index]
+    if row.empty:
+        return 0.0
+    value = pd.to_numeric(row.iloc[0].get("recovery_evidence", 0.0), errors="coerce")
+    return 0.0 if pd.isna(value) else float(value)
+
+
+def build_transition_snapshots(
+    risk_constraints: StateRiskConstraints,
+    physical_pressure: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
+    pressure_frame = physical_pressure if physical_pressure is not None else pd.DataFrame()
     for day in MATRIX_SNAPSHOT_DAYS:
+        day_physical_pressure = physical_pressure_at(pressure_frame, day)
+        day_recovery_evidence = recovery_evidence_at(pressure_frame, day)
         for spec in STATES:
-            probs = transition_probabilities(spec.state, day, risk_constraints)
+            probs = transition_probabilities(
+                spec.state,
+                day,
+                risk_constraints,
+                day_physical_pressure,
+                day_recovery_evidence,
+            )
             rows.append(
                 {
                     "day_index": day,
@@ -239,14 +386,30 @@ def build_transition_snapshots(risk_constraints: StateRiskConstraints) -> pd.Dat
                     "转为维持": float(probs[1]),
                     "转为升级": float(probs[2]),
                     "综合状态转移压力": risk_constraints.combined_pressure,
-                    "说明": f"{TRANSITION_MATRIX_SOURCE}，已加入GPR/OVX温和扰动和后期缓和修正",
+                    "物理压力": day_physical_pressure,
+                    "恢复证据": day_recovery_evidence,
+                    "说明": f"{TRANSITION_MATRIX_SOURCE}，已加入物理压力、恢复证据门控和GPR/OVX温和扰动",
                 }
             )
-    return pd.DataFrame(rows, columns=["day_index", "当前状态", *[f"转为{label}" for label in STATE_LABELS], "综合状态转移压力", "说明"])
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "day_index",
+            "当前状态",
+            *[f"转为{label}" for label in STATE_LABELS],
+            "综合状态转移压力",
+            "物理压力",
+            "恢复证据",
+            "说明",
+        ],
+    )
 
 
-def write_transition_snapshots(risk_constraints: StateRiskConstraints) -> pd.DataFrame:
-    frame = build_transition_snapshots(risk_constraints)
+def write_transition_snapshots(
+    risk_constraints: StateRiskConstraints,
+    physical_pressure: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    frame = build_transition_snapshots(risk_constraints, physical_pressure)
     ensure_parent(STATE_TRANSITION_SNAPSHOT_CSV)
     frame.to_csv(STATE_TRANSITION_SNAPSHOT_CSV, index=False)
     return frame
@@ -293,32 +456,50 @@ def sample_next_state(
     current_state: str,
     day_index: int,
     risk_constraints: StateRiskConstraints,
+    physical_pressure_lookup: dict[int, float],
+    recovery_evidence_lookup: dict[int, float],
 ) -> str:
-    probs = transition_probabilities(current_state, day_index, risk_constraints)
+    probs = transition_probabilities(
+        current_state,
+        day_index,
+        risk_constraints,
+        physical_pressure_lookup.get(day_index, 0.0),
+        recovery_evidence_lookup.get(day_index, 0.0),
+    )
     return str(rng.choice([spec.state for spec in STATES], p=probs))
 
 
 def simulate_path(
     rng: np.random.Generator,
     sample_id: int,
-    centers: dict[str, pd.DataFrame],
+    dates: pd.DataFrame,
+    center_price_lookup: dict[str, dict[int, float]],
     start_price: float,
     daily_sigma: float,
     transition_jump_sigma_scale: float,
     risk_constraints: StateRiskConstraints,
+    physical_pressure_lookup: dict[int, float],
+    recovery_evidence_lookup: dict[int, float],
 ) -> pd.DataFrame:
     state = "neutral"
     previous_price = start_price
     previous_noise = 0.0
     rows: list[dict[str, Any]] = []
-    dates = centers["neutral"][["day_index", "trade_date"]].copy()
 
     for _, base_row in dates.iterrows():
         day_index = int(base_row["day_index"])
-        next_state = sample_next_state(rng, state, day_index, risk_constraints)
+        day_physical_pressure = physical_pressure_lookup.get(day_index, 0.0)
+        day_recovery_evidence = recovery_evidence_lookup.get(day_index, 0.0)
+        next_state = sample_next_state(
+            rng,
+            state,
+            day_index,
+            risk_constraints,
+            physical_pressure_lookup,
+            recovery_evidence_lookup,
+        )
         spec = STATES[STATE_INDEX[next_state]]
-        center_row = centers[spec.center_scenario]
-        target_price = float(center_row.loc[center_row["day_index"] == day_index, "forecast_price"].iloc[0])
+        target_price = float(center_price_lookup[spec.center_scenario][day_index])
 
         noise_scale = max(previous_price * daily_sigma * spec.volatility_multiplier, 0.15)
         innovation = float(rng.normal(0.0, noise_scale))
@@ -345,6 +526,8 @@ def simulate_path(
                 "state_noise": previous_noise,
                 "transition_jump": transition_jump,
                 "combined_risk_pressure": risk_constraints.combined_pressure,
+                "physical_pressure": day_physical_pressure,
+                "recovery_evidence": day_recovery_evidence,
             }
         )
         state = next_state
@@ -502,7 +685,7 @@ def build_report(
 
 本增强模型不替代三情景物理中心路径，而是在其上加入缓和、维持、升级三类状态的马尔可夫切换，并用附件历史价格估计日度波动扰动。它回答的是：如果未来事件状态会切换，长期价格可能围绕中心路径怎样波动。
 
-本轮使用 {len(metrics)} 条状态转移样本，日度扰动波动率由附件历史数据校准为 {daily_sigma:.4f}，状态切换跳变标准差乘数为 {transition_jump_sigma_scale:.2f}。基础转移矩阵采用 {TRANSITION_MATRIX_SOURCE}，并进一步受到 GPR/OVX 风险约束，综合状态转移压力为 {risk_constraints.combined_pressure:.3f}。第 180 天价格中位数为 {final_q["p50"]:.2f} 美元/桶，5%-95% 区间为 {final_q["p05"]:.2f}--{final_q["p95"]:.2f} 美元/桶；外推期最高价 P95 为 {peak_p95:.2f} 美元/桶。突破 120 美元/桶的条件概率为 {metrics["突破120"].mean():.1%}，突破 130 美元/桶的条件概率为 {metrics["突破130"].mean():.1%}。
+本轮使用 {len(metrics)} 条状态转移样本，日度扰动波动率由附件历史数据校准为 {daily_sigma:.4f}，状态切换跳变标准差乘数为 {transition_jump_sigma_scale:.2f}。基础转移矩阵采用 {TRANSITION_MATRIX_SOURCE}，并进一步受到 SPR/库存/缺口物理压力、恢复证据门控和 GPR/OVX 风险约束，综合状态转移压力为 {risk_constraints.combined_pressure:.3f}。第 180 天价格中位数为 {final_q["p50"]:.2f} 美元/桶，5%-95% 区间为 {final_q["p05"]:.2f}--{final_q["p95"]:.2f} 美元/桶；外推期最高价 P95 为 {peak_p95:.2f} 美元/桶。突破 120 美元/桶的条件概率为 {metrics["突破120"].mean():.1%}，突破 130 美元/桶的条件概率为 {metrics["突破130"].mean():.1%}。
 
 ## 风险约束来源
 
@@ -521,7 +704,7 @@ def build_report(
 |---|---:|---:|---:|
 {base_matrix_rows}
 
-GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率，扰动倍率为 {TRANSITION_RISK_SCALE:.2f}；第 120 天和第 150 天后仍有缓和修正，但修正倍率降为 {LATE_EASING_SCALE:.2f}。所有行在扰动后重新归一化，因此每一日转移概率仍为合法概率分布。
+GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率，扰动倍率为 {TRANSITION_RISK_SCALE:.2f}；SPR 剩余、库存消耗、剩余缺口、绕道恢复和高价压力共同形成物理压力，扰动倍率为 {PHYSICAL_PRESSURE_SCALE:.2f}。第 120 天和第 150 天后的缓和不再由日历时间机械触发，而是由恢复证据门控：当剩余缺口下降、SPR 与库存仍有余量、高价压力回落且耗尽压力较低时，缓和概率才明显提高。所有行在扰动后重新归一化，因此每一日转移概率仍为合法概率分布。
 
 ## 时变转移矩阵快照
 
@@ -533,7 +716,7 @@ GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率
 
 ## GPR/OVX 风险约束消融
 
-为检查外部风险变量是否只是装饰项，本文比较“仅基础矩阵”和“基础矩阵+GPR/OVX风险约束”两种状态转移设定。完整结果见 `{STATE_RISK_ABLATION_CSV.relative_to(PROJECT_ROOT)}`。
+为检查新增约束是否只是装饰项，本文比较“仅基础矩阵”“基础矩阵+物理压力约束”和“基础矩阵+物理压力+GPR/OVX风险约束”三种状态转移设定。完整结果见 `{STATE_RISK_ABLATION_CSV.relative_to(PROJECT_ROOT)}`。
 
 | 模型设定 | 突破120概率 | 突破130概率 | 外推期最高价P95 | 第180天价格P95 |
 |---|---:|---:|---:|---:|
@@ -542,7 +725,7 @@ GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率
 ## 为什么它比单条线更可信
 
 - 原三情景线保留为物理中心路径，用来表达供应恢复、SPR 收缩、需求弹性和风险溢价衰减的慢变量。
-- 状态转移层表达未来事件的不确定性：冲突缓和时向乐观中心靠近，维持时围绕中性中心，升级时向悲观中心和跳涨方向移动；GPR/OVX 风险压力会温和提高早中期升级概率。
+- 状态转移层表达未来事件的不确定性：冲突缓和时向乐观中心靠近，维持时围绕中性中心，升级时向悲观中心和跳涨方向移动；SPR/库存/缺口物理压力与 GPR/OVX 风险压力会共同提高早中期升级概率，而后期缓和必须由供需和缓冲资源的恢复证据触发。
 - 扰动强度和状态切换跳变尺度来自 2017--2025 附件历史价格波动，不使用爬虫数据，也不生成未来真实价格。
 - 输出图应作为长期主图的辅助证据：长期预测不能承诺逐日精确命中，只能给出条件中心、概率区间和尾部风险。
 
@@ -552,6 +735,7 @@ GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率
 - `{SAMPLE_METRICS_CSV.relative_to(PROJECT_ROOT)}`
 - `{STATE_SHARE_CSV.relative_to(PROJECT_ROOT)}`
 - `{STATE_RISK_CONSTRAINT_CSV.relative_to(PROJECT_ROOT)}`
+- `{STATE_PHYSICAL_PRESSURE_CSV.relative_to(PROJECT_ROOT)}`
 - `{STATE_TRANSITION_MATRIX_CSV.relative_to(PROJECT_ROOT)}`
 - `{STATE_TRANSITION_SNAPSHOT_CSV.relative_to(PROJECT_ROOT)}`
 - `{STATE_RISK_ABLATION_CSV.relative_to(PROJECT_ROOT)}`
@@ -562,9 +746,26 @@ GPR/OVX 综合状态转移压力通过时变扰动项提高早中期升级概率
 def _run_state_transition_with_constraints(
     risk_constraints: StateRiskConstraints,
     n_samples: int = N_SAMPLES,
+    use_physical_pressure: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, float]:
     scenario_result, short_path, history = load_inputs()
     centers = center_lookup(scenario_result)
+    physical_pressure = build_physical_pressure_series(scenario_result, write_output=use_physical_pressure)
+    if not use_physical_pressure:
+        physical_pressure = physical_pressure.assign(physical_pressure=0.0) if not physical_pressure.empty else physical_pressure
+    physical_pressure_lookup = {
+        int(row["day_index"]): float(row["physical_pressure"])
+        for _, row in physical_pressure.iterrows()
+    }
+    recovery_evidence_lookup = {
+        int(row["day_index"]): float(row.get("recovery_evidence", 0.0))
+        for _, row in physical_pressure.iterrows()
+    }
+    dates = centers["neutral"][["day_index", "trade_date"]].copy()
+    center_price_lookup = {
+        key: {int(row["day_index"]): float(row["forecast_price"]) for _, row in group.iterrows()}
+        for key, group in centers.items()
+    }
     cutoff_price = float(short_path.sort_values("trade_date").iloc[-1]["simulated_price"])
     factors = load_historical_model_factors()
     daily_sigma = estimate_event_volatility(short_path, history)
@@ -574,11 +775,14 @@ def _run_state_transition_with_constraints(
             simulate_path(
                 rng,
                 sample_id,
-                centers,
+                dates,
+                center_price_lookup,
                 cutoff_price,
                 daily_sigma,
                 factors.transition_jump_sigma_scale,
                 risk_constraints,
+                physical_pressure_lookup,
+                recovery_evidence_lookup,
             )
             for sample_id in range(1, n_samples + 1)
         ],
@@ -599,17 +803,23 @@ def build_risk_constraint_ablation(current_constraints: StateRiskConstraints) ->
         evidence_note="消融设定：保留基础转移矩阵和历史波动扰动，但不加入GPR/OVX风险压力。"
     )
     settings = [
-        ("历史基础矩阵", no_risk_constraints),
-        ("历史基础矩阵+GPR/OVX风险约束", current_constraints),
+        ("历史基础矩阵", no_risk_constraints, False),
+        ("历史基础矩阵+物理压力约束", no_risk_constraints, True),
+        ("历史基础矩阵+物理压力+GPR/OVX风险约束", current_constraints, True),
     ]
     rows: list[dict[str, Any]] = []
-    for label, constraints in settings:
-        metrics, quantiles, _, _ = _run_state_transition_with_constraints(constraints, n_samples=N_SAMPLES)
+    for label, constraints, use_physical_pressure in settings:
+        metrics, quantiles, _, _ = _run_state_transition_with_constraints(
+            constraints,
+            n_samples=N_SAMPLES,
+            use_physical_pressure=use_physical_pressure,
+        )
         final_q = quantiles[quantiles["day_index"] == 180].iloc[0]
         rows.append(
             {
                 "模型设定": label,
                 "综合状态转移压力": constraints.combined_pressure,
+                "使用物理压力": use_physical_pressure,
                 "突破120概率": float(metrics["突破120"].mean()),
                 "突破130概率": float(metrics["突破130"].mean()),
                 "外推期最高价P95": float(metrics["外推期最高价"].quantile(0.95)),
@@ -634,9 +844,10 @@ def write_outputs(metrics: pd.DataFrame, quantiles: pd.DataFrame, state_share: p
     state_share.to_csv(STATE_SHARE_CSV, index=False)
     write_transition_matrix()
     risk_constraints = load_state_risk_constraints()
-    transition_snapshots = write_transition_snapshots(risk_constraints)
-    risk_ablation = build_risk_constraint_ablation(risk_constraints)
     scenario_result, _, _ = load_inputs()
+    physical_pressure = build_physical_pressure_series(scenario_result)
+    transition_snapshots = write_transition_snapshots(risk_constraints, physical_pressure)
+    risk_ablation = build_risk_constraint_ablation(risk_constraints)
     save_figure(quantiles, state_share, scenario_result)
     factors = load_historical_model_factors()
     REPORT_PATH.write_text(

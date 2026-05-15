@@ -27,6 +27,8 @@
 | `paper/总论文.tex` | 总论文 LaTeX 源码 |
 | `docs/00_项目总览.md` | 项目状态和关键结论入口 |
 
+当前正式 PDF 为 56 页，已包含附录核心代码。附录代码采用 `minted`/Pygments 近 IDE 风格彩色高亮，PDF 是当前最稳定的正式排版版本；DOCX 主要用于队友批注和人工修改。
+
 注意：最终只交付一份总论文。`paper/短期冲击模型历史素材稿.tex` 是历史素材稿，不是当前最终论文主线。
 
 ## 文档入口
@@ -49,8 +51,10 @@
 
 ```bash
 source scripts/project_env.sh
-./scripts/build_final_paper.sh
+./scripts/build/build_final_paper.sh
 ```
+
+根目录的 `scripts/build_final_paper.sh` 是兼容转发入口。正式构建需要 `xelatex -shell-escape` 和 Pygments，以便渲染附录彩色代码块。
 
 输出：
 

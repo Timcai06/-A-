@@ -5,19 +5,21 @@
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-  node distance=0.72cm and 0.9cm,
-  layer/.style={draw=OilBorder, fill=PaperNoteBack, rounded corners=1pt, align=center, minimum height=0.8cm, text width=3.0cm, font=\small\bfseries},
-  item/.style={draw=OilBorder, fill=white, rounded corners=1pt, align=center, minimum height=0.58cm, text width=2.55cm, font=\scriptsize},
-  arrow/.style={-{Latex[length=2.1mm]}, line width=0.45pt, draw=OilGray}
+  x=1cm,
+  y=1cm,
+  layer/.style={draw=OilBorder, fill=PaperNoteBack, rounded corners=1pt, align=center, minimum height=0.78cm, text width=3.15cm, font=\small\bfseries},
+  item/.style={draw=OilBorder, fill=white, rounded corners=1pt, align=center, minimum height=0.58cm, text width=2.72cm, font=\scriptsize},
+  arrow/.style={-{Latex[length=2.1mm]}, line width=0.45pt, draw=OilGray},
+  feedback/.style={-{Latex[length=2.0mm]}, line width=0.4pt, draw=OilGray, dashed}
 ]
-\node[layer] (physical) {物理供需层};
-\node[layer, right=of physical] (pricing) {市场价格形成层};
-\node[layer, right=of pricing] (path) {日度价格路径};
-\node[item, below left=0.65cm and -0.2cm of physical] (gap) {供应中断\\需求收缩};
-\node[item, below right=0.65cm and -0.2cm of physical] (buffer) {SPR\\库存与绕道};
-\node[item, below left=0.65cm and -0.2cm of pricing] (risk) {风险溢价\\制度不确定性};
-\node[item, below right=0.65cm and -0.2cm of pricing] (relief) {缓冲确认\\预期修复};
-\node[item, below=0.65cm of path] (eval) {拟合、基准\\消融检验};
+\node[layer] (physical) at (0,0) {物理供需层};
+\node[layer] (pricing) at (4.45,0) {市场价格形成层};
+\node[layer] (path) at (8.90,0) {日度价格路径};
+\node[item] (gap) at (0,-1.28) {供应中断\\需求收缩};
+\node[item] (buffer) at (0,-2.12) {SPR\\库存与绕道};
+\node[item] (risk) at (4.45,-1.28) {风险溢价\\制度不确定性};
+\node[item] (relief) at (4.45,-2.12) {缓冲确认\\预期修复};
+\node[item] (eval) at (8.90,-1.70) {拟合、基准\\消融检验};
 \draw[arrow] (gap) -- (physical);
 \draw[arrow] (buffer) -- (physical);
 \draw[arrow] (physical) -- node[above, font=\scriptsize] {剩余缺口 \(G_t\)} (pricing);
@@ -25,7 +27,7 @@
 \draw[arrow] (relief) -- (pricing);
 \draw[arrow] (pricing) -- node[above, font=\scriptsize] {目标价格 \(P_t^\ast\)} (path);
 \draw[arrow] (path) -- (eval);
-\draw[arrow] (eval.west) -- ++(-1.1,0) |- (physical.south);
+\draw[feedback] (eval.south west) .. controls (6.6,-3.0) and (2.4,-3.0) .. node[below, font=\scriptsize] {反馈校验} (physical.south);
 \end{tikzpicture}
 \caption{短期冲击模型结构}
 \end{figure}

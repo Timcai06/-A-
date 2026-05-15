@@ -16,6 +16,7 @@
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{float}
+\usepackage[section]{placeins}
 \usepackage{enumitem}
 \usepackage{array}
 \usepackage{etoolbox}
@@ -116,7 +117,6 @@
 }
 
 \sisetup{
-  detect-all,
   table-number-alignment=center,
   group-minimum-digits=4
 }
@@ -154,6 +154,11 @@
 \setlength{\parskip}{0.06em}
 \setlength{\tabcolsep}{5.5pt}
 \renewcommand{\arraystretch}{1.18}
+\setlength{\extrarowheight}{1.2pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{Z}{>{\centering\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 \setlength{\textfloatsep}{0.9em plus 0.2em minus 0.2em}
 \setlength{\floatsep}{0.8em plus 0.2em minus 0.2em}
 \setlength{\intextsep}{0.9em plus 0.2em minus 0.2em}
@@ -262,6 +267,8 @@
 \input{paper/sections/08-中长期油价调节模型}
 
 \input{paper/sections/09-敏感性分析}
+
+\clearpage
 
 \input{paper/sections/10-模型评价与结论}
 

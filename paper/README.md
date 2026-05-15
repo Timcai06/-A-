@@ -15,7 +15,7 @@
 
 ## 历史素材
 
-`短期动态模型论文.tex` 是早期短期模型论文素材稿。它保留用于追溯短期模型写作来源，但最终交付以 `总论文.tex`、`sections/` 和 `output/final/A题_霍尔木兹海峡封锁对国际原油价格影响_论文.pdf`、`output/final/A题_霍尔木兹海峡封锁对国际原油价格影响_论文.docx` 为准。
+`短期冲击模型历史素材稿.tex` 是早期短期模型论文素材稿。它保留用于追溯短期模型写作来源，但最终交付以 `总论文.tex`、`sections/` 和 `output/final/A题_霍尔木兹海峡封锁对国际原油价格影响_论文.pdf`、`output/final/A题_霍尔木兹海峡封锁对国际原油价格影响_论文.docx` 为准。
 
 ## 构建方式
 
@@ -23,5 +23,7 @@
 
 ```bash
 source scripts/project_env.sh
-./scripts/build_final_paper.sh
+./scripts/build/build_final_paper.sh
 ```
+
+根目录的 `scripts/build_final_paper.sh` 是兼容转发入口。正式构建脚本位于 `scripts/build/build_final_paper.sh`，会用 `xelatex -shell-escape` 编译总论文，并通过 `minted`/Pygments 渲染附录代码高亮。

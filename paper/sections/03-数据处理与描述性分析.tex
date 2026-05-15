@@ -2,22 +2,22 @@
 
 \subsection{数据来源与清洗口径}
 
-本文使用附件中的布伦特原油期货主力合约价格数据，字段包括交易日期、开盘价、最高价、最低价、收盘价和前收盘价。原始数据共 2237 条，覆盖 2017 年 9 月 1 日至 2026 年 5 月 5 日。数据清洗步骤包括日期解析、数值字段标准化、收益率计算、滚动波动率计算和冲突窗口截取。第一条记录的前收盘价缺失属于正常时间序列边界，冲突窗口内收盘价不存在缺失。
+本文使用附件中的布伦特原油期货主力合约价格数据，字段包括交易日期、开盘价、最高价、最低价、收盘价和前收盘价。原始数据共 2237 条，覆盖 2017 年 9 月 1 日至 2026 年 5 月 5 日。清洗工作包括日期解析、数值字段标准化、收益率计算、滚动波动率计算和冲突窗口截取。第一条记录的前收盘价缺失属于正常时间序列边界，冲突窗口内收盘价不存在缺失。
 
-本文采用附件 CSV 中的 \texttt{close\_price} 作为拟合目标。题面中提到的极端峰值和附件 CSV 的收盘价口径并不完全一致，因此本文在建模评价中坚持“以附件数据为准”，并把题面峰值作为极端冲击叙述背景。
+本文采用 \texttt{close\_price} 作为短期拟合和误差评价目标；\texttt{open\_price}、\texttt{high\_price}、\texttt{low\_price} 与 \texttt{pre\_close\_price} 用于日内振幅、收益率、滚动波动率和冲击峰值描述。题面极端峰值与附件 CSV 的收盘价口径不同，因此题面峰值只作为冲击背景，不参与 RMSE、MAE、MAPE 等误差计算。
 
-为统一数据口径，本文将数据分为“拟合目标”“长期约束”“风险校验”和“候选市场变量”四类。短期拟合的真实价格目标只来自赛题附件；EIA、JODI、OPEC、GPR、OVX 和期限结构资料用于数量级约束、风险校验或后续扩展，不构造新的真实油价。\cref{tab:external-data-role} 给出各类数据在模型中的位置。
+为统一数据口径，本文将数据分为“拟合目标”“长期约束”“风险校验”和“候选市场变量”四类。EIA、JODI、OPEC、GPR、OVX 和期限结构资料用于数量级约束、风险校验或后续扩展，不构造新的真实油价。\cref{tab:external-data-role} 给出各类数据在模型中的位置。
 
-\begin{table}[htbp]
+\begin{table}[!htbp]
 \centering
 \caption{外部数据来源、模型作用与使用边界}
 \label{tab:external-data-role}
 \small
-\begin{tabularx}{\linewidth}{p{2.8cm}p{3.0cm}p{4.0cm}X}
+\begin{tabularx}{\linewidth}{L{2.8cm}L{3.0cm}L{4.0cm}Y}
 \toprule
 来源 & 数据对象 & 在模型中的作用 & 使用边界 \\
 \midrule
-赛题附件 CSV & 2017--2026 年布伦特原油期货主力合约价格 & 短期冲击模型拟合目标、基准模型对比、历史滚动窗口检验 & 唯一真实价格来源；短期 RMSE、MAE、MAPE 均以附件收盘价计算 \\
+赛题附件 CSV & 2017--2026 年布伦特原油期货主力合约价格 & 短期冲击模型拟合目标、基准模型对比、历史滚动窗口检验 & 短期 RMSE、MAE、MAPE 均以附件收盘价计算 \\
 EIA 周度石油数据 & 美国 SPR 库存、商业库存、原油产量 & 中长期油价调节模型中的库存缓冲、SPR 释放强度和非海湾供给恢复数量级校验 & 美国口径，不等同全球总量；不参与短期模型拟合 \\
 JODI Oil World Database & 多国月度产量、库存、进出口、需求、炼厂产出 & 多国上报口径下的供需与库存约束，辅助校验中长期参数方向 & 有国家覆盖差异和发布滞后，只作同口径数量级校验 \\
 OPEC MOMR & 全球供需平衡表、需求增量、非 DoC 供给增量、DoC 原油需求差额 & 约束中长期油价调节模型中的需求背景、供给恢复和尾部压力 & 正常基线预测，不替代霍尔木兹封锁冲击参数 \\
@@ -28,7 +28,7 @@ ICE / EIA 报道 & Brent 多期限官方结算价候选来源、现货-近月期
 \end{tabularx}
 \end{table}
 
-\begin{table}[htbp]
+\begin{table}[!htbp]
 \centering
 \caption{附件数据和冲突窗口关键统计}
 \begin{tabular}{lr}
@@ -48,34 +48,38 @@ ICE / EIA 报道 & Brent 多期限官方结算价候选来源、现货-近月期
 \end{tabular}
 \end{table}
 
-为增强中长期油价调节模型的外部约束，本文进一步补充 EIA 官方周度数据，包括美国 SPR 原油库存、美国商业原油库存和美国原油产量。由于 EIA 数据为美国口径，本文只将其用于校验 SPR、商业库存和非海湾供给恢复的数量级。
+\subsection{外部供需与风险约束}
 
-\begin{table}[htbp]
+为避免中长期参数只由冲突窗口拟合得到，本文引入 EIA、JODI 和 OPEC 三类官方数据，对 SPR、商业库存、供给恢复、需求背景和尾部压力进行数量级约束。三类数据的口径不同：EIA 为美国周度数据，JODI 为多国上报月度数据，OPEC 为全球供需基线预测。因此，它们只约束参数方向和合理范围，不替代附件价格序列。
+
+\begin{table}[!htbp]
 \centering
 \caption{EIA 官方外生数据摘要}
+\label{tab:eia-summary}
 \small
-\begin{tabularx}{\linewidth}{lrrrr}
+\begin{tabularx}{\linewidth}{Y L{2.2cm} S[table-format=6.0] S[table-format=6.0] S[table-format=-5.1] S[table-format=-2.2]}
 \toprule
-指标 & 冲突前数值 & 窗口末数值 & 窗口变化 & 日均变化 \\
+指标 & 变化口径 & {冲突前} & {窗口末} & {窗口变化} & {日均变化} \\
 \midrule
-美国 SPR 库存 & 415441 & 392700 & -2274.1 万桶 & -36.10 万桶/日 \\
-美国商业库存 & 439279 & 457182 & 1790.3 万桶 & 28.42 万桶/日 \\
-美国原油产量 & 13696 & 13573 & -12.3 万桶/日 & -0.20 万桶/日 \\
+美国 SPR 库存 & 千桶；万桶 & 415441 & 392700 & -2274.1 & -36.10 \\
+美国商业库存 & 千桶；万桶 & 439279 & 457182 & 1790.3 & 28.42 \\
+美国原油产量 & 千桶/日；万桶/日 & 13696 & 13573 & -12.3 & -0.20 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-该外部数据带来三个约束。第一，美国 SPR 释放强度明显低于赛题给定的国际协调释放上限，因此模型中的 SPR 参数应解释为全球或多国协调缓冲能力，而非美国单独释放量。第二，美国商业库存并未在冲突窗口内快速耗尽，说明库存缓冲不能被写成机械消耗项。第三，美国原油产量短期变化较小，支持“非海湾供给恢复较慢，难以单独抵消封锁缺口”的长期设定。
+EIA 数据显示，美国 SPR 释放强度明显低于赛题给定的国际协调释放上限，美国商业库存未在冲突窗口内快速耗尽，美国原油产量短期变化较小。这说明模型中的 SPR 参数应解释为多国协调缓冲能力；库存缓冲不能写成机械消耗项；非海湾供给恢复也难以单独抵消封锁缺口。
 
-为补强全球口径约束，本文进一步接入 JODI Oil World Database。JODI 数据由国际能源论坛协调，汇集多国官方上报的月度石油数据。本文抽取一次石油和二次石油中的产量、库存、进出口、油品需求与炼厂产出，并采用 2026 年 2 月已上报国家/地区作为同口径样本。由于 JODI 存在国家覆盖差异和发布滞后，本文将其表述为“多国上报口径”，用于中长期参数方向和数量级校验。
+JODI Oil World Database 汇集多国官方上报的月度石油数据。本文抽取一次石油和二次石油中的产量、库存、进出口、油品需求与炼厂产出，并采用 2026 年 2 月已上报国家/地区作为同口径样本。由于 JODI 存在国家覆盖差异和发布滞后，本文将其表述为“多国上报口径”。
 
-\begin{table}[htbp]
+\begin{table}[!htbp]
 \centering
 \caption{JODI 多国口径外生约束摘要}
+\label{tab:jodi-summary}
 \small
-\begin{tabularx}{\linewidth}{lrrrr}
+\begin{tabularx}{\linewidth}{Y C{1.45cm} S[table-format=7.2] C{1.45cm} S[table-format=-5.2]}
 \toprule
-指标 & 月份 & 数值 & 单位 & 同口径较上年末变化 \\
+指标 & 月份 & {数值} & 单位 & {同口径较上年末变化} \\
 \midrule
 原油及凝析油产量 & 2026-02 & 51456.97 & KBD & 108.39 \\
 原油及凝析油期末库存 & 2026-02 & 2203133.02 & KBBL & 20073.83 \\
@@ -88,17 +92,18 @@ ICE / EIA 报道 & Brent 多期限官方结算价候选来源、现货-近月期
 \end{tabularx}
 \end{table}
 
-JODI 数据对中长期油价调节模型提供了三点约束：非海湾供给恢复和需求调整是多国系统的缓慢响应；库存缓冲应同时区分原油库存和成品油库存；2026 年 2 月可得数据处于冲突发生前，更适合作为中长期外推的先验约束。
+JODI 数据提示，非海湾供给恢复和需求调整是多国系统的缓慢响应，库存缓冲也需要同时区分原油库存和成品油库存。由于 2026 年 2 月可得数据处于冲突发生前，它更适合作为中长期外推的先验约束。
 
-在此基础上，本文进一步整理 OPEC Monthly Oil Market Report 中的全球供需平衡表。与 EIA、JODI 不同，OPEC 表给出的是全球正常情景下的年度和季度供需基线，适合约束中长期油价调节模型中的需求背景、非 DoC 供给恢复和 DoC 原油需求差额尾部压力。
+OPEC Monthly Oil Market Report 给出全球正常情景下的年度和季度供需基线，适合约束中长期油价调节模型中的需求背景、非 DoC 供给恢复和 DoC 原油需求差额尾部压力。
 
-\begin{table}[htbp]
+\begin{table}[!htbp]
 \centering
 \caption{OPEC 全球供需平衡表关键约束}
+\label{tab:opec-summary}
 \small
-\begin{tabularx}{\linewidth}{lrrX}
+\begin{tabularx}{\linewidth}{Y S[table-format=2.2] C{1.4cm} Y}
 \toprule
-指标 & 数值 & 单位 & 模型含义 \\
+指标 & {数值} & 单位 & 模型含义 \\
 \midrule
 2026 年世界石油需求增量 & 1.40 & mb/d & 长期需求背景仍增长，需求收缩不能设得过强 \\
 2026 年非 DoC 液体供给增量 & 0.60 & mb/d & 外部供给有恢复能力，但远小于封锁冲击量级 \\
@@ -111,21 +116,27 @@ JODI 数据对中长期油价调节模型提供了三点约束：非海湾供给
 
 OPEC 表说明，在没有霍尔木兹极端封锁的正常基线下，2026 年全球需求仍有增长、非 DoC 供给恢复有限且下半年 DoC 原油需求差额更高。因此，中长期油价调节模型中的价格回落应解释为政策缓冲、供给恢复、需求弹性和风险溢价衰减共同作用后的条件路径，而非全球需求自然塌陷。
 
-本文还接入 Caldara-Iacoviello 官方 GPR 月度指数，作为地缘风险溢价的外部校验变量。由于 GPR 由新闻文本构造，同月指数不直接进入短期拟合；详细滞后检验放在第 9.5 节统一报告。与此同时，本文接入 Cboe/FRED 的 OVX 原油 ETF 隐含波动率。OVX 反映期权市场对未来约 30 日油价波动的定价，冲突窗口均值为 87.07，最大值为 120.91，同长度历史窗口均值分位约 97.3\%，因此适合进入长期风险权重和不确定性强度约束。
+本文还接入 Caldara-Iacoviello 官方 GPR 月度指数和 Cboe/FRED 的 OVX 原油 ETF 隐含波动率。GPR 由新闻文本构造，因此不用于同月解释同月价格；OVX 反映期权市场对未来约 30 日油价波动的定价，冲突窗口均值为 87.07，最大值为 120.91，同长度历史窗口均值分位约 97.3\%，适合进入长期风险权重和不确定性强度约束。
 
-\keypoint{数据使用遵循“附件真实价格为主、外部数据服务长期约束与风险校验”的原则。EIA、JODI、OPEC 约束供需和库存数量级，GPR 校验地缘风险环境，OVX 约束市场隐含波动率。}
+\keypoint{本章的数据处理逻辑是：附件价格用于拟合和评价，EIA、JODI、OPEC 约束供需和库存数量级，GPR 校验地缘风险环境，OVX 约束市场隐含波动率。}
 
-\begin{figure}[htbp]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.92\linewidth]{布伦特原油长期价格走势.png}
-\caption{布伦特原油期货主力合约收盘价长期走势}
+\begin{subfigure}[t]{0.78\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{布伦特原油长期价格走势.png}
+  \caption{2017--2026 年长期走势}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}[t]{0.78\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{冲突窗口价格走势.png}
+  \caption{2026 年冲突窗口路径}
+\end{subfigure}
+\caption{附件收盘价的长期背景与冲突窗口放大}
 \end{figure}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.92\linewidth]{冲突窗口价格走势.png}
-\caption{冲突窗口内附件真实价格路径}
-\end{figure}
+\FloatBarrier
 
 \subsection{波动率特征}
 
