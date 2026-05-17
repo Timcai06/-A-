@@ -140,6 +140,9 @@
 \setlength{\headheight}{15pt}
 \renewcommand{\headrulewidth}{0.3pt}
 
+\renewcommand{\thesection}{\chinese{section}、}
+\renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
 \titleformat{\section}{\normalfont\Large\bfseries\color{OilDark}}{\thesection}{0.8em}{}[\vspace{0.22em}{\color{OilBorder}\titlerule[0.7pt]}]
 \titleformat{\subsection}{\normalfont\large\bfseries\color{OilGray}}{\thesubsection}{0.7em}{}
 \titleformat{\subsubsection}{\normalfont\normalsize\bfseries\color{OilDark}}{\thesubsubsection}{0.65em}{}
@@ -271,6 +274,8 @@
 \clearpage
 
 \input{paper/sections/10-模型评价与结论}
+
+\input{paper/sections/13-结论}
 
 \input{paper/sections/12-参考文献}
 
