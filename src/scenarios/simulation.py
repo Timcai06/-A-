@@ -50,6 +50,9 @@ BLOCKADE_RISK_DECAY = dynamic.BLOCKADE_RISK_DECAY
 LONG_ELASTICITY_TRANSITION_DAYS = 120
 LONG_ELASTICITY_PRICE_ACTIVATION_START = 1.15
 LONG_ELASTICITY_PRICE_ACTIVATION_WIDTH = 0.45
+ADAPTIVE_ANCHOR_START_DAY = 75
+ADAPTIVE_ANCHOR_ALPHA = 0.035
+ADAPTIVE_ANCHOR_MAX_RATIO = 1.45
 
 ROUTE_SMOOTHNESS = 7.0
 ROUTE_BASE_UTILIZATION = 0.86
@@ -140,6 +143,13 @@ MECHANISM_CONSTANT_NOTES: tuple[MechanismConstantNote, ...] = (
         "长期机制增强",
     ),
     MechanismConstantNote(
+        "ADAPTIVE_ANCHOR_ALPHA",
+        ADAPTIVE_ANCHOR_ALPHA,
+        "长期价格锚随高油价环境缓慢更新的日度速度",
+        "避免 60-180 天仍永久使用战前价格作为需求和压力判断锚点。",
+        "长期机制增强",
+    ),
+    MechanismConstantNote(
         "DEMAND_PRICE_RESPONSE",
         DEMAND_PRICE_RESPONSE,
         "长期需求收缩对价格压力的附加响应强度",
@@ -213,6 +223,14 @@ def smooth_unit_response(value: float, smoothness: float = PRESSURE_RESPONSE_SMO
     upper = 1.0 / (1.0 + np.exp(-smoothness * 0.5))
     raw = 1.0 / (1.0 + np.exp(-smoothness * (x - 0.5)))
     return float((raw - lower) / max(upper - lower, 1e-9))
+
+
+def update_adaptive_price_anchor(day_index: int, previous_anchor: float, previous_price: float, base_price: float) -> float:
+    """Let the long-horizon reference price absorb sustained high-price regimes slowly."""
+    if day_index < ADAPTIVE_ANCHOR_START_DAY:
+        return float(previous_anchor)
+    updated = previous_anchor + ADAPTIVE_ANCHOR_ALPHA * (previous_price - previous_anchor)
+    return float(np.clip(updated, base_price * 0.85, base_price * ADAPTIVE_ANCHOR_MAX_RATIO))
 
 
 def adaptive_spr_release(
@@ -457,6 +475,10 @@ def simulate_future_from_prefix(
     previous_day = int(prefix.iloc[-1]["day_index"])
     previous_fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * previous_day)
     previous_buffer_coverage_ratio = float(prefix.iloc[-1].get("buffer_coverage_ratio", 0.0))
+    previous_perceived_buffer_coverage_ratio = float(
+        prefix.iloc[-1].get("perceived_buffer_coverage_ratio", previous_buffer_coverage_ratio)
+    )
+    price_anchor = base_price
     inventory_remaining = float(prefix.iloc[-1]["inventory_remaining"])
     spr_budget_total, spr_future_budget, spr_remaining = initialize_spr_budget(prefix, assumptions)
     gap_closure_day = infer_gap_closure_day(prefix, assumptions)
@@ -465,11 +487,12 @@ def simulate_future_from_prefix(
     for _, row in future_frame.iterrows():
         trade_date = row["trade_date"]
         day_index = int(row["day_index"])
-        elasticity = adaptive_long_elasticity(day_index, previous_price, base_price, assumptions)
-        price_ratio = max(previous_price / base_price, 0.1)
+        price_anchor = update_adaptive_price_anchor(day_index, price_anchor, previous_price, base_price)
+        elasticity = adaptive_long_elasticity(day_index, previous_price, price_anchor, assumptions)
+        price_ratio = max(previous_price / price_anchor, 0.1)
 
         price_adjusted_demand = assumptions.base_demand * (price_ratio**elasticity)
-        observed_demand_decline = adaptive_demand_decline(day_index, previous_price, base_price, assumptions)
+        observed_demand_decline = adaptive_demand_decline(day_index, previous_price, price_anchor, assumptions)
         effective_demand, demand_decline, price_elasticity_demand_loss = dynamic.effective_demand_after_adjustments(
             assumptions.base_demand,
             price_adjusted_demand,
@@ -495,7 +518,7 @@ def simulate_future_from_prefix(
         route_supply = adaptive_route_supply(
             day_index,
             previous_price,
-            base_price,
+            price_anchor,
             gross_shortage_before_route,
             assumptions,
         )
@@ -505,7 +528,7 @@ def simulate_future_from_prefix(
         inventory_buffer, inventory_release_pressure = adaptive_inventory_buffer(
             gross_gap_before_spr,
             previous_price,
-            base_price,
+            price_anchor,
             inventory_remaining,
             assumptions,
             behavior,
@@ -517,7 +540,7 @@ def simulate_future_from_prefix(
             scheduled_spr_release,
             gross_gap_after_inventory,
             previous_price,
-            base_price,
+            price_anchor,
             assumptions,
         )
         spr_release = float(min(spr_release, spr_remaining))
@@ -528,10 +551,18 @@ def simulate_future_from_prefix(
         residual_gap = max(-supply_balance, 0.0)
         oversupply = max(supply_balance, 0.0)
         total_buffer_supply = spr_release + route_supply + inventory_buffer
-        buffer_coverage_ratio = total_buffer_supply / max(gross_shortage, 1.0)
-        buffer_coverage_ratio = float(np.clip(buffer_coverage_ratio, 0.0, 1.5))
-        coverage_momentum = buffer_coverage_ratio - previous_buffer_coverage_ratio
-        if gap_closure_day is None and residual_gap <= assumptions.base_demand * GAP_CLOSURE_SHARE:
+        observed_buffer_coverage_ratio = total_buffer_supply / max(gross_shortage, 1.0)
+        observed_buffer_coverage_ratio = float(np.clip(observed_buffer_coverage_ratio, 0.0, 1.5))
+        perceived_buffer_coverage_ratio = dynamic.update_perceived_buffer_coverage(
+            previous_perceived_buffer_coverage_ratio,
+            observed_buffer_coverage_ratio,
+        )
+        coverage_momentum = perceived_buffer_coverage_ratio - previous_perceived_buffer_coverage_ratio
+        if (
+            gap_closure_day is None
+            and residual_gap <= assumptions.base_demand * GAP_CLOSURE_SHARE
+            and perceived_buffer_coverage_ratio >= 0.55
+        ):
             gap_closure_day = day_index
 
         fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * day_index)
@@ -563,13 +594,13 @@ def simulate_future_from_prefix(
             gap_closure_day,
             base_price,
             behavior,
-            buffer_coverage_ratio,
+            perceived_buffer_coverage_ratio,
         )
         relief_discount = dynamic.expectation_relief_discount(
             day_index,
             base_price,
             behavior,
-            buffer_coverage_ratio,
+            perceived_buffer_coverage_ratio,
             coverage_momentum,
         )
         excess_supply_discount = oversupply_discount(oversupply, base_price, elasticity, assumptions, behavior)
@@ -620,9 +651,12 @@ def simulate_future_from_prefix(
                 "inventory_buffer": inventory_buffer,
                 "inventory_release_pressure": inventory_release_pressure,
                 "total_buffer_supply": total_buffer_supply,
-                "buffer_coverage_ratio": buffer_coverage_ratio,
+                "observed_buffer_coverage_ratio": observed_buffer_coverage_ratio,
+                "perceived_buffer_coverage_ratio": perceived_buffer_coverage_ratio,
+                "buffer_coverage_ratio": perceived_buffer_coverage_ratio,
                 "buffer_coverage_momentum": coverage_momentum,
                 "inventory_remaining": inventory_remaining,
+                "price_anchor": price_anchor,
                 "demand_decline": demand_decline,
                 "observed_demand_decline": observed_demand_decline,
                 "price_elasticity_demand_loss": price_elasticity_demand_loss,
@@ -645,7 +679,8 @@ def simulate_future_from_prefix(
         )
         previous_price = simulated_price
         previous_fear_excess = fear_excess
-        previous_buffer_coverage_ratio = buffer_coverage_ratio
+        previous_buffer_coverage_ratio = observed_buffer_coverage_ratio
+        previous_perceived_buffer_coverage_ratio = perceived_buffer_coverage_ratio
 
     return pd.DataFrame(rows)
 

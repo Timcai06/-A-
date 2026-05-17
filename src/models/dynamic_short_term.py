@@ -33,6 +33,12 @@ PROBLEM_PARAMETERS_PATH = PROJECT_ROOT / "data" / "metadata" / "题面参数表.
 BLOCKADE_RISK_DECAY = 0.004
 DEMAND_FLOOR_SHARE = 0.70
 DEMAND_ELASTICITY_OVERLAP_SHARE = 0.35
+BUFFER_PERCEPTION_ALPHA = 0.35
+INVENTORY_PRICE_STRESS_START_RATIO = 1.06
+INVENTORY_PRICE_STRESS_WIDTH = 0.35
+INVENTORY_RELEASE_SMOOTHNESS = 6.0
+INVENTORY_MIN_CAP_SHARE = 0.70
+INVENTORY_STOCK_CAP_SHARE = 0.30
 
 
 @dataclass(frozen=True)
@@ -188,6 +194,49 @@ def coverage_activation(coverage_ratio: float, center: float = 0.55, slope: floa
     return float(1.0 / (1.0 + np.exp(-slope * (bounded - center))))
 
 
+def bounded_unit(value: float) -> float:
+    return float(np.clip(value, 0.0, 1.0))
+
+
+def smooth_unit_response(value: float, smoothness: float = INVENTORY_RELEASE_SMOOTHNESS) -> float:
+    x = bounded_unit(value)
+    lower = 1.0 / (1.0 + np.exp(smoothness * 0.5))
+    upper = 1.0 / (1.0 + np.exp(-smoothness * 0.5))
+    raw = 1.0 / (1.0 + np.exp(-smoothness * (x - 0.5)))
+    return float((raw - lower) / max(upper - lower, 1e-9))
+
+
+def update_perceived_buffer_coverage(previous: float, observed: float) -> float:
+    """Market perception follows observed buffers with a short information lag."""
+    return float(previous + BUFFER_PERCEPTION_ALPHA * (observed - previous))
+
+
+def adaptive_inventory_buffer(
+    raw_gap: float,
+    previous_price: float,
+    base_price: float,
+    inventory_remaining: float,
+    assumptions: PhysicalAssumptions,
+    behavior: BehavioralParameters,
+) -> tuple[float, float]:
+    """Release commercial inventory when shortage and price pressure justify it."""
+    if raw_gap <= 0 or inventory_remaining <= 0:
+        return 0.0, 0.0
+
+    remaining_share = bounded_unit(inventory_remaining / max(assumptions.commercial_inventory, 1.0))
+    shortage_stress = smooth_unit_response(raw_gap / max(assumptions.supply_interruption, 1.0))
+    price_stress = smooth_unit_response(
+        (previous_price / base_price - INVENTORY_PRICE_STRESS_START_RATIO) / INVENTORY_PRICE_STRESS_WIDTH
+    )
+    release_pressure = bounded_unit(0.62 * shortage_stress + 0.38 * price_stress)
+    effective_daily_cap = assumptions.inventory_daily_cap * (
+        INVENTORY_MIN_CAP_SHARE + INVENTORY_STOCK_CAP_SHARE * remaining_share
+    )
+    desired_release = raw_gap * behavior.inventory_response * (0.65 + 0.35 * release_pressure)
+    inventory_buffer = min(desired_release, effective_daily_cap, inventory_remaining)
+    return float(max(inventory_buffer, 0.0)), release_pressure
+
+
 def expectation_relief_discount(
     day: float,
     base_price: float,
@@ -236,6 +285,7 @@ def simulate_dynamic_model(
     previous_price = base_price
     previous_fear_excess = assumptions.fear_initial
     previous_buffer_coverage_ratio = 0.0
+    previous_perceived_buffer_coverage_ratio = 0.0
     inventory_remaining = assumptions.commercial_inventory
     gap_closure_day: int | None = None
     rows: list[dict[str, Any]] = []
@@ -280,19 +330,30 @@ def simulate_dynamic_model(
         supply_without_inventory = assumptions.base_supply - assumptions.supply_interruption + spr_release + route_supply
         raw_gap = max(effective_demand - supply_without_inventory, 0.0)
 
-        inventory_buffer = min(
-            raw_gap * behavior.inventory_response,
-            assumptions.inventory_daily_cap,
+        inventory_buffer, inventory_release_pressure = adaptive_inventory_buffer(
+            raw_gap,
+            previous_price,
+            base_price,
             inventory_remaining,
+            assumptions,
+            behavior,
         )
         inventory_remaining -= inventory_buffer
         effective_supply = supply_without_inventory + inventory_buffer
         residual_gap = max(effective_demand - effective_supply, 0.0)
         total_buffer_supply = spr_release + route_supply + inventory_buffer
-        buffer_coverage_ratio = total_buffer_supply / max(gross_shortage, 1.0)
-        buffer_coverage_ratio = float(np.clip(buffer_coverage_ratio, 0.0, 1.5))
-        coverage_momentum = buffer_coverage_ratio - previous_buffer_coverage_ratio
-        if gap_closure_day is None and residual_gap <= assumptions.base_demand * 0.005:
+        observed_buffer_coverage_ratio = total_buffer_supply / max(gross_shortage, 1.0)
+        observed_buffer_coverage_ratio = float(np.clip(observed_buffer_coverage_ratio, 0.0, 1.5))
+        perceived_buffer_coverage_ratio = update_perceived_buffer_coverage(
+            previous_perceived_buffer_coverage_ratio,
+            observed_buffer_coverage_ratio,
+        )
+        coverage_momentum = perceived_buffer_coverage_ratio - previous_perceived_buffer_coverage_ratio
+        if (
+            gap_closure_day is None
+            and residual_gap <= assumptions.base_demand * 0.005
+            and perceived_buffer_coverage_ratio >= 0.55
+        ):
             gap_closure_day = day_index
 
         fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * day_index)
@@ -316,13 +377,13 @@ def simulate_dynamic_model(
             gap_closure_day,
             base_price,
             behavior,
-            buffer_coverage_ratio,
+            perceived_buffer_coverage_ratio,
         )
         relief_discount = expectation_relief_discount(
             day_index,
             base_price,
             behavior,
-            buffer_coverage_ratio,
+            perceived_buffer_coverage_ratio,
             coverage_momentum,
         )
         target_price = (
@@ -354,8 +415,11 @@ def simulate_dynamic_model(
                 "spr_release": spr_release,
                 "route_supply": route_supply,
                 "inventory_buffer": inventory_buffer,
+                "inventory_release_pressure": inventory_release_pressure,
                 "total_buffer_supply": total_buffer_supply,
-                "buffer_coverage_ratio": buffer_coverage_ratio,
+                "observed_buffer_coverage_ratio": observed_buffer_coverage_ratio,
+                "perceived_buffer_coverage_ratio": perceived_buffer_coverage_ratio,
+                "buffer_coverage_ratio": perceived_buffer_coverage_ratio,
                 "buffer_coverage_momentum": coverage_momentum,
                 "inventory_remaining": inventory_remaining,
                 "demand_decline": demand_decline,
@@ -373,7 +437,8 @@ def simulate_dynamic_model(
         )
         previous_price = simulated_price
         previous_fear_excess = fear_excess
-        previous_buffer_coverage_ratio = buffer_coverage_ratio
+        previous_buffer_coverage_ratio = observed_buffer_coverage_ratio
+        previous_perceived_buffer_coverage_ratio = perceived_buffer_coverage_ratio
 
     return pd.DataFrame(rows)
 

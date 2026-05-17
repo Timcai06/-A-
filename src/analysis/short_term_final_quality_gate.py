@@ -98,7 +98,7 @@ def build_gate() -> tuple[pd.DataFrame, pd.DataFrame, dict[str, float]]:
     all_baselines_beaten = bool((rmse < non_model_baselines["RMSE"]).all())
 
     mechanism = model_row(ml, "机制递推主模型")
-    hybrid = model_row(ml, "机制+Ridge收益率修正")
+    hybrid = model_row(ml, "机制+阶段Ridge修正")
     pure_ridge = model_row(ml, "历史Ridge收益率模型")
     hybrid_gain = float(hybrid["相对机制主模型RMSE改善率"])
     hybrid_direction_gain = float(hybrid["方向命中率"] - mechanism["方向命中率"])
