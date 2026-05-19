@@ -1,0 +1,33 @@
+\subsection*{H 机制消融与统计检验}
+
+代码~\ref{lst:ablation} 用于逐项关闭模型机制，检验主结论是否依赖某一个单独设定。
+
+\begin{paperlisting}{lst:ablation}{python}{机制消融实验设计}
+VARIANTS = [
+    ("完整统一模型", "题面物理机制 + 市场价格形成机制", base_variant),
+    ("去除SPR释放", "关闭战略石油储备释放", no_spr),
+    ("去除商业库存缓冲", "关闭库存吸收缺口能力", no_inventory),
+    ("去除绕道运输", "关闭绕道运输恢复能力", no_reroute),
+    ("去除需求收缩", "关闭高油价需求下降", no_demand_contraction),
+    ("去除风险与不确定性溢价", "关闭地缘风险和不确定性平台", no_risk_uncertainty),
+    ("去除缓冲确认折价", "关闭市场确认缓冲后的降温", no_buffer_confirmation),
+    ("去除预期修复折价", "关闭中后期预期修复再定价", no_expectation_relief),
+]
+
+def run_ablation(event_df, base_assumptions, base_behavior):
+    rows = []
+    for name, note, variant_fn in VARIANTS:
+        assumptions, behavior = variant_fn(base_assumptions, base_behavior)
+        simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+        metrics = evaluate_simulation(simulation)
+        rows.append({
+            "消融实验": name,
+            "说明": note,
+            "RMSE": metrics["RMSE"],
+            "MAE": metrics["MAE"],
+            "峰值误差": metrics["峰值误差"],
+        })
+    return pd.DataFrame(rows)
+\end{paperlisting}
+
+\clearpage

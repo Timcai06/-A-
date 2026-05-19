@@ -20,11 +20,11 @@
 \usepackage{enumitem}
 \usepackage{array}
 \usepackage{etoolbox}
+\usepackage{indentfirst}
 \usepackage{xcolor}
 \usepackage{listings}
 \usepackage{hyperref}
 \usepackage[nameinlink,noabbrev]{cleveref}
-\usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage{microtype}
 \usepackage{needspace}
@@ -36,28 +36,28 @@
 
 \graphicspath{{paper/figures/}}
 
-\definecolor{OilBlue}{HTML}{0074F2}
-\definecolor{OilDark}{HTML}{1A1A1A}
-\definecolor{OilGray}{HTML}{4B5563}
-\definecolor{OilLight}{HTML}{F5F7FA}
-\definecolor{OilTint}{HTML}{E8FBFF}
+\definecolor{OilBlue}{HTML}{222222}
+\definecolor{OilDark}{HTML}{111111}
+\definecolor{OilGray}{HTML}{555555}
+\definecolor{OilLight}{HTML}{F7F7F7}
+\definecolor{OilTint}{HTML}{F4F4F4}
 \definecolor{PaperNoteBack}{HTML}{FAFAFA}
-\definecolor{PaperNoteRule}{HTML}{6B7280}
+\definecolor{PaperNoteRule}{HTML}{666666}
 \definecolor{PaperAlgBack}{HTML}{FFFFFF}
-\definecolor{PaperAlgTitle}{HTML}{F7F7F7}
-\definecolor{OilGreen}{HTML}{00E978}
-\definecolor{OilRed}{HTML}{0095F2}
-\definecolor{OilBorder}{HTML}{CBD5E1}
-\definecolor{OilAmber}{HTML}{00CFAE}
+\definecolor{PaperAlgTitle}{HTML}{F4F4F4}
+\definecolor{OilGreen}{HTML}{222222}
+\definecolor{OilRed}{HTML}{222222}
+\definecolor{OilBorder}{HTML}{888888}
+\definecolor{OilAmber}{HTML}{222222}
 \definecolor{CodeBack}{HTML}{FFFFFF}
 \definecolor{CodeText}{HTML}{24292F}
-\definecolor{CodeKeyword}{HTML}{0000FF}
-\definecolor{CodeString}{HTML}{A31515}
-\definecolor{CodeComment}{HTML}{008000}
+\definecolor{CodeKeyword}{HTML}{111111}
+\definecolor{CodeString}{HTML}{333333}
+\definecolor{CodeComment}{HTML}{666666}
 \definecolor{CodeNumber}{HTML}{6E7781}
-\definecolor{CodeBuiltin}{HTML}{267F99}
-\definecolor{CodeFunction}{HTML}{795E26}
-\definecolor{CodeConstant}{HTML}{AF00DB}
+\definecolor{CodeBuiltin}{HTML}{222222}
+\definecolor{CodeFunction}{HTML}{222222}
+\definecolor{CodeConstant}{HTML}{333333}
 \definecolor{CodeTitleBack}{HTML}{F6F8FA}
 \definecolor{CodeFrame}{HTML}{D0D7DE}
 
@@ -124,7 +124,7 @@
 \hypersetup{
   hidelinks,
   pdftitle={霍尔木兹海峡封锁对国际原油价格影响的动态建模与情景预测},
-  pdfauthor={数学建模 A 题项目组}
+  pdfauthor={}
 }
 \crefname{figure}{图}{图}
 \Crefname{figure}{图}{图}
@@ -133,26 +133,21 @@
 \crefname{equation}{式}{式}
 \Crefname{equation}{式}{式}
 
-\pagestyle{fancy}
-\fancyhf{}
-\lhead{\small 霍尔木兹海峡封锁与国际原油价格}
-\rhead{\small \thepage}
-\setlength{\headheight}{15pt}
-\renewcommand{\headrulewidth}{0.3pt}
+\pagestyle{plain}
 
 \renewcommand{\thesection}{\chinese{section}、}
 \renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
 \renewcommand{\thesubsubsection}{\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
-\titleformat{\section}{\normalfont\Large\bfseries\color{OilDark}}{\thesection}{0.8em}{}[\vspace{0.22em}{\color{OilBorder}\titlerule[0.7pt]}]
-\titleformat{\subsection}{\normalfont\large\bfseries\color{OilGray}}{\thesubsection}{0.7em}{}
-\titleformat{\subsubsection}{\normalfont\normalsize\bfseries\color{OilDark}}{\thesubsubsection}{0.65em}{}
+\titleformat{\section}[block]{\filcenter\sffamily\zihao{4}\bfseries}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\sffamily\zihao{-4}\bfseries}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}{\sffamily\zihao{-4}\bfseries}{\thesubsubsection}{0.65em}{}
 \titlespacing*{\section}{0pt}{1.25em}{0.8em}
 \titlespacing*{\subsection}{0pt}{0.95em}{0.5em}
 \titlespacing*{\subsubsection}{0pt}{0.75em}{0.35em}
 \setlist[itemize]{leftmargin=2em,itemsep=0.2em,topsep=0.35em}
 \setlist[enumerate]{leftmargin=2em,itemsep=0.32em,topsep=0.45em}
 \setcounter{tocdepth}{2}
-\linespread{1.06}
+\linespread{1.25}
 \setlength{\parindent}{2em}
 \setlength{\parskip}{0.06em}
 \setlength{\tabcolsep}{5.5pt}
@@ -171,7 +166,7 @@
 \renewcommand{\floatpagefraction}{0.76}
 \captionsetup{
   font=footnotesize,
-  labelfont={bf,color=OilDark},
+  labelfont=bf,
   labelsep=quad,
   justification=centering,
   singlelinecheck=true,
@@ -184,31 +179,13 @@
 \AtBeginEnvironment{longtable}{\small}
 \setlength{\emergencystretch}{2em}
 
-\newtcolorbox{paperkeypointbox}{
-  enhanced,
-  breakable,
-  sharp corners,
-  arc=0pt,
-  colback=PaperNoteBack,
-  colframe=OilBorder,
-  boxrule=0.35pt,
-  leftrule=1.8pt,
-  left=7pt,
-  right=7pt,
-  top=5pt,
-  bottom=5pt,
-  before skip=0.62em,
-  after skip=0.62em,
-  fontupper=\small,
-}
-
 \newtcolorbox{paperalgobox}[1]{
   enhanced,
   breakable,
   sharp corners,
   arc=0pt,
   colback=PaperAlgBack,
-  colframe=OilBorder,
+  colframe=black!35,
   boxrule=0.35pt,
   leftrule=1.8pt,
   left=7pt,
@@ -218,68 +195,55 @@
   before skip=0.8em,
   after skip=0.8em,
   title={#1},
-  fonttitle=\small\bfseries\sffamily\color{OilDark},
-  coltitle=OilDark,
+  fonttitle=\small\bfseries\sffamily,
+  coltitle=black,
   colbacktitle=PaperAlgTitle,
   attach boxed title to top left={xshift=0pt,yshift=-1pt},
   boxed title style={
     sharp corners,
     arc=0pt,
     boxrule=0.35pt,
-    colframe=OilBorder,
+    colframe=black!35,
     colback=PaperAlgTitle
   },
   fontupper=\small,
 }
 
 \newcommand{\keypoint}[1]{%
-  \Needspace{4\baselineskip}
-  \begin{paperkeypointbox}
-  \textbf{\sffamily\color{OilDark}结论}\quad #1
-  \end{paperkeypointbox}
+  \Needspace{3\baselineskip}
+  \par\vspace{0.45em}
+  {\small\noindent\textbf{\sffamily 结论}\quad #1\par}
+  \vspace{0.35em}
 }
 
 \title{\sffamily\bfseries 霍尔木兹海峡封锁对国际原油价格影响的动态建模与情景预测}
-\author{数学建模 A 题项目组}
-\date{2026 年 5 月}
+\author{}
+\date{}
 
 \begin{document}
+\zihao{-4}
 
-\input{paper/sections/00-摘要}
-
-\clearpage
-{\hypersetup{hidelinks}
-\tableofcontents
-}
-\clearpage
-
-\input{paper/sections/01-问题重述}
-
-\input{paper/sections/02-问题分析与总体思路}
-
-\input{paper/sections/03-数据处理与描述性分析}
-
-\input{paper/sections/04-模型假设与符号说明}
-
-\input{paper/sections/05-传统供需基准模型}
-
-\input{paper/sections/06-短期冲击模型}
-
-\input{paper/sections/07-参数校准与模型检验}
-
-\input{paper/sections/08-中长期油价调节模型}
-
-\input{paper/sections/09-敏感性分析}
+\input{paper/sections/00_摘要/index}
 
 \clearpage
 
-\input{paper/sections/10-模型评价与结论}
+\input{paper/sections/01_问题重述/index}
 
-\input{paper/sections/13-结论}
+\input{paper/sections/02_问题分析/index}
 
-\input{paper/sections/12-参考文献}
+\input{paper/sections/03_模型假设/index}
+
+\input{paper/sections/04_符号说明/index}
+
+\input{paper/sections/05_模型建立与求解/index}
+
+\input{paper/sections/06_结果分析与模型检验/index}
+
+\input{paper/sections/07_模型优缺点评价/index}
+
+\input{paper/sections/08_参考文献/index}
 
 \clearpage
-\input{paper/sections/11-附录}
+\input{paper/sections/09_附录/index}
 
 \end{document}

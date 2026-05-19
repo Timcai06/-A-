@@ -1,0 +1,91 @@
+\subsection*{C 短期冲击模型关键实现}
+
+代码~\ref{lst:dynamic-recursion} 摘录短期冲击模型的关键递推逻辑，重点展示需求净扣减、商业库存自适应释放、市场感知缓冲率和价格形成层的实现方式。
+
+\begin{paperlisting}{lst:dynamic-recursion}{python}{短期冲击模型关键递推}
+def simulate_dynamic_model(event_df, assumptions, behavior):
+    base_price = float(event_df.iloc[0]["pre_close"])
+    previous_price = base_price
+    previous_fear_excess = assumptions.fear_initial
+    perceived_coverage = 0.0
+    inventory_remaining = assumptions.commercial_inventory
+    gap_closure_day = None
+    rows = []
+
+    for step_index, actual_row in enumerate(event_df.itertuples(index=False)):
+        day_index = int((actual_row.trade_date - event_df["trade_date"].min()).days)
+        elasticity = interpolate_elasticity(day_index, assumptions)
+
+        # 需求侧：价格弹性解释一部分需求下降，题面需求收缩只扣除净额
+        price_ratio = max(previous_price / base_price, 0.1)
+        price_adjusted_demand = assumptions.base_demand * (price_ratio**elasticity)
+        observed_decline = ramp(day_index, 0, assumptions.demand_decline_ramp_days,
+                                assumptions.observed_demand_decline)
+        effective_demand, demand_decline, elasticity_loss = effective_demand_after_adjustments(
+            assumptions.base_demand, price_adjusted_demand, observed_decline
+        )
+
+        # 供给侧：SPR、绕道和商业库存共同缓冲供应缺口
+        spr_release = ramp(day_index, assumptions.spr_delay_days,
+                           assumptions.spr_ramp_days, assumptions.spr_max_release)
+        route_supply = ramp(day_index, assumptions.route_start_day,
+                            assumptions.route_ramp_days, assumptions.route_max_capacity)
+        supply_without_inventory = (assumptions.base_supply - assumptions.supply_interruption
+                                    + spr_release + route_supply)
+        raw_gap = max(effective_demand - supply_without_inventory, 0.0)
+        inventory_buffer, inventory_release_pressure = adaptive_inventory_buffer(
+            raw_gap, previous_price, base_price, inventory_remaining, assumptions, behavior
+        )
+        inventory_remaining -= inventory_buffer
+        residual_gap = max(effective_demand - supply_without_inventory - inventory_buffer, 0.0)
+
+        # 市场不是立即相信所有缓冲，因此用感知覆盖率触发折价项
+        gross_shortage = max(effective_demand - (assumptions.base_supply
+                                                 - assumptions.supply_interruption), 0.0)
+        total_buffer_supply = spr_release + route_supply + inventory_buffer
+        old_coverage = perceived_coverage
+        observed_coverage = np.clip(total_buffer_supply / max(gross_shortage, 1.0), 0.0, 1.5)
+        perceived_coverage = update_perceived_buffer_coverage(old_coverage, observed_coverage)
+        coverage_momentum = perceived_coverage - old_coverage
+        if (gap_closure_day is None
+                and residual_gap <= assumptions.base_demand * 0.005
+                and perceived_coverage >= 0.55):
+            gap_closure_day = day_index
+
+        # 价格形成层：物理缺口、地缘风险、恐慌、不确定性与缓冲折价
+        fear_excess = assumptions.fear_initial * np.exp(-assumptions.fear_decay * day_index)
+        shortage_pressure = (base_price * behavior.pressure_scale
+                             * (residual_gap / assumptions.base_demand)
+                             / max(abs(elasticity), 0.01))
+        blockade_risk_premium = (base_price * behavior.risk_weight
+                                 * (assumptions.supply_interruption / assumptions.base_demand)
+                                 * (1 - np.exp(-day_index / 7))
+                                 * np.exp(-BLOCKADE_RISK_DECAY * day_index))
+        uncertainty_premium = base_price * behavior.uncertainty_floor * (1 - np.exp(-day_index / 18))
+        panic_premium = base_price * 0.45 * fear_excess
+        buffer_discount = buffer_confirmation_discount(day_index, gap_closure_day,
+                                                       base_price, behavior, perceived_coverage)
+        relief_discount = expectation_relief_discount(day_index, base_price, behavior,
+                                                      perceived_coverage, coverage_momentum)
+        target_price = (base_price + shortage_pressure + blockade_risk_premium
+                        + uncertainty_premium + panic_premium
+                        - buffer_discount - relief_discount)
+        simulated_price = previous_price + behavior.adjustment_speed * (target_price - previous_price)
+        simulated_price += 2.5 * (fear_excess - previous_fear_excess)
+        simulated_price = float(np.clip(simulated_price, base_price * 0.75, 180.0))
+
+        rows.append({
+            "day_index": day_index,
+            "simulated_price": simulated_price,
+            "supply_gap": residual_gap,
+            "inventory_buffer": inventory_buffer,
+            "inventory_release_pressure": inventory_release_pressure,
+            "perceived_buffer_coverage_ratio": perceived_coverage,
+        })
+        previous_price = simulated_price
+        previous_fear_excess = fear_excess
+
+    return pd.DataFrame(rows)
+\end{paperlisting}
+
+\clearpage

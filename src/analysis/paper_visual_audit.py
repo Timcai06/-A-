@@ -26,11 +26,15 @@ class TexSource:
 
     @property
     def section_name(self) -> str:
+        if self.path.name == "index.tex" and self.path.parent != SECTION_DIR:
+            return self.path.parent.name
+        if SECTION_DIR in self.path.parents:
+            return f"{self.path.parent.name}/{self.path.stem}"
         return self.path.stem
 
 
 def load_sources() -> list[TexSource]:
-    paths = [PAPER_DIR / "总论文.tex", *sorted(SECTION_DIR.glob("*.tex"))]
+    paths = [PAPER_DIR / "总论文.tex", *sorted(SECTION_DIR.rglob("*.tex"))]
     return [TexSource(path, path.read_text(encoding="utf-8")) for path in paths if path.exists()]
 
 
@@ -82,7 +86,10 @@ def extract_figures(sources: list[TexSource], refs: dict[str, int]) -> pd.DataFr
                     "审计说明": note,
                 }
             )
-    return pd.DataFrame(rows)
+    return pd.DataFrame(
+        rows,
+        columns=["章节", "图片文件", "文件存在", "图注", "标签", "正文引用次数", "图注质量", "审计说明"],
+    )
 
 
 def extract_tables(sources: list[TexSource], refs: dict[str, int]) -> pd.DataFrame:
@@ -106,7 +113,7 @@ def extract_tables(sources: list[TexSource], refs: dict[str, int]) -> pd.DataFra
                     "审计说明": note,
                 }
             )
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=["章节", "表注", "标签", "正文引用次数", "表注质量", "审计说明"])
 
 
 def build_report(figures: pd.DataFrame, tables: pd.DataFrame) -> str:

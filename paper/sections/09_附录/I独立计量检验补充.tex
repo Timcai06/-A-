@@ -1,0 +1,63 @@
+\subsection*{I 独立计量检验补充}
+
+代码~\ref{lst:r-audit} 给出 R 语言独立计量检验的核心逻辑。Python 负责机制递推和情景生成，R 侧用于复核主模型相对朴素基准的误差优势、残差相关性和稳健标准误结果，从而降低单一实现口径带来的偏差风险。
+
+\begin{paperlisting}{lst:r-audit}{r}{R 语言计量审计核心代码}
+model_df <- read_csv(calibrated_path, show_col_types = FALSE) %>%
+  arrange(trade_date) %>%
+  mutate(
+    naive_forecast = lag(actual_price),
+    model_error = simulated_price - actual_price,
+    naive_error = naive_forecast - actual_price
+  ) %>%
+  filter(!is.na(naive_forecast))
+
+model_error <- model_df$model_error
+naive_error <- model_df$naive_error
+
+# Diebold-Mariano 检验：模型损失是否显著低于朴素上一日基准
+dm_sq <- forecast::dm.test(model_error, naive_error,
+                           alternative = "less", h = 1, power = 2)
+dm_abs <- forecast::dm.test(model_error, naive_error,
+                            alternative = "less", h = 1, power = 1)
+
+# 校准回归与 Newey-West 稳健标准误
+calibration_lm <- lm(actual_price ~ simulated_price, data = model_df)
+calibration_hac <- lmtest::coeftest(
+  calibration_lm,
+  vcov. = sandwich::NeweyWest(calibration_lm, lag = 3,
+                              prewhite = FALSE, adjust = TRUE)
+)
+
+# 残差自相关、条件异方差和波动聚集检验
+lb_resid_5 <- Box.test(model_error, lag = 5, type = "Ljung-Box")
+lb_sq_5 <- Box.test(model_error^2, lag = 5, type = "Ljung-Box")
+arch_test <- FinTS::ArchTest(model_error, lags = 5)
+\end{paperlisting}
+
+代码~\ref{lst:sensitivity-specs} 展示敏感性分析的扰动设置。扰动对象覆盖题面物理层、政策缓冲层、需求层、行为层和长期机制透明层
+
+\begin{paperlisting}{lst:sensitivity-specs}{python}{敏感性分析扰动参数设置}
+SENSITIVITY_SPECS = [
+    {"key": "supply_interruption", "参数": "供应中断量",
+     "层级": "题面物理层", "扰动": [1400, 1493, 1600, 1800],
+     "解释": "封锁实际造成的供应缺口。"},
+    {"key": "spr_max_release", "参数": "SPR释放上限",
+     "层级": "题面政策缓冲层", "扰动": [200, 450, 670, 700],
+     "解释": "战略石油储备释放能力。"},
+    {"key": "route_max_capacity", "参数": "绕道运输能力",
+     "层级": "题面物理缓冲层", "扰动": [150, 237, 300, 420],
+     "解释": "绕道和替代航线形成的额外供给能力。"},
+    {"key": "long_elasticity", "参数": "长期需求弹性",
+     "层级": "题面需求层", "扰动": [-0.35, -0.25, -0.18, -0.10],
+     "解释": "高油价持续后需求收缩强弱。"},
+    {"key": "risk_weight", "参数": "地缘风险权重",
+     "层级": "市场价格形成层", "扰动": [1.85, 2.22, 2.46, 2.95],
+     "解释": "市场定价地缘风险溢价的强度。"},
+    {"key": "uncertainty_floor", "参数": "制度风险强度",
+     "层级": "长期机制透明层", "扰动": [0.17, 0.22, 0.247, 0.30],
+     "解释": "持续封锁和政策协调失败带来的不确定性。"},
+]
+\end{paperlisting}
+
+\clearpage

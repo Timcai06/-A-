@@ -1,0 +1,51 @@
+\subsection*{G 蒙特卡洛情景预测}
+
+代码~\ref{lst:monte-carlo} 展示长期蒙特卡洛情景树的核心思想。模型以压力指数为主轴，同时扰动供应中断、SPR 释放、绕道能力、需求弹性、风险权重和不确定性溢价，由此得到长期价格区间和尾部风险概率。
+
+\begin{paperlisting}{lst:monte-carlo}{python}{蒙特卡洛情景树参数抽样}
+def sample_parameters(rng, base_assumptions, base_behavior, historical_factors):
+    raw_stress = float(rng.beta(2.1, 2.3))
+    stress = float(np.clip(raw_stress + rng.normal(
+        0.0, historical_factors.monte_carlo_stress_noise_sigma), 0.0, 1.0))
+
+    supply_interruption = np.clip(1400 + 400 * stress + rng.normal(0, 35), 1400, 1800)
+    spr_max_release = np.clip(700 - 500 * (stress ** 1.08) + rng.normal(0, 30), 200, 700)
+    route_max_capacity = np.clip(360 - 210 * stress + rng.normal(0, 22), 150, 420)
+    long_elasticity = np.clip(-0.35 + 0.25 * stress + rng.normal(0, 0.018),
+                              -0.35, -0.10)
+
+    risk_weight = np.clip(base_behavior.risk_weight * (0.74 + 0.62 * stress
+                                                       + rng.normal(0, 0.06)),
+                          1.65, 3.35)
+    uncertainty_scale = 0.64 + 0.78 * stress + rng.normal(0, 0.06)
+    uncertainty_floor = np.clip(base_behavior.uncertainty_floor * uncertainty_scale,
+                                0.13, 0.36)
+
+    assumptions = replace(base_assumptions,
+                          supply_interruption=supply_interruption,
+                          spr_max_release=spr_max_release,
+                          route_max_capacity=route_max_capacity,
+                          long_elasticity=long_elasticity)
+    behavior = replace(base_behavior,
+                       risk_weight=risk_weight,
+                       uncertainty_floor=uncertainty_floor)
+    return assumptions, behavior, {"stress_index": stress}
+
+def run_monte_carlo(n_samples):
+    forecast_frame, prefix, base_assumptions, base_behavior = load_baseline()
+    historical_factors = load_historical_model_factors()
+    rng = np.random.default_rng(RANDOM_SEED)
+    paths, metric_rows = [], []
+
+    for sample_id in range(1, n_samples + 1):
+        assumptions, behavior, meta = sample_parameters(
+            rng, base_assumptions, base_behavior, historical_factors)
+        path = simulate_one_sample(forecast_frame, prefix, assumptions, behavior)
+        paths.append(path)
+        metric_rows.append(summarize_sample(path, prefix, meta))
+
+    metrics = pd.DataFrame(metric_rows)
+    return metrics, build_quantiles(paths), build_tail_risk(metrics)
+\end{paperlisting}
+
+\clearpage

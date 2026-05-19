@@ -1,0 +1,31 @@
+\begin{center}
+{\sffamily\bfseries\zihao{4} 附录}
+\end{center}
+\addcontentsline{toc}{section}{附录}
+
+\keypoint{附录保留核心模型实现、关键检验代码和正文未展开的补充证据。}
+
+\newcommand{\appendixfigunit}[7]{%
+  \Needspace{#1}%
+  \noindent\begin{minipage}{\linewidth}
+    \noindent\textbf{#2。}#3
+    \par\vspace{0.25em}
+    \centering
+    \includegraphics[width=#4\linewidth,height=#5,keepaspectratio]{#6}
+    \captionof*{figure}{#7}
+  \end{minipage}
+  \vspace{0.45em}
+}
+
+\input{paper/sections/09_附录/A项目材料说明}
+\input{paper/sections/09_附录/B数据口径}
+\input{paper/sections/09_附录/C短期冲击模型关键实现}
+\input{paper/sections/09_附录/D参数校准模块}
+\input{paper/sections/09_附录/E中长期油价调节模型递推与政策缓冲}
+\input{paper/sections/09_附录/F长期状态转移递推}
+\input{paper/sections/09_附录/G蒙特卡洛情景预测}
+\input{paper/sections/09_附录/H机制消融与统计检验}
+\input{paper/sections/09_附录/I独立计量检验补充}
+\input{paper/sections/09_附录/J短期冲击模型补充检验}
+\input{paper/sections/09_附录/K敏感性与外生风险补充检验}
+\input{paper/sections/09_附录/L关键结果核查表}

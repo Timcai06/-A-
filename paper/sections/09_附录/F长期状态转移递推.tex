@@ -1,0 +1,82 @@
+\subsection*{F 长期状态转移递推}
+
+代码~\ref{lst:state-transition-probability} 展示长期预测中状态转移概率的递推方式。基础矩阵先给出缓和、维持、升级三类状态之间的常规切换概率，再映射到 logit 空间，由物理压力和 GPR/OVX 综合风险压力对升级倾向进行温和修正；后期缓和不再按日历时间机械触发，而由恢复证据门控。
+
+\begin{paperlisting}{lst:state-transition-probability}{python}{长期状态转移概率递推}
+def transition_probabilities(current_state, day_index, risk_constraints,
+                             physical_pressure, recovery_evidence):
+    base_probs = TRANSITION_MATRIX[STATE_INDEX[current_state]].copy()
+    logits = np.log(np.clip(base_probs, 1e-6, 1.0))
+
+    # 市场风险主要影响外推早中期；物理压力来自剩余缺口、SPR、库存和绕道
+    early_risk_decay = np.clip(1.0 - max(day_index - 60, 0) / 150.0,
+                               0.25, 1.0)
+    risk_shift = risk_constraints.combined_pressure * early_risk_decay * 0.75
+    physical_shift = np.clip(physical_pressure, 0.0, 1.0) * 0.80
+    logits[STATE_INDEX["escalation"]] += 0.16 * risk_shift + 0.24 * physical_shift
+    logits[STATE_INDEX["easing"]] -= 0.11 * risk_shift + 0.18 * physical_shift
+
+    if current_state == "escalation":
+        logits[STATE_INDEX["escalation"]] += 0.07 * risk_shift + 0.11 * physical_shift
+    elif current_state == "easing":
+        logits[STATE_INDEX["neutral"]] += 0.04 * risk_shift
+
+    # 后期缓和由恢复证据门控，而不是只由日期触发
+    recovery_gate = np.clip((recovery_evidence - 0.45) / 0.35, 0.0, 1.0)
+    stress_brake = np.clip(1.0 - 0.75 * physical_shift, 0.0, 1.0)
+    conditional_easing = 0.75 * recovery_gate * stress_brake
+    if day_index >= 120:
+        logits[STATE_INDEX["easing"]] += 0.26 * conditional_easing
+        logits[STATE_INDEX["escalation"]] -= 0.24 * conditional_easing
+    if day_index >= 150:
+        logits[STATE_INDEX["easing"]] += 0.18 * conditional_easing
+        logits[STATE_INDEX["neutral"]] -= 0.07 * conditional_easing
+        logits[STATE_INDEX["escalation"]] -= 0.11 * conditional_easing
+
+    exp_values = np.exp(logits - np.max(logits))
+    return exp_values / exp_values.sum()
+\end{paperlisting}
+
+代码~\ref{lst:state-transition-path} 展示状态转移路径的价格递推。每条样本路径先抽取下一期市场状态，再根据状态选择对应中心情景，并叠加历史波动率约束下的扰动和状态切换跳跃，由此得到长期条件区间和尾部风险。
+
+\begin{paperlisting}{lst:state-transition-path}{python}{状态转移路径价格递推}
+def simulate_path(rng, sample_id, dates, center_price_lookup, start_price,
+                  daily_sigma, transition_jump_sigma_scale, risk_constraints,
+                  physical_pressure_lookup, recovery_evidence_lookup):
+    state = "neutral"
+    previous_price = start_price
+    previous_noise = 0.0
+    rows = []
+
+    for _, base_row in dates.iterrows():
+        day_index = int(base_row["day_index"])
+        physical_pressure = physical_pressure_lookup.get(day_index, 0.0)
+        recovery_evidence = recovery_evidence_lookup.get(day_index, 0.0)
+        next_state = sample_next_state(rng, state, day_index, risk_constraints,
+                                       physical_pressure_lookup,
+                                       recovery_evidence_lookup)
+        spec = STATES[STATE_INDEX[next_state]]
+        target_price = center_price_lookup[spec.center_scenario][day_index]
+
+        noise_scale = max(previous_price * daily_sigma
+                          * spec.volatility_multiplier, 0.15)
+        innovation = rng.normal(0.0, noise_scale)
+        previous_noise = 0.30 * previous_noise + innovation
+        transition_jump = 0.0
+        if next_state != state:
+            transition_jump = rng.normal(spec.transition_jump_mean,
+                                         spec.transition_jump_sigma
+                                         * transition_jump_sigma_scale)
+
+        price = 0.82 * previous_price + 0.18 * target_price
+        price = np.clip(price + previous_noise + transition_jump, 70.0, 145.0)
+        rows.append({"sample_id": sample_id, "day_index": day_index,
+                     "trade_date": base_row["trade_date"], "状态": spec.label,
+                     "forecast_price": price})
+        state = next_state
+        previous_price = price
+
+    return pd.DataFrame(rows)
+\end{paperlisting}
+
+\clearpage

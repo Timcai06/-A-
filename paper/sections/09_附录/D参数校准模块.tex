@@ -1,0 +1,50 @@
+\subsection*{D 参数校准模块}
+
+代码~\ref{lst:calibration} 给出参数校准流程。本文在固定机制结构下，综合使用差分进化、局部稳定性搜索和拟合质量精修选择代表性参数。
+
+\begin{paperlisting}{lst:calibration}{python}{参数校准与局部稳健性搜索}
+def refine_with_continuous_search(event_df, base_assumptions):
+    def objective(values):
+        assumptions, behavior = decode_continuous_parameters(values, base_assumptions)
+        simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+        metrics = evaluate_simulation(simulation)
+
+        # 综合得分同时考虑整体误差、峰值误差、末日误差和平台解释能力
+        return metrics["综合得分"] + excellence_penalty(metrics)
+
+    result = differential_evolution(
+        objective,
+        CONTINUOUS_PARAMETER_BOUNDS,
+        seed=RANDOM_SEED,
+        maxiter=LOCAL_REFINEMENT_MAXITER,
+        popsize=LOCAL_REFINEMENT_POPSIZE,
+        polish=True,
+        workers=1,
+        tol=0.002,
+    )
+
+    assumptions, behavior = decode_continuous_parameters(result.x, base_assumptions)
+    simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+    metrics = evaluate_simulation(simulation)
+    metrics["局部精修目标值"] = float(result.fun)
+    return assumptions, behavior, simulation, metrics
+
+def calibrate(event_df, base_assumptions):
+    rows, simulations = [], {}
+    for candidate_id, (assumptions, behavior) in enumerate(sampled_parameter_sets(base_assumptions)):
+        simulation = dynamic.simulate_dynamic_model(event_df, assumptions, behavior)
+        metrics = evaluate_simulation(simulation)
+        rows.append({"candidate_id": candidate_id, "candidate_source": "seeded_random",
+                     **metrics})
+        simulations[candidate_id] = simulation
+
+    # 在随机搜索基础上继续做连续精修、局部稳健性搜索和拟合质量精修
+    refined = refine_with_continuous_search(event_df, base_assumptions)
+    stable = refine_with_local_stability_search(event_df, base_assumptions,
+                                                refined[0], refined[1])
+    final = refine_with_fit_quality_search(event_df, base_assumptions,
+                                           stable[0], stable[1])
+    return select_representative_candidates(rows, simulations, final)
+\end{paperlisting}
+
+\clearpage

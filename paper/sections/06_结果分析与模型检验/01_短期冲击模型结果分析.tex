@@ -1,0 +1,26 @@
+\subsection{短期冲击模型结果分析}
+
+短期冲击模型在 2026 年 3 月 3 日至 2026 年 5 月 5 日的冲突窗口内取得 RMSE 3.47 美元/桶、MAE 2.87 美元/桶、MAPE 2.88\%。模拟峰值为 110.55 美元/桶，实际最高收盘价为 114.06 美元/桶；期末模拟价格为 110.55 美元/桶，实际期末价格为 110.31 美元/桶。加入仅使用历史滞后价格特征的阶段 Ridge 收益率辅助层后，RMSE 降至 3.28 美元/桶，MAE 降至 2.78 美元/桶。
+
+\begin{table}[!htbp]
+\centering
+\caption{短期冲击模型与核心基准对比}
+\begin{threeparttable}
+\begin{tabular}{l S[table-format=1.2] S[table-format=1.2] S[table-format=1.2] S[table-format=2.1]}
+\toprule
+模型 & {RMSE} & {MAE} & {MAPE(\%)} & {方向命中率(\%)} \\
+\midrule
+短期冲击模型 & 3.47 & 2.87 & 2.88 & 66.7 \\
+\textbf{短期冲击模型增强路径} & \textbf{3.28} & \textbf{2.78} & \textbf{2.79} & \textbf{66.7} \\
+朴素上一日基准 & 4.47 & 3.57 & 3.54 & 46.7 \\
+滚动 ARIMA(1,1,0) 基准 & 4.53 & 3.67 & 3.63 & 46.7 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\footnotesize
+\item 注：RMSE 与 MAE 单位为美元/桶。增强路径只在残差薄弱窗口启用低自由度收益率修正，不替代机制递推。
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+基准对比表明，短期冲击模型优于上一日价格朴素基准和滚动 ARIMA 基准。平移检验显示，原始预测位置的 RMSE 最低，向左平移后误差上升，说明模型不是简单把“昨天价格”当作“今天预测”。机制消融结果显示，SPR、商业库存、风险溢价、缓冲确认和预期修复分别承担不同功能：前两者解释物理缺口吸收，后三者解释价格平台和后期回落。

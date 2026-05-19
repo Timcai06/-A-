@@ -1,0 +1,20 @@
+\subsection*{A 项目材料说明}
+
+本文的建模、校验、绘图和论文生成均保存在同一项目目录中。附录只列出与论文结果直接相关的核心目录和关键代码，项目核心结构如下。
+
+{\footnotesize
+\begin{verbatim}
+数模/
+|-- data/                 原始数据、清洗数据和外部校验数据
+|-- src/
+|   |-- pipeline/         数据清洗与校验
+|   |-- models/           传统供需基准与短期冲击模型
+|   |-- calibration/      短期模型参数搜索与评价
+|   |-- scenarios/        60--180 天长期三情景预测
+|   |-- analysis/         敏感性、稳健性、GPR、OVX 与统计检验
+|   |-- visualization/    论文正式图表生成
+|-- scripts/              一键构建、R 审计与 DOCX 后处理脚本
+|-- paper/                总论文 LaTeX 源码、章节和正式图表
+|-- output/               模型结果、校验报告和最终 PDF/DOCX
+\end{verbatim}
+}

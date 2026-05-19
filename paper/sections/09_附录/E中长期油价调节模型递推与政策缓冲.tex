@@ -1,0 +1,52 @@
+\subsection*{E 中长期油价调节模型递推与政策缓冲}
+
+代码~\ref{lst:future-recursion} 展示长期外推中 SPR 自适应释放与供需再平衡的处理。该模块避免把战略储备释放机械设为满额，而是根据剩余缺口、价格压力、时间衰减和剩余等效预算动态收缩释放强度。
+
+\begin{paperlisting}{lst:future-recursion}{python}{中长期油价调节模型中的 SPR 自适应释放}
+def adaptive_spr_release(day_index, scheduled_spr, gross_gap_before_spr,
+                         previous_price, base_price, assumptions):
+    if scheduled_spr <= 0:
+        return 0.0, 0.0
+
+    # 当物理缺口已基本覆盖时，SPR 不再机械满额释放
+    reserve_buffer = assumptions.base_demand * GAP_CLOSURE_SHARE
+    coverage_need = max(gross_gap_before_spr + reserve_buffer, 0.0)
+    demand_based_release = min(scheduled_spr, coverage_need)
+
+    stress_ratio = np.clip(gross_gap_before_spr / max(assumptions.supply_interruption, 1.0),
+                           0.0, 1.0)
+    price_stress = np.clip((previous_price / base_price - SPR_PRICE_STRESS_START_RATIO)
+                           / SPR_PRICE_STRESS_WIDTH, 0.0, 1.0)
+    minimum_policy_share = SPR_MIN_POLICY_SHARE + SPR_PRICE_POLICY_SHARE * price_stress
+    stress_share = max(minimum_policy_share, stress_ratio)
+
+    time_taper = 1.0
+    if day_index > SPR_TAPER_START_DAY:
+        time_taper = SPR_TAPER_FLOOR + (1 - SPR_TAPER_FLOOR) * np.exp(
+            -(day_index - SPR_TAPER_START_DAY) / SPR_TAPER_DECAY_DAYS
+        )
+
+    actual_release = max(demand_based_release, scheduled_spr * stress_share * time_taper)
+    actual_release = float(min(scheduled_spr, actual_release))
+    return actual_release, actual_release / scheduled_spr
+
+def simulate_future_from_prefix(prefix, future_frame, assumptions, behavior, base_price):
+    spr_budget_total, spr_future_budget, spr_remaining = initialize_spr_budget(prefix, assumptions)
+    inventory_remaining = float(prefix.iloc[-1]["inventory_remaining"])
+
+    for _, row in future_frame.iterrows():
+        scheduled_spr = ramp(row["day_index"], assumptions.spr_delay_days,
+                             assumptions.spr_ramp_days, assumptions.spr_max_release)
+        spr_release, taper_ratio = adaptive_spr_release(...)
+        spr_release = min(spr_release, spr_remaining)
+        spr_remaining = max(spr_remaining - spr_release, 0.0)
+
+        # 当 SPR 接近耗尽且剩余缺口仍存在时，加入二次跳涨压力
+        exhaustion_premium, exhaustion_pressure = spr_exhaustion_premium(
+            spr_remaining, spr_future_budget, residual_gap, base_price, assumptions
+        )
+        target_price = base_price + shortage_pressure + risk_premium \
+            + exhaustion_premium - buffer_discount - relief_discount
+\end{paperlisting}
+
+\clearpage
